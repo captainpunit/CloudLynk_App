@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+dist/
+web-build/
+android/
+ios/
+*.keystore
+*.jks
+google-services.json
+play-service-account*.json
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+.DS_Store

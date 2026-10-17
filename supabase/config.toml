@@ -1,0 +1,10 @@
+# Minimal local config. Run `supabase init` in an existing project to merge defaults.
+project_id = "cloudlynk"
+
+[functions.play-rtdn-webhook]
+# Google Pub/Sub calls this; it is verified with Google's OIDC token instead of a Supabase JWT.
+verify_jwt = false
+
+[functions.meta-capi-dispatch]
+# Called by a scheduled job with the service role key.
+verify_jwt = false

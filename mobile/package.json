@@ -1,0 +1,31 @@
+{
+  "name": "cloudlynk-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "expo": "~57.0.28",
+    "expo-build-properties": "~57.0.22",
+    "expo-constants": "~57.0.21",
+    "expo-iap": "^6.0.1",
+    "expo-linking": "~57.0.12",
+    "expo-router": "~57.0.26",
+    "expo-secure-store": "~57.0.4",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-fbsdk-next": "^13.4.3",
+    "react-native-play-install-referrer": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  }
+}
