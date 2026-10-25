@@ -14,3 +14,7 @@ play-service-account*.json
 supabase/.temp/
 supabase/.branches/
 .DS_Store
+work/
+deliverables/
+references/
+*.log

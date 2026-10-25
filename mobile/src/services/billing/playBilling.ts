@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from '@/lib/supabase';
 
 /**
  * Google Play Billing glue. The app never unlocks access by itself:
@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
  * server entitlement. Purchase UI (expo-iap) is wired in the subscription PR.
  */
 export async function verifyPurchaseOnServer(productId: string, purchaseToken: string) {
-  const { data, error } = await supabase.functions.invoke("verify-play-receipt", {
+  const { data, error } = await supabase.functions.invoke('verify-play-receipt', {
     body: { productId, purchaseToken },
   });
   if (error) throw error;
