@@ -1,5 +1,10 @@
 {
+  "tasks": {
+    "test": "deno test ../tests/functions",
+    "check": "deno check verify-play-receipt/index.ts play-rtdn-webhook/index.ts meta-capi-dispatch/index.ts track-install/index.ts subscription-reconcile/index.ts drive-cleanup/index.ts"
+  },
   "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.117.3",
+    "jose": "npm:jose@6.1.0"
   }
 }

@@ -19,16 +19,22 @@ If the app and server ever log the same event, both use the same
 ## Flow
 
 1. User taps a Meta ad, installs from Play.
-2. App reads the Play install referrer and calls `track-install`.
+2. App reads the Play install referrer and calls `track-install` after sign-in,
+   with explicit consent (see `api/track-install.md`).
    Meta install ads put encrypted campaign data in `utm_content`; we store it.
 3. User buys a plan with Play Billing.
 4. App sends the purchase token to `verify-play-receipt`.
 5. Server verifies with Google, saves the subscription, acknowledges it,
-   and adds a row to `meta_event_outbox`.
+   and atomically adds a row to `meta_event_outbox` when consent permits.
 6. `meta-capi-dispatch` (runs on a schedule) sends outbox rows to Meta CAPI
    and retries failures.
 7. Renewals, cancels and refunds arrive on `play-rtdn-webhook` and update the
    subscription. Renewals are queued for Meta the same way.
+
+Dispatch reads the actual processed order total from Google's Orders API,
+not the plan's recurring price. Test purchases and refunded orders are excluded.
+See `api/subscriptions.md` and `PR3_SETUP.md` for retry behavior, ownership,
+scheduled jobs and the remaining provider acceptance checks.
 
 ## Deep links
 

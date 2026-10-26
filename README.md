@@ -3,9 +3,12 @@
 Android app for private cloud storage and subscription video channels, with
 backend support for Meta ads (app installs and subscriptions).
 
-Status: **PR1 backend done** (profiles, channels, one access rule; see
-`docs/api/access-policy.md`). Server functions that are not built yet return
-`501 not_implemented` until their PR lands.
+Status: **PR1 and PR2 implemented; PR3 implemented locally**: profiles, channels and one access rule
+(`docs/api/access-policy.md`), and the private cloud drive with quota
+reservation and cleanup (`docs/api/drive.md`), plus plans, Play subscription
+verification/RTDN/reconciliation and consent-based Meta tracking.
+See `docs/PR3_SETUP.md` for deployment and provider acceptance checks;
+PR4 publisher/catalogue, PR5 playback and PR6 release features remain.
 
 ## Stack
 
@@ -38,7 +41,10 @@ cloudlynk/
       verify-play-receipt/    verify purchase, grant access, queue Meta event
       play-rtdn-webhook/      Google Play renewals, cancels, refunds
       meta-capi-dispatch/     send queued events to Meta CAPI (scheduled)
-    tests/database/           pgTAP tests (access matrix), run with `supabase test db`
+      subscription-reconcile/ refresh subscription state (scheduled)
+      drive-cleanup/          remove deleted and abandoned drive uploads (scheduled)
+    tests/database/           pgTAP tests (access matrix, drive), run with `supabase test db`
+    tests/functions/          provider mapping, attribution and subscription workflow tests
   docs/
     api/                      API contracts the app builds against
     CONTRACT_REVIEW.md        review of the client's terms

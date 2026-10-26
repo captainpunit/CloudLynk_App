@@ -40,6 +40,7 @@ export async function sendCapiEvents(events: CapiAppEvent[]): Promise<Response> 
   const url = `https://graph.facebook.com/${env("META_GRAPH_VERSION")}/${env("META_DATASET_ID")}/events`;
   return fetch(url, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       data,

@@ -1,9 +1,15 @@
-// Stores install attribution (Play install referrer, Meta campaign data) for the user/device.
-import { json, notImplemented } from "../_shared/http.ts";
+import { json } from "../_shared/http.ts";
+import { body, dbCheck, endpoint, HttpError } from "../_shared/endpoint.ts";
+import { supabaseAdmin, userFromRequest } from "../_shared/supabaseAdmin.ts";
+import { installRecord } from "../_shared/attribution.ts";
 
-Deno.serve(async (req) => {
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
-  // TODO: parse referrer (utm_source, utm_campaign, utm_content = Meta encrypted data),
-  // insert into app_installs, link to user once signed in.
-  return notImplemented("track-install");
-});
+Deno.serve(endpoint(async (req) => {
+  const user = await userFromRequest(req);
+  if (!user) throw new HttpError(401, "sign_in_required");
+  const record = await installRecord(await body(req), user.id);
+  const saved = await supabaseAdmin.from("app_installs").upsert(record, {
+    onConflict: "user_id,installation_id",
+  });
+  dbCheck(saved.error);
+  return json({ recorded: true, installationId: record.installation_id });
+}));

@@ -6,5 +6,12 @@ project_id = "cloudlynk"
 verify_jwt = false
 
 [functions.meta-capi-dispatch]
-# Called by a scheduled job with the service role key.
+# Called by a scheduled job with x-cron-secret.
+verify_jwt = false
+
+[functions.subscription-reconcile]
+verify_jwt = false
+
+[functions.drive-cleanup]
+# Called by a scheduled job with x-cron-secret.
 verify_jwt = false
