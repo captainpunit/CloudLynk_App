@@ -1,4 +1,4 @@
-import * as Linking from "expo-linking";
+import * as Linking from 'expo-linking';
 
 /**
  * Maps incoming links (Meta ad deep links, App Links, shared links) to
@@ -8,7 +8,7 @@ import * as Linking from "expo-linking";
 export function routeFromUrl(url: string): string | null {
   const { path } = Linking.parse(url);
   if (!path) return null;
-  const clean = path.replace(/^open\//, "");
-  if (clean.startsWith("channel/") || clean.startsWith("plans")) return `/${clean}`;
+  const clean = path.replace(/^open\//, '');
+  if (clean.startsWith('channel/') || clean.startsWith('plans')) return `/${clean}`;
   return null;
 }

@@ -1,0 +1,7 @@
+node_modules
+.expo
+dist
+android
+ios
+package-lock.json
+src/lib/database.types.ts

@@ -1,5 +1,10 @@
 # CloudLynk
 
+**New frontend workspace:** start with [START_HERE.md](START_HERE.md), then open `mobile/`.
+Explore is the initial screen. The interactive preview runs without real credentials.
+See [frontend verification](docs/QA_RESULTS.md) and [integration handoff](docs/FRONTEND_HANDOFF.md)
+for what is tested and what still requires backend implementation.
+
 Android app for private cloud storage and subscription video channels, with
 backend support for Meta ads (app installs and subscriptions).
 

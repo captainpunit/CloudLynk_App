@@ -1,4 +1,4 @@
-import { AppEventsLogger, Settings } from "react-native-fbsdk-next";
+import { AppEventsLogger, Settings } from 'react-native-fbsdk-next';
 
 /**
  * Client side Meta App Events.
@@ -18,7 +18,7 @@ export function setMetaUser(userId: string) {
 }
 
 export function logViewPlans() {
-  AppEventsLogger.logEvent("ViewContent", { content_type: "subscription_plans" });
+  AppEventsLogger.logEvent('ViewContent', { content_type: 'subscription_plans' });
 }
 
 export function logCheckoutStarted(productId: string) {
