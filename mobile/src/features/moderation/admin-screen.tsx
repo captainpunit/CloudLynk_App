@@ -12,14 +12,15 @@ import {
   Surface,
 } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
-import { unavailable } from '@/data/live/cloud-api';
 import { colors as c } from '@/theme/tokens';
 import type { ChannelStatus, ChannelVisibility } from '@/domain/models';
+import LiveAdmin from './live-admin';
 
 export default function AdminScreen() {
   const { state, demo, dispatch, notify } = useWorkspace();
   const [tab, setTab] = useState('Channels');
   const [error, setError] = useState<string | null>(null);
+  if (!demo) return <LiveAdmin />;
   if (state.profile?.role !== 'admin')
     return (
       <Screen title="Admin workspace" back>
@@ -32,7 +33,6 @@ export default function AdminScreen() {
     );
   function update(id: string, changes: { visibility?: ChannelVisibility; status?: ChannelStatus }) {
     try {
-      if (!demo) unavailable('Admin moderation');
       dispatch({ type: 'channel-updated', id, changes });
       notify('Channel review updated in preview');
     } catch (cause) {
@@ -120,10 +120,6 @@ export default function AdminScreen() {
                     title="Mark reviewed"
                     variant="soft"
                     onPress={() => {
-                      if (!demo) {
-                        setError('Live reports API is not implemented.');
-                        return;
-                      }
                       dispatch({ type: 'report-resolved', id: report.id });
                     }}
                   />

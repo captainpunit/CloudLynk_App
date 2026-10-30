@@ -11,10 +11,14 @@ export function VideoPlayback({
   uri,
   resumeAt,
   onProgress,
+  privateStream = false,
+  onRetry,
 }: {
   uri: string;
   resumeAt: number;
   onProgress: (seconds: number) => void;
+  privateStream?: boolean;
+  onRetry?: () => void;
 }) {
   const resumed = useRef(false);
   const callback = useRef(onProgress);
@@ -47,17 +51,23 @@ export function VideoPlayback({
         style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: '#071413', borderRadius: 17 }}
         nativeControls
         contentFit="contain"
-        allowsPictureInPicture
+        allowsPictureInPicture={!privateStream}
       />
       {status === 'loading' && <Label style={{ color: c.muted }}>Getting your video ready…</Label>}
       {status === 'error' && (
         <View style={{ gap: 10 }}>
           <Label accessibilityRole="alert" style={{ color: c.danger }}>
-            {error?.message ?? 'The video could not be loaded. Check your connection.'}
+            {privateStream
+              ? 'The video could not be loaded. Retry to check playback access.'
+              : (error?.message ?? 'The video could not be loaded. Check your connection.')}
           </Label>
           <Button
             title="Retry playback"
             onPress={() => {
+              if (onRetry) {
+                onRetry();
+                return;
+              }
               resumed.current = false;
               void player.replaceAsync(source).catch(() => {
                 // expo-video exposes replacement failures through statusChange.

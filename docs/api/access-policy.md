@@ -23,6 +23,7 @@ set; a new value is a contract change.
 | `channel_unavailable` | Channel missing or not published | "This channel is not available" |
 | `subscription_required` | Premium channel, no paid unexpired subscription | Plans screen |
 | `membership_required` | Watch only: user has not joined the channel | Join button |
+| `private_channel` | Private channel without an invitation/membership | Invitation required |
 
 ```ts
 export type AccessDecision =
@@ -31,7 +32,8 @@ export type AccessDecision =
   | "account_restricted"
   | "channel_unavailable"
   | "subscription_required"
-  | "membership_required";
+  | "membership_required"
+  | "private_channel";
 ```
 
 Rules, in the order they are checked:
@@ -40,6 +42,8 @@ Rules, in the order they are checked:
 2. Account `active`, else `account_restricted`.
 3. `purchase` stops here: `allowed`. There is no approval step before buying.
 4. Channel exists and is `published`, else `channel_unavailable`.
+   Private channels also require an invitation or existing membership, else
+   `private_channel` (PR4). An invitation permits joining; watching still requires membership.
 5. Premium channel (`requires_subscription = true`) needs a subscription with
    status `active`, `in_grace` or `cancelled` and `paid_until` in the future,
    else `subscription_required`. Cancelled means auto-renew is off; access lasts

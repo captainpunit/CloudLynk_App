@@ -53,7 +53,7 @@ src/
   state/                    Workspace provider, reducer and tests
   theme/                    Shared design tokens
   lib/                      Environment, Supabase and generated database types
-  services/                 Existing billing/attribution/Meta integration scaffolds
+  services/                 Billing, resumable uploads, notifications and consent adapters
 assets/video/               Bundled preview playback clip
 ```
 
@@ -79,12 +79,38 @@ EXPO_PUBLIC_DATA_MODE=live
 The existing PR1 contract supports catalogue reads, email authentication, profile name edits, membership RPCs,
 and server access checks. Empty live catalogues stay empty; sample videos are never substituted for live data.
 
-The remaining storage, creator, plans, receipts, playback and moderation endpoints must be implemented before release.
-Those actions show a clear unavailable state and never silently fall back to simulated access.
+Live Android Premium now reads active backend plans and matching Google Play offers,
+starts purchases with `profiles.play_account_id`, and verifies purchase/restore
+tokens through `verify-play-receipt`. It displays regular automatically renewing
+base plans with a matching billing period. Trials, installments and in-app plan
+replacement are not offered; existing purchases link to Google Play management.
+No local preview entitlement is granted in live mode. Server acknowledgement and
+RTDN/reconciliation remain responsible for durable subscription state.
+
+Settings now requests queued account deletion through `delete-account` after
+password reauthentication and typed `DELETE` confirmation. Users must cancel
+Google Play billing separately. Deploy the deletion endpoint and scheduled workers
+before enabling live use; acceptance means provider objects and Auth are removed,
+not merely that the request returned `queued`.
+
+Storage, catalogue/series/episodes, creator publishing, signed playback, watch
+progress/bookmarks, notifications and moderation are now connected to the backend.
+See [the API binding inventory](../docs/FRONTEND_API_BINDINGS.md) for exact calls,
+test evidence and provider acceptance requirements. Live drive controls follow
+the existing flat-file contract; folders and rename remain preview-only.
+
+Enable push from Notifications. Configure `EXPO_PUBLIC_EAS_PROJECT_ID`, the
+production Android FCM v1 credentials in EAS, and rebuild after installing
+`expo-notifications`. Settings exposes self-declared birth date for age-gated
+playback and explicit advertising-measurement consent/withdrawal.
 Do not use an older CloudLynk database without a separate contract adapter.
 
 `EXPO_PUBLIC_NATIVE_INTEGRATIONS=true` enables the existing Meta/Play config plugins for a configured native build.
-It does not implement billing or grant an entitlement. No advertising SDK starts automatically.
+Rebuild the native application after enabling it. Billing needs a Play-enabled
+Android build and configured Play Console products; Expo Go and browser previews
+cannot purchase. Verify purchase, pending payment, cancellation, restore, account
+mismatch and provider outage with Play license testers on an internal test track.
+No advertising SDK starts automatically.
 Never put service-role keys, signing credentials or Cloudflare secrets in an `EXPO_PUBLIC_` value.
 
 ## Build an Android package

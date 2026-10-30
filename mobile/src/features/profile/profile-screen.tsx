@@ -59,8 +59,10 @@ export default function ProfileScreen() {
                 {state.profile.email}
               </Label>
               <Label style={{ color: c.primary, fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                {state.demoPlanId
-                  ? 'CLOUDLYNK PLUS · PREVIEW'
+                {(demo ? state.demoPlanId : state.subscribed)
+                  ? demo
+                    ? 'CLOUDLYNK PLUS · PREVIEW'
+                    : 'CLOUDLYNK PLUS'
                   : demo
                     ? 'PREVIEW MEMBER'
                     : 'CLOUDLYNK MEMBER'}
@@ -83,7 +85,9 @@ export default function ProfileScreen() {
       >
         <Sparkles size={25} color={c.accent} />
         <Heading style={{ color: c.white, fontSize: 24 }}>
-          {state.demoPlanId ? 'A little more, all yours.' : 'Good things come with Plus.'}
+          {(demo ? state.demoPlanId : state.subscribed)
+            ? 'A little more, all yours.'
+            : 'Good things come with Plus.'}
         </Heading>
         <Label style={{ color: '#B9CBC4', fontSize: 12 }}>
           Exclusive channels and room for your biggest ideas. ↗

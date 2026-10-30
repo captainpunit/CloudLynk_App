@@ -1,6 +1,6 @@
 // Scheduled worker: removes stored drive objects for deleted files, expired
 // uploads and orphans, then drops their rows. Safe to run often and in parallel.
-import { env } from "../_shared/env.ts";
+import { scheduled } from "../_shared/scheduled.ts";
 import { json } from "../_shared/http.ts";
 import { supabaseAdmin } from "../_shared/supabaseAdmin.ts";
 
@@ -10,15 +10,15 @@ const MAX_BATCHES = 10; // keeps one run well inside the function time limit
 
 type CleanupRow = { file_id: string | null; storage_path: string };
 
-Deno.serve(async (req) => {
-  if (req.headers.get("x-cron-secret") !== env("CRON_SECRET")) return json({ error: "forbidden" }, 403);
-
+Deno.serve(scheduled("drive-cleanup", async () => {
   let removedObjects = 0;
   let removedRows = 0;
   const errors: string[] = [];
 
   for (let i = 0; i < MAX_BATCHES; i++) {
-    const { data, error } = await supabaseAdmin.rpc("drive_cleanup_batch", { p_limit: BATCH });
+    const { data, error } = await supabaseAdmin.rpc("drive_cleanup_batch", {
+      p_limit: BATCH,
+    });
     if (error) {
       errors.push(error.message);
       break;
@@ -38,9 +38,12 @@ Deno.serve(async (req) => {
 
     const fileIds = batch.flatMap((row) => (row.file_id ? [row.file_id] : []));
     if (fileIds.length) {
-      const { data: count, error: finishError } = await supabaseAdmin.rpc("drive_cleanup_finish", {
-        p_file_ids: fileIds,
-      });
+      const { data: count, error: finishError } = await supabaseAdmin.rpc(
+        "drive_cleanup_finish",
+        {
+          p_file_ids: fileIds,
+        },
+      );
       if (finishError) {
         errors.push(finishError.message);
         break;
@@ -51,5 +54,9 @@ Deno.serve(async (req) => {
     if (batch.length < BATCH) break;
   }
 
-  return json({ removed_objects: removedObjects, removed_rows: removedRows, errors }, errors.length ? 500 : 200);
-});
+  return json({
+    removed_objects: removedObjects,
+    removed_rows: removedRows,
+    errors,
+  }, errors.length ? 500 : 200);
+}));

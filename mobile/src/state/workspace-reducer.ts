@@ -6,6 +6,7 @@ export type WorkspaceAction =
   | { type: 'catalogue'; channels: Channel[] }
   | { type: 'membership'; id: string; joined: boolean }
   | { type: 'bookmark'; id: string }
+  | { type: 'bookmark-set'; id: string; saved: boolean }
   | { type: 'files-added'; files: DriveFile[] }
   | { type: 'file-renamed'; id: string; name: string }
   | { type: 'file-deleted'; id: string }
@@ -16,7 +17,7 @@ export type WorkspaceAction =
       changes: Partial<Pick<Channel, 'visibility' | 'status'>>;
     }
   | { type: 'video-added'; video: Video }
-  | { type: 'progress'; id: string; seconds: number }
+  | { type: 'progress'; id: string; seconds: number; completed?: boolean }
   | { type: 'demo-plan'; id: string | null }
   | { type: 'notices-read' };
 // Report actions stay local in preview; production needs the moderation API.
@@ -47,6 +48,13 @@ export function workspaceReducer(
         savedIds: state.savedIds.includes(action.id)
           ? state.savedIds.filter((id) => id !== action.id)
           : [...state.savedIds, action.id],
+      };
+    case 'bookmark-set':
+      return {
+        ...state,
+        savedIds: action.saved
+          ? [...new Set([...state.savedIds, action.id])]
+          : state.savedIds.filter((id) => id !== action.id),
       };
     case 'files-added':
       return { ...state, files: [...action.files, ...state.files] };
@@ -86,6 +94,13 @@ export function workspaceReducer(
       return {
         ...state,
         progress: { ...state.progress, [action.id]: Math.max(0, action.seconds) },
+        ...(action.completed === undefined
+          ? {}
+          : {
+              completedIds: action.completed
+                ? [...new Set([...(state.completedIds ?? []), action.id])]
+                : (state.completedIds ?? []).filter((id) => id !== action.id),
+            }),
       };
     case 'demo-plan':
       return { ...state, demoPlanId: action.id };

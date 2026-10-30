@@ -37,6 +37,7 @@ const config: ExpoConfig = {
     'expo-image',
     'expo-sharing',
     'expo-font',
+    'expo-notifications',
     ...(nativeIntegrations
       ? ([
           'expo-iap',
@@ -58,6 +59,9 @@ const config: ExpoConfig = {
     ['expo-build-properties', { android: { minSdkVersion: 24 } }],
   ],
   experiments: { typedRoutes: true },
+  ...(process.env.EXPO_PUBLIC_EAS_PROJECT_ID
+    ? { extra: { eas: { projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID } } }
+    : {}),
 };
 
 export default config;

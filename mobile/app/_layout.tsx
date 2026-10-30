@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { WorkspaceProvider, useWorkspace } from '@/state/workspace-provider';
 import { Button, Label, Screen } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
+import { PushLifecycle } from '@/services/notifications/push-lifecycle';
 
 export default function RootLayout() {
   // Native advertising modules are deliberately not imported at startup.
@@ -12,6 +13,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <WorkspaceProvider>
+        <PushLifecycle />
         <StatusBar style="dark" />
         <AppNavigation />
       </WorkspaceProvider>

@@ -1,5 +1,15 @@
 # Frontend handoff
 
+## Backend update — 26 October 2026
+
+PR1–PR6 backend APIs are implemented locally. See `api/catalogue.md`,
+`api/playback.md`, `api/release.md` and `PR4_PR6_SETUP.md`. The original preview
+verification remains documented for the preview branch. The live adapter now
+binds to these APIs; see [the binding inventory](FRONTEND_API_BINDINGS.md). Publishing requires an
+admin or `profiles.can_publish`; channel ownership is `created_by`, private access
+uses `is_private` plus invitations, and signed playback enforces the server rule.
+Backend drive folders/rename are not part of the flat PR2 contract.
+
 ## Product decisions implemented
 
 - Android-first, Explore as the initial guest screen.
@@ -13,27 +23,47 @@
 
 ## Integration matrix
 
+Update — 28 October 2026: all PR1–PR6 mobile flows are bound to the existing APIs.
+Premium joins active backend plans to Play product offers, uses Play prices and
+the profile's obfuscated account ID, and sends purchases/restores to server
+verification. Pending payments never unlock access locally. Existing purchases
+must be restored or managed in Google Play before buying another plan. This UI
+offers regular automatically renewing base plans; trials, introductory offers,
+installments and in-app plan replacement are not exposed.
+Deletion reauthenticates the signed-in email/password user, requires typed `DELETE`,
+queues the backend request and clears the displayed identity after acceptance.
+It explains that Google Play billing must be canceled separately. Catalogue,
+storage, publishing, signed playback, personal state, notices and moderation
+are connected as described in the inventory.
+
+Local verification for this update: `npm run typecheck` passed; `npm test`
+passed all 38 tests. The local HTTP/Edge harness passed 32 integration checks,
+including real local Storage TUS and synthetic RSA playback signing. Expo exports for
+web and Android both completed successfully (Android JavaScript/Hermes bundle,
+not an APK/native build or a Play transaction). Real provider purchases and
+dedicated-account erasure were not performed.
+
 | Feature | Preview implementation | Production dependency |
 |---|---|---|
-| Explore/search/filter/sort | Sample catalogue; functional filtering and routes | Catalogue/title API |
+| Explore/search/filter/sort | Sample catalogue; functional filtering and routes | Wired: paginated catalogue/titles/seasons and live filtering |
 | Sign-in/profile | Local test identity; persistent | Supabase email auth and profiles implemented |
 | Join/leave channel | Tested local access policy | Existing `my_access`, `join_channel`, `leave_channel` RPCs |
-| Feed/bookmarks | Joined/saved video collections | Server watchlist/content API |
-| Cloud/files | Native picker, app-local copies, folders, rename/remove/export | Reserve/finalize/list/signed download APIs |
-| Creator | Channel submission and local video selection | Creator submission, upload URL, processing and moderation APIs |
-| Admin | Explicit preview role, approve/hide/visibility and report review | Secure moderation API and audit trail |
-| Premium | Explicit no-charge simulation and local plan restoration | Play plan catalogue, billing flow, receipt verification, RTDN |
-| Player | Bundled sample/local files, controls, progress, failure/retry | Signed playback URLs and token renewal |
-| Notices | Local workspace notices/read state | Notifications API and push registration |
-| Reports | Persistent local review queue | Reports API |
-| Account deletion | Confirmed local reset | Secure server deletion endpoint |
+| Feed/bookmarks | Joined/saved video collections | Wired: saved titles, progress and continue watching |
+| Cloud/files | Native picker, app-local copies, folders, rename/remove/export | Wired: quota, reserve/TUS/finalize/list/download/delete/cancel; live folders/rename outside contract |
+| Creator | Channel submission and local video selection | Wired: channel/title/season/episode drafts, allocated TUS, processing, revisions and review |
+| Admin | Explicit preview role, approve/hide/visibility and report review | Wired: moderation, publisher/account permissions, reports, notices and audit |
+| Premium | Explicit no-charge simulation and local plan restoration | Wired: backend plans, Android Play offers/purchase/restore, server verification. Needs deployed functions, configured Play products and device acceptance |
+| Player | Bundled sample/local files, controls, progress, failure/retry | Wired: signed HLS, expiry/foreground renewal, progress |
+| Notices | Local workspace notices/read state | Wired: inbox/read state, explicit Expo push registration and lifecycle |
+| Reports | Persistent local review queue | Wired: report submission and admin decisions |
+| Account deletion | Confirmed local reset | Wired: password reauthentication, typed confirmation, secure queued deletion endpoint. Needs deployed workers and end-to-end erasure acceptance |
 
-## Access-policy gap requiring backend design
+## Original access-policy gap (resolved in PR4)
 
-The newer PR1 schema does not yet define channel ownership or a private/invitation visibility field.
-The frontend's preview model expresses the requested product behaviour, but the live adapter must not invent
-an authorization column. Backend owners must define ownership, private-channel membership and publishing contracts.
-The frontend relies on RLS and server access checks; it never grants a real subscription locally.
+PR4 now defines ownership (`created_by`), private visibility (`is_private`),
+invitations and publisher permission (`can_publish`). These are mapped explicitly in the
+live adapter. The preview model does not grant real
+authorization: the frontend must continue relying on RLS and server access checks.
 
 ## Review checklist
 

@@ -1,7 +1,8 @@
 {
   "tasks": {
     "test": "deno test ../tests/functions",
-    "check": "deno check verify-play-receipt/index.ts play-rtdn-webhook/index.ts meta-capi-dispatch/index.ts track-install/index.ts subscription-reconcile/index.ts drive-cleanup/index.ts"
+    "check": "deno check verify-play-receipt/index.ts play-rtdn-webhook/index.ts meta-capi-dispatch/index.ts track-install/index.ts subscription-reconcile/index.ts drive-cleanup/index.ts generate-stream-upload/index.ts stream-webhook/index.ts stream-playback-token/index.ts stream-reconcile/index.ts media-cleanup/index.ts notification-dispatch/index.ts delete-account/index.ts account-deletion-worker/index.ts backend-health/index.ts",
+    "lint": "deno lint . ../tests/functions"
   },
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@2.117.3",

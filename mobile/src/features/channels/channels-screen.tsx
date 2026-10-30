@@ -19,7 +19,7 @@ import { colors as c } from '@/theme/tokens';
 import { compactNumber } from '@/domain/format';
 
 export default function ChannelsScreen() {
-  const { state, join, requireIdentity } = useWorkspace();
+  const { state, join, requireIdentity, demo } = useWorkspace();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('Discover');
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +27,12 @@ export default function ChannelsScreen() {
   const channels = state.channels.filter(
     (channel) =>
       channel.status === 'published' &&
-      channel.visibility !== 'private' &&
+      (channel.visibility !== 'private' || (!demo && tab !== 'Discover')) &&
       channel.name.toLowerCase().includes(query.toLowerCase()) &&
-      (tab === 'Discover' || state.joinedIds.includes(channel.id)),
+      (tab === 'Discover' ||
+        (tab === 'Private'
+          ? channel.visibility === 'private'
+          : state.joinedIds.includes(channel.id))),
   );
   async function handleJoin(id: string) {
     setPending(id);
@@ -58,7 +61,7 @@ export default function ChannelsScreen() {
     >
       <SearchField value={query} onChangeText={setQuery} placeholder="Find a channel" />
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {['Discover', 'Joined'].map((item) => (
+        {['Discover', 'Joined', ...(!demo ? ['Private'] : [])].map((item) => (
           <Pill key={item} title={item} selected={tab === item} onPress={() => setTab(item)} />
         ))}
       </View>
@@ -103,7 +106,11 @@ export default function ChannelsScreen() {
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <Users color={c.muted} size={14} />
                 <Label style={{ color: c.muted, fontSize: 11 }}>
-                  {compactNumber(channel.members)} members
+                  {demo
+                    ? `${compactNumber(channel.members)} members`
+                    : channel.visibility === 'private'
+                      ? 'Private channel'
+                      : channel.category}
                 </Label>
               </View>
               <Button

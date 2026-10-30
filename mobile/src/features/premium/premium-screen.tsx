@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Check, Circle, Cloud, Radio, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { plans } from '@/data/demo/seed';
-import { Button, ErrorNote, Heading, Label, Screen, Surface } from '@/components/ui';
+import { Button, ErrorNote, Heading, Label, Screen } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
 import { useWorkspace } from '@/state/workspace-provider';
-import { unavailable } from '@/data/live/cloud-api';
+import LiveBilling from './live-billing';
 
 export default function PremiumScreen() {
   const { state, demo, dispatch, requireIdentity, notify } = useWorkspace();
@@ -15,7 +15,7 @@ export default function PremiumScreen() {
   function activate() {
     if (!requireIdentity()) return;
     try {
-      if (!demo) unavailable('Google Play plan catalogue and server-verified billing');
+      if (!demo) return;
       dispatch({ type: 'demo-plan', id: selected });
       notify('Preview Plus enabled. No charge or real subscription.');
       goBackOrExplore();
@@ -133,43 +133,37 @@ export default function PremiumScreen() {
           </Pressable>
         ))
       ) : (
-        <Surface>
-          <Label>Live plans are not published yet.</Label>
-          <Label style={{ color: c.muted }}>
-            Prices must come from Google Play, and access must be granted by the server after
-            verification.
-          </Label>
-        </Surface>
+        <LiveBilling />
       )}
       <ErrorNote message={error} />
-      <Button
-        title={
-          demo
-            ? state.demoPlanId
-              ? 'Update preview plan'
-              : 'Try Plus in preview'
-            : 'Check plan availability'
-        }
-        icon={Sparkles}
-        onPress={activate}
-      />
-      <Button
-        title={demo ? 'Restore preview plan' : 'Restore purchases'}
-        variant="outline"
-        onPress={() => {
-          if (!requireIdentity()) return;
-          if (demo)
-            notify(
-              state.demoPlanId
-                ? 'Your preview plan is already active on this device.'
-                : 'No preview plan found. Choose one above.',
-            );
-          else
-            setError(
-              'Purchase restoration needs the live Play Billing and receipt-verification integration.',
-            );
-        }}
-      />
+      {demo && (
+        <Button
+          title={
+            demo
+              ? state.demoPlanId
+                ? 'Update preview plan'
+                : 'Try Plus in preview'
+              : 'Check plan availability'
+          }
+          icon={Sparkles}
+          onPress={activate}
+        />
+      )}
+      {demo && (
+        <Button
+          title={demo ? 'Restore preview plan' : 'Restore purchases'}
+          variant="outline"
+          onPress={() => {
+            if (!requireIdentity()) return;
+            if (demo)
+              notify(
+                state.demoPlanId
+                  ? 'Your preview plan is already active on this device.'
+                  : 'No preview plan found. Choose one above.',
+              );
+          }}
+        />
+      )}
       <Label style={{ color: c.muted, fontSize: 11, textAlign: 'center' }}>
         {demo
           ? 'Illustrative prices. Preview activation is local and free; it does not start a paid subscription.'

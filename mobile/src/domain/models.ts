@@ -24,6 +24,9 @@ export interface Video {
   publishedAt: string;
   /** Only demo assets use a public URI. Production playback requires a signed token. */
   demoUri?: string;
+  kind?: 'movie' | 'series' | 'episode';
+  seasonId?: string;
+  episodeNumber?: number;
 }
 export interface DriveFile {
   id: string;
@@ -33,6 +36,10 @@ export interface DriveFile {
   createdAt: string;
   uri?: string;
   parentId?: string;
+  storagePath?: string;
+  mimeType?: string;
+  status?: 'pending' | 'ready';
+  expiresAt?: string;
 }
 export interface Profile {
   id: string;
@@ -40,6 +47,8 @@ export interface Profile {
   email: string;
   role: 'member' | 'admin';
   accountStatus: 'active' | 'restricted';
+  canPublish?: boolean;
+  birthDate?: string;
 }
 export interface Plan {
   id: string;
@@ -61,6 +70,17 @@ export interface Workspace {
   demoPlanId: string | null;
   noticesRead: boolean;
   reports: ContentReport[];
+  seasons?: { id: string; seriesId: string; number: number; name: string }[];
+  driveUsage?: {
+    used_bytes: number;
+    reserved_bytes: number;
+    quota_bytes: number;
+    max_file_bytes: number;
+    can_upload: boolean;
+  };
+  notices?: { id: string; title: string; body: string; readAt: string | null; createdAt: string }[];
+  subscribed?: boolean;
+  completedIds?: string[];
 }
 export interface ContentReport {
   id: string;

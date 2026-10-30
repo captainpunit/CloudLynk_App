@@ -18,7 +18,7 @@ import {
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { createId, fileSize } from '@/domain/format';
-import { unavailable } from '@/data/live/cloud-api';
+import LiveDrive from './live-drive';
 
 const fileIcons = { image: ImageIcon, video: Video, document: FileText, folder: Folder };
 export default function DriveScreen() {
@@ -44,7 +44,6 @@ export default function DriveScreen() {
       return;
     }
     try {
-      if (!demo) unavailable('Cloud folder creation');
       if (
         state.files.some(
           (file) =>
@@ -73,6 +72,7 @@ export default function DriveScreen() {
       setError(cause instanceof Error ? cause.message : 'Could not create folder.');
     }
   }
+  if (!demo) return <LiveDrive />;
   return (
     <Screen
       title={
@@ -107,9 +107,7 @@ export default function DriveScreen() {
             <Label style={{ color: '#99B6AD', fontSize: 13 }}> / {fileSize(quota)}</Label>
           </Label>
           <Label style={{ color: '#ABC3BA', fontSize: 11 }}>
-            {demo
-              ? 'Local preview storage · not backed up to cloud'
-              : 'Cloud quota API integration pending'}
+            Local preview storage · not backed up to cloud
           </Label>
         </View>
         <View style={{ height: 5, backgroundColor: '#FFFFFF20', borderRadius: 5 }}>
