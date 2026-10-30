@@ -1,5 +1,9 @@
 # Frontend verification — 25 October 2026
 
+For the 28 October live API integration update, see
+[frontend API bindings and verification](FRONTEND_API_BINDINGS.md).
+The checks below describe the earlier preview build.
+
 ## Passed
 
 - TypeScript: `npm run typecheck`.

@@ -1,5 +1,60 @@
-# Minimal local config. Run `supabase init` in an existing project to merge defaults.
+# Local development services. Hosted provider credentials stay in server secrets.
 project_id = "cloudlynk"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:8081"
+additional_redirect_urls = ["http://127.0.0.1:8081", "cloudlynk://**"]
+jwt_expiry = 3600
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+# Local development only. Configure verified email/SMTP separately for production.
+enable_confirmations = false
+double_confirm_changes = true
+
+[local_smtp]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = "2GiB"
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+inspector_port = 8083
+deno_version = 2
+
+[studio]
+enabled = false
+
+[realtime]
+enabled = false
+
+[analytics]
+enabled = false
 
 [functions.play-rtdn-webhook]
 # Google Pub/Sub calls this; it is verified with Google's OIDC token instead of a Supabase JWT.
@@ -14,4 +69,22 @@ verify_jwt = false
 
 [functions.drive-cleanup]
 # Called by a scheduled job with x-cron-secret.
+verify_jwt = false
+
+[functions.stream-webhook]
+verify_jwt = false
+
+[functions.stream-reconcile]
+verify_jwt = false
+
+[functions.media-cleanup]
+verify_jwt = false
+
+[functions.notification-dispatch]
+verify_jwt = false
+
+[functions.account-deletion-worker]
+verify_jwt = false
+
+[functions.backend-health]
 verify_jwt = false

@@ -1,0 +1,4110 @@
+{
+  "info": {
+    "_postman_id": "15c1fbd8-ae7b-4bdf-a346-2747f40c9b33",
+    "name": "CloudLynk Backend - PR1 to PR6",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Import together with CloudLynk.local.postman_environment.json. Fill base_url and supabase_anon_key, then user credentials. Sign in user/admin to capture separate tokens. API bodies match the repository RPC/Edge Function contracts. Run requests manually in the workflow order described in docs/postman/README.md. Provider calls need configured server accounts. Admin/worker/webhook/binary/destructive folders are skipped until their explicit environment flags are true. No real credentials are exported."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "[\"installation_id\",\"campaign_id\"].forEach(key=>{if(!pm.environment.get(key))pm.environment.set(key,pm.variables.replaceIn(\"{{$guid}}\"));});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Auth",
+      "description": "Sign in the regular user and admin separately; admin login never replaces access_token.",
+      "item": [
+        {
+          "name": "Sign up test user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/signup",
+            "description": "Set email/password first. Local email confirmation is disabled. Hosted projects may require email confirmation before login.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"data\": {\n    \"full_name\": \"Postman Tester\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200 && pm.response.code<300){const data=pm.response.json();const session=data.session||data;if(session.access_token)pm.environment.set(\"access_token\",session.access_token);if(session.refresh_token)pm.environment.set(\"refresh_token\",session.refresh_token);if(data.user?.id)pm.environment.set(\"user_id\",data.user.id);}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in user - saves user tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/token?grant_type=password",
+            "description": "Sign in user - saves user tokens",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  " const data=pm.response.json();",
+                  " if(data.access_token) pm.environment.set(\"access_token\",data.access_token);",
+                  " if(data.refresh_token) pm.environment.set(\"refresh_token\",data.refresh_token);",
+                  " if(data.user && data.user.id) pm.environment.set(\"user_id\",data.user.id);",
+                  "}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh user session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/token?grant_type=refresh_token",
+            "description": "Refresh user session",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  " const data=pm.response.json();",
+                  " if(data.access_token) pm.environment.set(\"access_token\",data.access_token);",
+                  " if(data.refresh_token) pm.environment.set(\"refresh_token\",data.refresh_token);",
+                  " if(data.user && data.user.id) pm.environment.set(\"user_id\",data.user.id);",
+                  "}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get authenticated user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/user",
+            "description": "Get authenticated user"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign in admin - saves separate admin token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/token?grant_type=password",
+            "description": "An existing admin is required. Login does not grant admin role; bootstrap that role using trusted SQL.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  " const data=pm.response.json();",
+                  " if(data.access_token) pm.environment.set(\"admin_access_token\",data.access_token);",
+                  " ",
+                  " if(data.user && data.user.id) pm.environment.set(\"admin_user_id\",data.user.id);",
+                  "}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Profile and access",
+      "description": "User RLS and the shared access rule.",
+      "item": [
+        {
+          "name": "My profile and Play account ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/profiles?select=id,display_name,role,account_status,can_publish,birth_date,play_account_id&id=eq.{{user_id}}",
+            "description": "My profile and Play account ID"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data[0]?.play_account_id; if (value !== undefined && value !== null) pm.environment.set(\"play_account_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my display name and age gate",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/profiles?id=eq.{{user_id}}",
+            "description": "Updates the signed-in user's display fields and self-declared birth date. Does not change role, publisher permission or account standing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Postman Tester\",\n  \"birth_date\": \"1995-01-01\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check purchase access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/my_access",
+            "description": "Check purchase access",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_action\": \"purchase\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check channel join access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/my_access",
+            "description": "Check channel join access",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_action\": \"join\",\n  \"p_channel_id\": \"{{channel_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check channel watch access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/my_access",
+            "description": "Check channel watch access",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_action\": \"watch\",\n  \"p_channel_id\": \"{{channel_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Am I an active admin?",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/is_admin",
+            "description": "Am I an active admin?",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Public catalogue",
+      "description": "Read APIs enforce visibility. Empty results are normal until reviewed content and plans exist.",
+      "item": [
+        {
+          "name": "List visible channels",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/channels?select=id,name,description,requires_subscription,is_private,category,cover_url,status,created_by&order=created_at.desc&limit=50&offset=0",
+            "description": "Anonymous view. Private/draft channels are excluded. Use the next request for signed-in visibility.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{supabase_anon_key}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List channels visible to user",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/channels?select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "List channels visible to user"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get channel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/channels?id=eq.{{channel_id}}&select=*",
+            "description": "Get channel"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List published movies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?kind=eq.movie&status=eq.published&select=*&order=published_at.desc,id&limit=50&offset=0",
+            "description": "List published movies",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{supabase_anon_key}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List series",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?kind=eq.series&status=eq.published&select=*&order=published_at.desc,id&limit=50&offset=0",
+            "description": "List series",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{supabase_anon_key}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get title",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?id=eq.{{title_id}}&select=*",
+            "description": "Get title"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List channel titles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?channel_id=eq.{{channel_id}}&select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "List channel titles"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List series seasons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/seasons?series_id=eq.{{series_id}}&select=*&order=number.asc",
+            "description": "List series seasons"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List season episodes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?season_id=eq.{{season_id}}&kind=eq.episode&select=*&order=episode_number.asc",
+            "description": "List season episodes"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search title names",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/titles?name=ilike.*{{search_term}}*&select=*&limit=50&offset=0",
+            "description": "Search title names"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List active plans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/plans?select=product_id,name,billing_period,quota_bytes,benefits&active=eq.true",
+            "description": "List active plans",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{supabase_anon_key}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Membership",
+      "description": "Joining a premium channel requires a paid subscription. A private channel requires an invitation.",
+      "item": [
+        {
+          "name": "Join channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/join_channel",
+            "description": "Join channel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My memberships",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/channel_members?select=channel_id,joined_at&order=joined_at.desc",
+            "description": "My memberships"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My private invitations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/channel_invitations?select=channel_id,created_at",
+            "description": "My private invitations"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invite a user to my private channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/invite_channel_member",
+            "description": "Channel owner with publishing permission, or admin. Channel must be published and private.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\",\n  \"p_user_id\": \"{{target_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Private drive",
+      "description": "Reserve -> upload -> finalize. Cleanup is separate from logical deletion.",
+      "item": [
+        {
+          "name": "Get drive quota and usage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/my_drive_usage",
+            "description": "Get drive quota and usage",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reserve sample upload - captures file/path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/reserve_drive_upload",
+            "description": "Reserve sample upload - captures file/path",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_name\": \"postman-sample.txt\",\n  \"p_mime_type\": \"text/plain\",\n  \"p_size_bytes\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200 && pm.response.code<300){const data=pm.response.json();const row=Array.isArray(data)?data[0]:data;if(row){pm.environment.set(\"file_id\",row.file_id);pm.environment.set(\"drive_bucket\",row.bucket);pm.environment.set(\"storage_path\",row.storage_path);}}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload 10-byte sample to reserved path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain",
+                "type": "text"
+              },
+              {
+                "key": "x-upsert",
+                "value": "true",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/storage/v1/object/{{drive_bucket}}/{{storage_path}}",
+            "description": "Run Reserve sample upload first. Body is exactly CloudLynk followed by LF (10 bytes). For another file reserve its exact size, choose a binary body and the matching MIME type. For files over 6 MB use the documented Supabase TUS workflow.",
+            "body": {
+              "mode": "raw",
+              "raw": "CloudLynk\n",
+              "options": {
+                "raw": {
+                  "language": "text"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finalize upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/finalize_drive_upload",
+            "description": "Finalize upload",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_file_id\": \"{{file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List my ready files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/files?status=eq.ready&select=id,name,mime_type,category,size_bytes,storage_path,created_at&order=created_at.desc&limit=50&offset=0",
+            "description": "List my ready files"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List pending uploads",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/files?status=eq.pending&select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "List pending uploads"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create signed download URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/storage/v1/object/sign/{{drive_bucket}}/{{storage_path}}",
+            "description": "Create signed download URL",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiresIn\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200&&pm.response.code<300){const data=pm.response.json();const url=data.signedURL||data.signedUrl;if(url){const base=pm.environment.get(\"base_url\");pm.environment.set(\"download_url\",url.startsWith(\"http\")?url:base+(url.startsWith(\"/storage/v1/\")?\"\":\"/storage/v1\")+(url.startsWith(\"/\")?\"\":\"/\")+url);}}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download file using signed URL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{download_url}}",
+            "description": "Send within 60 seconds of generating the URL. No Authorization or apikey headers are sent; the URL carries the signature.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Subscriptions and attribution",
+      "description": "Provider secrets stay on the server. No service-role key is needed in Postman.",
+      "item": [
+        {
+          "name": "Verify or restore Google Play purchase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/verify-play-receipt",
+            "description": "Requires a real Play purchase token, matching configured product and Google service account. The Billing flow must have supplied profiles.play_account_id as obfuscatedAccountId. Fake tokens do not grant access.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{product_id}}\",\n  \"purchaseToken\": \"{{purchase_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/subscriptions?select=id,product_id,status,is_trial,paid_until,verified_at,latest_order_id&order=created_at.desc",
+            "description": "My subscriptions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record installation without tracking consent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/track-install",
+            "description": "Record installation without tracking consent",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"android\",\n  \"installationId\": \"{{installation_id}}\",\n  \"trackingConsent\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Record consented installation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/track-install",
+            "description": "Replace extinfo with complete real Android device information before testing Meta delivery. This request stores explicit consent; no conversion is sent by this request.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"android\",\n  \"installationId\": \"{{installation_id}}\",\n  \"trackingConsent\": true,\n  \"installReferrer\": \"utm_source=meta&utm_campaign=postman&utm_content=encrypted-payload\",\n  \"metaAnonId\": \"{{meta_anon_id}}\",\n  \"extinfo\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Publisher workflow",
+      "description": "Grant publisher permission and publish the channel using admin requests. Video titles need a processed asset before review. Series containers do not.",
+      "item": [
+        {
+          "name": "Submit draft channel - captures channel_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/submit_channel",
+            "description": "Requires an active admin or a user already granted can_publish. Starts private and draft; admin must publish it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_name\": \"Postman channel\",\n  \"p_description\": \"API test channel\",\n  \"p_category\": \"Films\",\n  \"p_cover_url\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.id; if (value !== undefined && value !== null) pm.environment.set(\"channel_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create movie draft - captures title_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_title",
+            "description": "Create movie draft - captures title_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\",\n  \"p_kind\": \"movie\",\n  \"p_name\": \"Postman movie\",\n  \"p_description\": \"API test draft\",\n  \"p_min_age\": 0,\n  \"p_cover_url\": null,\n  \"p_countries\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.id; if (value !== undefined && value !== null) pm.environment.set(\"title_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create series draft - captures series_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_title",
+            "description": "Create series draft - captures series_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\",\n  \"p_kind\": \"series\",\n  \"p_name\": \"Postman series\",\n  \"p_description\": \"API test draft\",\n  \"p_min_age\": 0,\n  \"p_cover_url\": null,\n  \"p_countries\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.id; if (value !== undefined && value !== null) pm.environment.set(\"series_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create season - captures season_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_season",
+            "description": "Create season - captures season_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_series_id\": \"{{series_id}}\",\n  \"p_number\": 1,\n  \"p_name\": \"Season 1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.id; if (value !== undefined && value !== null) pm.environment.set(\"season_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create episode - captures episode_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_title",
+            "description": "Create episode - captures episode_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\",\n  \"p_kind\": \"episode\",\n  \"p_name\": \"Episode 1\",\n  \"p_description\": \"API test draft\",\n  \"p_min_age\": 0,\n  \"p_cover_url\": null,\n  \"p_countries\": [],\n  \"p_season_id\": \"{{season_id}}\",\n  \"p_episode_number\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.id; if (value !== undefined && value !== null) pm.environment.set(\"episode_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit movie draft metadata",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_title",
+            "description": "Edit movie draft metadata",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\",\n  \"p_kind\": \"movie\",\n  \"p_name\": \"Updated Postman movie\",\n  \"p_description\": \"API test draft\",\n  \"p_min_age\": 0,\n  \"p_cover_url\": null,\n  \"p_countries\": [],\n  \"p_title_id\": \"{{title_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Allocate resumable video upload - captures URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/generate-stream-upload",
+            "description": "Set video_size_bytes to the exact selected video size. The returned TUS URL is already allocated; use it as uploadUrl.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titleId\": \"{{title_id}}\",\n  \"sizeBytes\": {{video_size_bytes}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200&&pm.response.code<300){const data=pm.response.json();if(data.uploadURL)pm.environment.set(\"stream_upload_url\",data.uploadURL);if(data.assetId)pm.environment.set(\"stream_asset_id\",data.assetId);}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poll sanitized upload state",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/my_stream_uploads?title_id=eq.{{title_id}}&select=*",
+            "description": "Poll sanitized upload state"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit ready video for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/submit_title_review",
+            "description": "Submit ready video for review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit series container for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/submit_title_review",
+            "description": "Submit series container for review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{series_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit episode for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/submit_title_review",
+            "description": "Submit episode for review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{episode_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Stream binary upload (manual)",
+      "description": "Opt in with enable_stream_binary_upload=true and choose a real binary video file. Do not run this folder blindly.",
+      "item": [
+        {
+          "name": "HEAD existing Stream TUS upload",
+          "request": {
+            "method": "HEAD",
+            "header": [
+              {
+                "key": "Tus-Resumable",
+                "value": "1.0.0",
+                "type": "text"
+              }
+            ],
+            "url": "{{stream_upload_url}}",
+            "description": "HEAD existing Stream TUS upload",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200&&pm.response.code<300)pm.environment.set(\"stream_upload_offset\",pm.response.headers.get(\"Upload-Offset\")||\"0\");",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH video bytes to Stream TUS URL",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Tus-Resumable",
+                "value": "1.0.0",
+                "type": "text"
+              },
+              {
+                "key": "Upload-Offset",
+                "value": "{{stream_upload_offset}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/offset+octet-stream",
+                "type": "text"
+              }
+            ],
+            "url": "{{stream_upload_url}}",
+            "description": "Choose the actual video file in Body > binary. For a single request the file must fit the provider's chunk limit (200 MiB); the size must equal the allocation and offset must be 0. For chunked/resumed large uploads use a TUS client and valid chunk sizes. No Supabase credentials are sent to Cloudflare.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": null
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200&&pm.response.code<300)pm.environment.set(\"stream_upload_offset\",pm.response.headers.get(\"Upload-Offset\")||pm.environment.get(\"stream_upload_offset\"));",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get(\"enable_stream_binary_upload\") !== \"true\") { pm.execution.skipRequest(); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - Playback and library",
+      "description": "Signed playback requires published content, membership, correct age and any paid entitlement. Use episode_id instead of title_id when playing an episode.",
+      "item": [
+        {
+          "name": "Get signed playback URLs - captures hls_url",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/stream-playback-token",
+            "description": "Get signed playback URLs - captures hls_url",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titleId\": \"{{title_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data.hlsUrl; if (value !== undefined && value !== null) pm.environment.set(\"hls_url\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save watch progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/save_watch_progress",
+            "description": "Save watch progress",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\",\n  \"p_position_seconds\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My continue-watching list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/watch_progress?select=*&order=updated_at.desc&limit=50&offset=0",
+            "description": "My continue-watching list"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Save title bookmark",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/set_saved_title",
+            "description": "Save title bookmark",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\",\n  \"p_saved\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My saved titles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/saved_titles?select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "My saved titles"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Report title - captures report_id",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/report_title",
+            "description": "Report title - captures report_id",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\",\n  \"p_reason\": \"copyright\",\n  \"p_details\": \"Postman test report\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data; if (value !== undefined && value !== null) pm.environment.set(\"report_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My content reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/content_reports?select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "My content reports"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Notifications",
+      "description": "Use a real Expo token from the Android app. Raw FCM tokens are not accepted.",
+      "item": [
+        {
+          "name": "Register Expo push token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/register_push_token",
+            "description": "Register Expo push token",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_installation_id\": \"{{installation_id}}\",\n  \"p_token\": \"{{expo_push_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My registered push devices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/push_tokens?select=id,installation_id,enabled,updated_at",
+            "description": "My registered push devices"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My notices - captures latest notice_id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/notices?select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "My notices - captures latest notice_id"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code >= 200 && pm.response.code < 300) { const data = pm.response.json(); const value = data[0]?.id; if (value !== undefined && value !== null) pm.environment.set(\"notice_id\", value); }",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark notice read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/mark_notice_read",
+            "description": "Mark notice read",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_notice_id\": \"{{notice_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Unregister this installation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/unregister_push_token",
+            "description": "Unregister this installation",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_installation_id\": \"{{installation_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 - Admin operations (manual)",
+      "description": "Set enable_admin_operations=true and sign in an existing admin. These requests change publication, account standing, permissions or send real notices.",
+      "item": [
+        {
+          "name": "List admin-visible profiles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/profiles?select=id,display_name,role,account_status,can_publish&limit=50&offset=0",
+            "description": "List admin-visible profiles",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Grant publishing permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Grant publishing permission",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"publisher\",\n  \"p_id\": \"{{target_user_id}}\",\n  \"p_action\": \"grant\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke publishing permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Revoke publishing permission",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"publisher\",\n  \"p_id\": \"{{target_user_id}}\",\n  \"p_action\": \"revoke\",\n  \"p_reason\": \"Postman review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Publish channel",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"channel\",\n  \"p_id\": \"{{channel_id}}\",\n  \"p_action\": \"publish\",\n  \"p_visibility\": \"{{channel_visibility}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish movie/title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Publish movie/title",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"title\",\n  \"p_id\": \"{{title_id}}\",\n  \"p_action\": \"publish\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish series",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Publish series",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"title\",\n  \"p_id\": \"{{series_id}}\",\n  \"p_action\": \"publish\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish episode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Publish episode",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"title\",\n  \"p_id\": \"{{episode_id}}\",\n  \"p_action\": \"publish\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Reject title",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"title\",\n  \"p_id\": \"{{title_id}}\",\n  \"p_action\": \"reject\",\n  \"p_reason\": \"Please replace the source video\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hide title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Hide title",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"title\",\n  \"p_id\": \"{{title_id}}\",\n  \"p_action\": \"hide\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Hide channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Hide channel",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"channel\",\n  \"p_id\": \"{{channel_id}}\",\n  \"p_action\": \"hide\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resolve report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Resolve report",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"report\",\n  \"p_id\": \"{{report_id}}\",\n  \"p_action\": \"resolve\",\n  \"p_reason\": \"Reviewed\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dismiss report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Dismiss report",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"report\",\n  \"p_id\": \"{{report_id}}\",\n  \"p_action\": \"dismiss\",\n  \"p_reason\": \"No violation found\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Suspend account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Suspend account",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"account\",\n  \"p_id\": \"{{target_user_id}}\",\n  \"p_action\": \"suspend\",\n  \"p_reason\": \"Postman review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ban account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Ban account",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"account\",\n  \"p_id\": \"{{target_user_id}}\",\n  \"p_action\": \"ban\",\n  \"p_reason\": \"Postman review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restore account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/moderate_content",
+            "description": "Restore account",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_kind\": \"account\",\n  \"p_id\": \"{{target_user_id}}\",\n  \"p_action\": \"restore\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send notice to target user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/send_notice",
+            "description": "Send notice to target user",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_campaign_id\": \"{{campaign_id}}\",\n  \"p_user_ids\": [\n    \"{{target_user_id}}\"\n  ],\n  \"p_title\": \"CloudLynk update\",\n  \"p_body\": \"A test notice from Postman\",\n  \"p_data\": {\n    \"source\": \"postman\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List open reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/content_reports?status=eq.open&select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "List open reports",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read audit log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/audit_log?select=*&order=created_at.desc&limit=50&offset=0",
+            "description": "Read audit log",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Read worker runs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/job_runs?select=*&order=started_at.desc&limit=50&offset=0",
+            "description": "Read worker runs",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get(\"enable_admin_operations\") !== \"true\") { pm.execution.skipRequest(); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Health (read only)",
+      "description": "Private aggregate health endpoint; no service-role key required.",
+      "item": [
+        {
+          "name": "Backend health and queue counts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/backend-health",
+            "description": "Requires the server CRON_SECRET. HTTP 503 with status=degraded is expected before all schedules have run.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Healthy or explicitly degraded\", function () { pm.expect(pm.response.code).to.be.oneOf([200,503]); pm.expect(pm.response.json()).to.have.property(\"checked_at\"); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 - Scheduled workers (manual)",
+      "description": "Set enable_worker_requests=true only when intentionally processing queued work.",
+      "item": [
+        {
+          "name": "drive-cleanup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/drive-cleanup",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "subscription-reconcile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/subscription-reconcile",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "meta-capi-dispatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/meta-capi-dispatch",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "stream-reconcile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/stream-reconcile",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "media-cleanup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/media-cleanup",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "notification-dispatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/notification-dispatch",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "account-deletion-worker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "x-cron-secret",
+                "value": "{{cron_secret}}",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/account-deletion-worker",
+            "description": "Runs real queued work, including provider calls or erasure when applicable. Set the matching CRON_SECRET and use a test environment.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get(\"enable_worker_requests\") !== \"true\") { pm.execution.skipRequest(); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Provider webhooks (manual)",
+      "description": "Set enable_provider_webhooks=true. Real provider credentials and signatures are required.",
+      "item": [
+        {
+          "name": "Cloudflare Stream signed webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/stream-webhook",
+            "description": "Requires the real webhook signing secret configured on this backend, a real owned Stream UID and a modern Postman supporting pm.require. The pre-request script signs the exact expanded body; the backend re-reads Cloudflare, so this does not fabricate processing state.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uid\": \"{{stream_uid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const CryptoJS=pm.require(\"npm:crypto-js@4.2.0\");",
+                  "const secret=pm.environment.get(\"stream_webhook_secret\");",
+                  "if(!secret) throw new Error(\"Set stream_webhook_secret locally first\");",
+                  "const raw=pm.variables.replaceIn(pm.request.body.raw);",
+                  "pm.request.body.update(raw);",
+                  "const time=Math.floor(Date.now()/1000).toString();",
+                  "const signature=CryptoJS.HmacSHA256(time+\".\"+raw,secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({key:\"Webhook-Signature\",value:\"time=\"+time+\",sig1=\"+signature});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Google Play authenticated PubSub test notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/play-rtdn-webhook",
+            "description": "Requires a genuine Google OIDC bearer token matching RTDN_PUSH_AUDIENCE and RTDN_SERVICE_ACCOUNT_EMAIL. Supabase user/admin tokens do not authenticate this endpoint.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{pubsub_oidc_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": {\n    \"messageId\": \"{{$guid}}\",\n    \"data\": \"{{rtdn_message_data}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const data={version:\"1.0\",packageName:pm.environment.get(\"android_package\"),eventTimeMillis:Date.now().toString(),testNotification:{version:\"1.0\"}};",
+                  "pm.variables.set(\"rtdn_message_data\",btoa(JSON.stringify(data)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get(\"enable_provider_webhooks\") !== \"true\") { pm.execution.skipRequest(); }"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - Cleanup and account deletion (manual)",
+      "description": "Set enable_destructive_requests=true. This folder changes/removes data or signs out the user; account erasure is irreversible once processed.",
+      "item": [
+        {
+          "name": "Leave channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/leave_channel",
+            "description": "Leave channel",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_channel_id\": \"{{channel_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove bookmark",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/set_saved_title",
+            "description": "Remove bookmark",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\",\n  \"p_saved\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete drive file / cancel upload",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/delete_drive_file",
+            "description": "Delete drive file / cancel upload",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_file_id\": \"{{file_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reopen hidden or rejected title",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/reopen_title",
+            "description": "Reopen hidden or rejected title",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset draft Stream asset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/rest/v1/rpc/reset_stream_upload",
+            "description": "Reset draft Stream asset",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"p_title_id\": \"{{title_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request account erasure",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/functions/v1/delete-account",
+            "description": "Re-sign in within 15 minutes, set delete_confirmation=DELETE and enable_destructive_requests=true. Immediately restricts the current user and hides owned content; workers later erase it. Does not cancel Play billing.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmation\": \"{{delete_confirmation}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign out user (local session)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "apikey",
+                "value": "{{supabase_anon_key}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/v1/logout?scope=local",
+            "description": "Sign out user (local session)",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(pm.response.code>=200&&pm.response.code<300){[\"access_token\",\"refresh_token\",\"user_id\"].forEach(key=>pm.environment.unset(key));}",
+                  "pm.test(\"Successful response\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.environment.get(\"enable_destructive_requests\") !== \"true\") { pm.execution.skipRequest(); }"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

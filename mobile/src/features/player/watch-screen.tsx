@@ -21,10 +21,11 @@ import { accessMessages } from '@/domain/access';
 import { compactNumber } from '@/domain/format';
 import { colors as c } from '@/theme/tokens';
 import { VideoPlayback } from './video-playback';
+import LivePlayback from './live-playback';
 
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, demo, access, join, dispatch, requireIdentity, notify } = useWorkspace();
+  const { state, demo, access, join, dispatch, requireIdentity, bookmark } = useWorkspace();
   const video = state.videos.find((item) => item.id === id);
   const channel = state.channels.find((item) => item.id === video?.channelId);
   const [decision, setDecision] = useState<AccessDecision | null>(null);
@@ -52,6 +53,7 @@ export default function WatchScreen() {
     state.profile?.id,
     state.profile?.accountStatus,
     state.demoPlanId,
+    state.subscribed,
     state.joinedIds.join(','),
     attempt,
   ]);
@@ -84,6 +86,31 @@ export default function WatchScreen() {
     } else setAttempt((value) => value + 1);
   }
   const related = state.videos.filter((item) => item.id !== id && item.channelId === channel.id);
+  if (!demo && video.kind === 'series')
+    return (
+      <Screen title={video.title} back>
+        <Label>{video.description}</Label>
+        {(state.seasons ?? [])
+          .filter((season) => season.seriesId === id)
+          .sort((a, b) => a.number - b.number)
+          .map((season) => (
+            <View key={season.id} style={{ gap: 12 }}>
+              <Section title={`${season.number}. ${season.name}`} />
+              {state.videos
+                .filter((episode) => episode.seasonId === season.id)
+                .sort((a, b) => (a.episodeNumber ?? 0) - (b.episodeNumber ?? 0))
+                .map((episode) => (
+                  <VideoCard key={episode.id} video={episode} channel={channel} />
+                ))}
+            </View>
+          ))}
+        <Button
+          title={state.savedIds.includes(id) ? 'Remove saved series' : 'Save series'}
+          onPress={() => void bookmark(id).catch((cause: Error) => setError(cause.message))}
+        />
+        <ErrorNote message={error} />
+      </Screen>
+    );
   return (
     <Screen title="Now watching" back>
       <View style={{ gap: 16 }}>
@@ -93,6 +120,8 @@ export default function WatchScreen() {
             resumeAt={state.progress[id] ?? 0}
             onProgress={(seconds) => dispatch({ type: 'progress', id, seconds })}
           />
+        ) : decision === 'allowed' && !demo ? (
+          <LivePlayback titleId={id} />
         ) : (
           <View style={{ gap: 16 }}>
             <Image
@@ -104,8 +133,7 @@ export default function WatchScreen() {
               <LockKeyhole size={25} color={c.primary} />
               <Label style={{ textAlign: 'center' }}>
                 {decision
-                  ? accessMessages[decision] ||
-                    'Signed playback is not available from the current backend.'
+                  ? accessMessages[decision] || 'Playback is unavailable.'
                   : error
                     ? 'Access could not be verified.'
                     : 'Checking access…'}
@@ -131,22 +159,15 @@ export default function WatchScreen() {
         {error && <Button title="Retry" onPress={() => setAttempt((value) => value + 1)} />}
         <Heading style={{ fontSize: 26 }}>{video.title}</Heading>
         <Label style={{ color: c.muted, fontSize: 12 }}>
-          {compactNumber(video.views)} views · {video.duration} ·{' '}
-          {new Date(video.publishedAt).toLocaleDateString()}
+          {demo ? `${compactNumber(video.views)} views · ` : ''}
+          {video.duration} · {new Date(video.publishedAt).toLocaleDateString()}
         </Label>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <IconButton
             icon={Bookmark}
             label={state.savedIds.includes(id) ? 'Remove from saved videos' : 'Save video'}
             onPress={() => {
-              if (requireIdentity()) {
-                dispatch({ type: 'bookmark', id });
-                notify(
-                  state.savedIds.includes(id)
-                    ? 'Removed from saved videos'
-                    : 'Saved for a little later',
-                );
-              }
+              void bookmark(id).catch((cause: Error) => setError(cause.message));
             }}
           />
           <IconButton

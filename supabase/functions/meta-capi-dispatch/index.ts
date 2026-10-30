@@ -1,5 +1,6 @@
 import { json } from "../_shared/http.ts";
-import { dbCheck, endpoint, requireCron } from "../_shared/endpoint.ts";
+import { dbCheck } from "../_shared/endpoint.ts";
+import { scheduled } from "../_shared/scheduled.ts";
 import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
 import { sendCapiEvents } from "../_shared/metaCapi.ts";
 import { getOrder } from "../_shared/googlePlay.ts";
@@ -20,8 +21,7 @@ type OutboxRow = {
   };
 };
 
-Deno.serve(endpoint(async (req) => {
-  requireCron(req);
+Deno.serve(scheduled("meta-capi-dispatch", async () => {
   const claimed = await db.rpc("claim_meta_events", { p_limit: 10 });
   dbCheck(claimed.error);
   let sent = 0;

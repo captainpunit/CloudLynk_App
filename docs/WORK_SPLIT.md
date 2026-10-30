@@ -1,5 +1,9 @@
 # Work split: Member 1 and Member 2
 
+Backend update (26 October 2026): PR1–PR6 are implemented and verified locally.
+See `PR4_PR6_SETUP.md` for API handoff, production configuration, scheduled jobs
+and outstanding live provider/device acceptance. FR11 remains a later phase.
+
 Two developers. One rule: **Member 1 owns the server, Member 2 owns the app.**
 
 | Person | Owns | Folders |

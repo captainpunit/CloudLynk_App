@@ -1,15 +1,10 @@
 import { json } from "../_shared/http.ts";
-import {
-  dbCheck,
-  endpoint,
-  HttpError,
-  requireCron,
-} from "../_shared/endpoint.ts";
+import { dbCheck, HttpError } from "../_shared/endpoint.ts";
 import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
 import { syncSubscription } from "../_shared/subscriptions.ts";
+import { scheduled } from "../_shared/scheduled.ts";
 
-Deno.serve(endpoint(async (req) => {
-  requireCron(req);
+Deno.serve(scheduled("subscription-reconcile", async () => {
   const due = await db.from("subscriptions").select("id,purchase_token,user_id")
     .is("superseded_by", null).lte("next_check_at", new Date().toISOString())
     .order("next_check_at").limit(20);

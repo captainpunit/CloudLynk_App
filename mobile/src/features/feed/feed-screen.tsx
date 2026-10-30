@@ -7,22 +7,24 @@ import { VideoCard } from '@/components/media-card';
 import { useWorkspace } from '@/state/workspace-provider';
 
 export default function FeedScreen() {
-  const { state } = useWorkspace();
+  const { state, demo } = useWorkspace();
   const [tab, setTab] = useState('Following');
   const videos = state.videos.filter((video) => {
     const channel = state.channels.find((item) => item.id === video.channelId);
     return (
       channel?.status === 'published' &&
-      channel.visibility !== 'private' &&
+      (!demo || channel.visibility !== 'private') &&
       (tab === 'Saved'
         ? state.savedIds.includes(video.id)
-        : state.joinedIds.includes(video.channelId))
+        : tab === 'Continue watching'
+          ? (state.progress[video.id] ?? 0) > 0 && !(state.completedIds ?? []).includes(video.id)
+          : state.joinedIds.includes(video.channelId))
     );
   });
   return (
     <Screen title="Your daily dose." subtitle="Fresh stories from the creators you follow.">
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {['Following', 'Saved'].map((item) => (
+        {['Following', 'Saved', 'Continue watching'].map((item) => (
           <Pill key={item} title={item} selected={tab === item} onPress={() => setTab(item)} />
         ))}
       </View>

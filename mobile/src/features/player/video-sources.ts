@@ -8,5 +8,7 @@ export function playbackSource(uri: string): VideoSource {
     if (Platform.OS === 'web') return '/preview.webm';
     return require('../../../assets/video/flower.webm');
   }
-  return uri;
+  return uri.includes('/manifest/video.m3u8')
+    ? { uri, contentType: 'hls', useCaching: false }
+    : uri;
 }

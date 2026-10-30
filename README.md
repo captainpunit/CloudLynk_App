@@ -3,17 +3,21 @@
 **New frontend workspace:** start with [START_HERE.md](START_HERE.md), then open `mobile/`.
 Explore is the initial screen. The interactive preview runs without real credentials.
 See [frontend verification](docs/QA_RESULTS.md) and [integration handoff](docs/FRONTEND_HANDOFF.md)
-for what is tested and what still requires backend implementation.
+for test evidence, live API bindings and remaining provider acceptance checks.
 
 Android app for private cloud storage and subscription video channels, with
 backend support for Meta ads (app installs and subscriptions).
 
-Status: **PR1 and PR2 implemented; PR3 implemented locally**: profiles, channels and one access rule
+Status: **PR1–PR6 backend implemented locally**: profiles, channels and one access rule
 (`docs/api/access-policy.md`), and the private cloud drive with quota
 reservation and cleanup (`docs/api/drive.md`), plus plans, Play subscription
 verification/RTDN/reconciliation and consent-based Meta tracking.
-See `docs/PR3_SETUP.md` for deployment and provider acceptance checks;
-PR4 publisher/catalogue, PR5 playback and PR6 release features remain.
+Publisher/catalogue and moderation, signed playback and watch progress, push
+dispatch, queued account erasure and worker monitoring are also implemented.
+See `docs/PR3_SETUP.md` and `docs/PR4_PR6_SETUP.md` for deployment and provider
+acceptance checks. The mobile feature screens now bind to these APIs in live mode;
+see [frontend API bindings](docs/FRONTEND_API_BINDINGS.md). Production deployment
+and real provider/device acceptance remain separate release checks.
 
 ## Stack
 
@@ -48,6 +52,15 @@ cloudlynk/
       meta-capi-dispatch/     send queued events to Meta CAPI (scheduled)
       subscription-reconcile/ refresh subscription state (scheduled)
       drive-cleanup/          remove deleted and abandoned drive uploads (scheduled)
+      generate-stream-upload/ allocate private resumable video uploads
+      stream-webhook/         verify processing events and refresh provider state
+      stream-reconcile/       recover missed events and orphan allocations (scheduled)
+      stream-playback-token/  authorize and sign short-lived HLS/DASH URLs
+      media-cleanup/          remove retired or erased provider assets (scheduled)
+      notification-dispatch/ send Expo pushes and check receipts (scheduled)
+      delete-account/         request erasure after a recent sign-in
+      account-deletion-worker/ erase personal data and Auth identity (scheduled)
+      backend-health/        private queue and worker health aggregates
     tests/database/           pgTAP tests (access matrix, drive), run with `supabase test db`
     tests/functions/          provider mapping, attribution and subscription workflow tests
   docs/

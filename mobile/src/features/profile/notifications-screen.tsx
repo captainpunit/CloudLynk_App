@@ -4,12 +4,14 @@ import { View } from 'react-native';
 import { Label, Screen, Surface } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
+import LiveNotifications from './live-notifications';
 
 export default function NotificationsScreen() {
   const { state, dispatch, demo } = useWorkspace();
   useEffect(() => {
-    dispatch({ type: 'notices-read' });
-  }, [dispatch]);
+    if (demo) dispatch({ type: 'notices-read' });
+  }, [dispatch, demo]);
+  if (!demo) return <LiveNotifications />;
   const notices = [
     {
       icon: Bell,

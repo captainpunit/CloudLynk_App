@@ -14,13 +14,16 @@ import { router } from 'expo-router';
 import { createDemoWorkspace } from '@/data/demo/seed';
 import {
   checkLiveAccess,
-  fetchCatalogue,
-  fetchIdentity,
+  fetchLiveWorkspace,
+  emptyLiveWorkspace,
   setLiveMembership,
 } from '@/data/live/cloud-api';
 import { accessMessages, demoAccess } from '@/domain/access';
 import type { AccessDecision, Workspace } from '@/domain/models';
 import { env } from '@/lib/env';
+import { supabase } from '@/lib/supabase';
+import { call } from '@/data/live/backend';
+import { AppState } from 'react-native';
 import { parseWorkspace } from './persistence';
 import { workspaceReducer, type ReportAction, type WorkspaceAction } from './workspace-reducer';
 
@@ -35,12 +38,13 @@ interface WorkspaceContextValue {
   requireIdentity: () => boolean;
   join: (id: string, joined: boolean) => Promise<void>;
   access: (id: string, action: 'join' | 'watch') => Promise<AccessDecision>;
+  bookmark: (id: string) => Promise<void>;
   toast: string | null;
   notify: (message: string) => void;
 }
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 const storageKey = 'cloudlynk.demo-workspace.v1';
-const liveSeed = { ...createDemoWorkspace(), channels: [], videos: [] };
+const liveSeed = emptyLiveWorkspace();
 
 /** State is hydrated before persistence starts, so launch never overwrites saved data. */
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
@@ -51,23 +55,58 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const writeQueue = useRef(Promise.resolve());
+  const generation = useRef(0);
+  const identityId = useRef<string | null>(null);
+  const pendingBookmarks = useRef(new Set<string>());
   const refresh = useCallback(async () => {
+    const request = ++generation.current;
     setRefreshing(true);
     setError(null);
     try {
       if (!demo) {
-        const [channels, identity] = await Promise.all([fetchCatalogue(), fetchIdentity()]);
-        dispatch({ type: 'catalogue', channels });
-        dispatch({ type: 'identity', ...identity });
+        const snapshot = await fetchLiveWorkspace();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (
+          request === generation.current &&
+          (session?.user.id ?? null) === (snapshot.profile?.id ?? null)
+        ) {
+          identityId.current = snapshot.profile?.id ?? null;
+          dispatch({ type: 'hydrate', value: snapshot });
+        }
       }
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : 'Could not load your workspace. Try again.',
-      );
+      if (request === generation.current)
+        setError(
+          cause instanceof Error ? cause.message : 'Could not load your workspace. Try again.',
+        );
     } finally {
-      setRefreshing(false);
+      if (request === generation.current) setRefreshing(false);
     }
   }, [demo]);
+  useEffect(() => {
+    if (demo) return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user.id ?? null;
+      if (userId !== identityId.current || event === 'SIGNED_OUT') {
+        ++generation.current;
+        identityId.current = userId;
+        dispatch({ type: 'hydrate', value: emptyLiveWorkspace() });
+      }
+      if (event !== 'TOKEN_REFRESHED') setTimeout(() => void refresh(), 0);
+    });
+    const foreground = AppState.addEventListener('change', (status) => {
+      if (status === 'active') void refresh();
+    });
+    return () => {
+      subscription.unsubscribe();
+      foreground.remove();
+      ++generation.current;
+    };
+  }, [demo, refresh]);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -123,6 +162,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
   async function join(id: string, joined: boolean) {
     if (!requireIdentity()) return;
+    const userId = state.profile?.id;
     if (joined) {
       const decision = await access(id, 'join');
       if (decision === 'subscription_required') {
@@ -131,9 +171,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       if (decision !== 'allowed') throw new Error(accessMessages[decision]);
     }
-    if (!demo) await setLiveMembership(id, joined);
+    if (!demo) {
+      const before = await supabase.auth.getSession();
+      if (before.data.session?.user.id !== userId) return;
+      await setLiveMembership(id, joined);
+      const after = await supabase.auth.getSession();
+      if (after.data.session?.user.id !== userId) return;
+    }
     dispatch({ type: 'membership', id, joined });
     setToast(joined ? 'Channel added to your collection' : 'You left the channel');
+  }
+  async function bookmark(id: string) {
+    if (!requireIdentity() || pendingBookmarks.current.has(id)) return;
+    const saved = state.savedIds.includes(id);
+    pendingBookmarks.current.add(id);
+    const userId = state.profile?.id;
+    try {
+      if (!demo) {
+        await call('set_saved_title', { p_title_id: id, p_saved: !saved });
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user.id !== userId) return;
+      }
+      dispatch({ type: 'bookmark-set', id, saved: !saved });
+      setToast(saved ? 'Removed from saved videos' : 'Saved for a little later');
+    } finally {
+      pendingBookmarks.current.delete(id);
+    }
   }
   return (
     <WorkspaceContext
@@ -148,6 +213,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         requireIdentity,
         join,
         access,
+        bookmark,
         toast,
         notify: setToast,
       }}

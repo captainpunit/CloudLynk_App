@@ -5,7 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { Button, ErrorNote, Field, Label, Pill, Screen } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { createId } from '@/domain/format';
-import { unavailable } from '@/data/live/cloud-api';
+import { call } from '@/data/live/backend';
 import { colors as c } from '@/theme/tokens';
 
 export default function ReportScreen() {
@@ -14,7 +14,9 @@ export default function ReportScreen() {
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
   const [error, setError] = useState<string | null>(null);
-  function submit() {
+  const [busy, setBusy] = useState(false);
+  async function submit() {
+    if (busy) return;
     if (!requireIdentity()) return;
     if (!reason) {
       setError('Choose a reason for your report.');
@@ -24,23 +26,37 @@ export default function ReportScreen() {
       setError('This video is no longer available.');
       return;
     }
+    setBusy(true);
+    setError(null);
     try {
-      if (!demo) unavailable('Content reporting');
-      dispatch({
-        type: 'report-added',
-        report: {
-          id: createId('report'),
-          videoId,
-          reason,
-          details: details.trim(),
-          createdAt: new Date().toISOString(),
-          resolved: false,
-        },
-      });
-      notify('Report recorded in your local preview workspace');
+      if (!demo)
+        await call('report_title', {
+          p_title_id: videoId,
+          p_reason: reason,
+          p_details: details.trim(),
+        });
+      else
+        dispatch({
+          type: 'report-added',
+          report: {
+            id: createId('report'),
+            videoId,
+            reason,
+            details: details.trim(),
+            createdAt: new Date().toISOString(),
+            resolved: false,
+          },
+        });
+      notify(
+        demo
+          ? 'Report recorded in your local preview workspace'
+          : 'Report submitted for moderation.',
+      );
       goBackOrExplore();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not submit report.');
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -68,11 +84,15 @@ export default function ReportScreen() {
         maxLength={1000}
       />
       <ErrorNote message={error} />
-      <Button title={demo ? 'Record preview report' : 'Submit report'} onPress={submit} />
+      <Button
+        title={demo ? 'Record preview report' : 'Submit report'}
+        loading={busy}
+        onPress={() => void submit()}
+      />
       <Label style={{ color: c.muted, fontSize: 11 }}>
         {demo
           ? 'Preview reports are saved on this device and can be reviewed using the local admin simulation.'
-          : 'Reports are reviewed by the moderation team when the live endpoint is available.'}
+          : 'Your report will be reviewed by the moderation team.'}
       </Label>
     </Screen>
   );

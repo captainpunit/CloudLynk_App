@@ -26,6 +26,7 @@ export default function ExploreScreen() {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category>('All');
   const [sort, setSort] = useState('For you');
+  const [kind, setKind] = useState('all');
   const channels = state.channels.filter(
     (channel) => channel.status === 'published' && channel.visibility !== 'private',
   );
@@ -38,13 +39,16 @@ export default function ExploreScreen() {
             channel?.status === 'published' &&
             channel.visibility !== 'private' &&
             (category === 'All' || channel.category === category) &&
-            `${video.title} ${channel.name}`.toLowerCase().includes(query.toLowerCase())
+            (kind === 'all' || video.kind === kind) &&
+            `${video.title} ${video.description} ${channel.name}`
+              .toLowerCase()
+              .includes(query.toLowerCase())
           );
         })
         .sort((a, b) =>
           sort === 'Popular' ? b.views - a.views : b.publishedAt.localeCompare(a.publishedAt),
         ),
-    [state.channels, state.videos, category, query, sort],
+    [state.channels, state.videos, category, query, sort, kind],
   );
   const hero = videos[0];
   return (
@@ -136,6 +140,18 @@ export default function ExploreScreen() {
             ))}
           </ScrollView>
           <ErrorNote message={error} />
+          {!demo && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {['all', 'movie', 'series', 'episode'].map((value) => (
+                <Pill
+                  key={value}
+                  title={value === 'all' ? 'All titles' : value}
+                  selected={kind === value}
+                  onPress={() => setKind(value)}
+                />
+              ))}
+            </View>
+          )}
           {hero && !query && category === 'All' && (
             <Pressable
               accessibilityRole="button"
@@ -172,7 +188,7 @@ export default function ExploreScreen() {
                     fontWeight: '800',
                   }}
                 >
-                  THE WEEKEND EDIT
+                  {demo ? 'THE WEEKEND EDIT' : 'LATEST STORY'}
                 </Label>
               </View>
               <View style={{ position: 'absolute', bottom: 22, left: 22, right: 22, gap: 10 }}>
@@ -192,7 +208,9 @@ export default function ExploreScreen() {
                   }}
                 >
                   <Label style={{ color: '#DAE1DD', fontSize: 11 }}>
-                    The Great Outdoors · {hero.duration} min
+                    {demo
+                      ? `The Great Outdoors · ${hero.duration} min`
+                      : `${channels.find((channel) => channel.id === hero.channelId)?.name ?? 'CloudLynk'} · ${hero.duration}`}
                   </Label>
                   <View
                     style={{
@@ -215,7 +233,7 @@ export default function ExploreScreen() {
             <View
               style={{ flexDirection: 'row', gap: 18, borderBottomWidth: 1, borderColor: c.line }}
             >
-              {['For you', 'Latest', 'Popular'].map((item) => (
+              {['For you', 'Latest', ...(demo ? ['Popular'] : [])].map((item) => (
                 <Pressable
                   key={item}
                   onPress={() => setSort(item)}

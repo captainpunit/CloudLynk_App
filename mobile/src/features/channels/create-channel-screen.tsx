@@ -7,42 +7,57 @@ import { categories, covers } from '@/data/demo/seed';
 import { createId, validateChannel } from '@/domain/format';
 import type { Category } from '@/domain/models';
 import { useWorkspace } from '@/state/workspace-provider';
-import { unavailable } from '@/data/live/cloud-api';
+import { call } from '@/data/live/backend';
 import { colors as c } from '@/theme/tokens';
 
 export default function CreateChannelScreen() {
-  const { state, demo, dispatch, requireIdentity, notify } = useWorkspace();
+  const { state, demo, dispatch, requireIdentity, notify, refresh } = useWorkspace();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Category>('Travel');
   const [error, setError] = useState<string | null>(null);
-  function submit() {
+  const [busy, setBusy] = useState(false);
+  const [cover, setCover] = useState('');
+  async function submit() {
+    if (busy) return;
     const validation = validateChannel(name, description);
     if (validation) {
       setError(validation);
       return;
     }
     if (!requireIdentity() || !state.profile) return;
+    setBusy(true);
+    setError(null);
     try {
-      if (!demo) unavailable('Creator channel submission');
-      dispatch({
-        type: 'channel-added',
-        channel: {
-          id: createId('channel'),
-          name: name.trim(),
-          description: description.trim(),
-          category,
-          cover: covers.forest,
-          ownerId: state.profile.id,
-          status: 'pending',
-          visibility: 'private',
-          members: 0,
-        },
-      });
+      if (!demo) {
+        await call('submit_channel', {
+          p_name: name.trim(),
+          p_description: description.trim(),
+          p_category: category,
+          ...(cover ? { p_cover_url: cover } : {}),
+        });
+        await refresh();
+      } else
+        dispatch({
+          type: 'channel-added',
+          channel: {
+            id: createId('channel'),
+            name: name.trim(),
+            description: description.trim(),
+            category,
+            cover: covers.forest,
+            ownerId: state.profile.id,
+            status: 'pending',
+            visibility: 'private',
+            members: 0,
+          },
+        });
       notify('Channel submitted for admin review');
       goBackOrExplore();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not submit your channel.');
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -72,6 +87,14 @@ export default function CreateChannelScreen() {
         maxLength={500}
       />
       <Label style={{ fontWeight: '700' }}>Choose a category</Label>
+      {!demo && (
+        <Field
+          label="Cover image URL (https, optional)"
+          value={cover}
+          onChangeText={setCover}
+          autoCapitalize="none"
+        />
+      )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {categories
           .filter((item) => item !== 'All')
@@ -92,7 +115,7 @@ export default function CreateChannelScreen() {
         </Label>
       </Surface>
       <ErrorNote message={error} />
-      <Button title="Submit for review" onPress={submit} />
+      <Button title="Submit for review" loading={busy} onPress={() => void submit()} />
     </Screen>
   );
 }

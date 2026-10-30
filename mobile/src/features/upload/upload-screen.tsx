@@ -9,9 +9,9 @@ import { Button, ErrorNote, Field, Label, Screen, Surface } from '@/components/u
 import { useWorkspace } from '@/state/workspace-provider';
 import { createId, fileSize } from '@/domain/format';
 import type { DriveFile } from '@/domain/models';
-import { unavailable } from '@/data/live/cloud-api';
 import { colors as c } from '@/theme/tokens';
 import { covers } from '@/data/demo/seed';
+import LiveUploadScreen from './live-upload-screen';
 
 const maxFileBytes = 250 * 1024 ** 2;
 export default function UploadScreen() {
@@ -25,6 +25,7 @@ export default function UploadScreen() {
   const channel = state.channels.find(
     (item) => item.id === channelId && item.ownerId === state.profile?.id,
   );
+  if (!demo) return <LiveUploadScreen channelId={channelId} />;
   async function pick() {
     setError(null);
     try {
@@ -65,12 +66,6 @@ export default function UploadScreen() {
     setError(null);
     setProgress(0);
     try {
-      if (!demo)
-        unavailable(
-          channelId
-            ? 'Publisher upload URLs and processing'
-            : 'Quota reservation and cloud uploads',
-        );
       const files: DriveFile[] = [];
       for (const [index, asset] of assets.entries()) {
         const id = createId('file');

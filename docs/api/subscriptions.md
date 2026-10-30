@@ -55,6 +55,7 @@ failures return 503 and safely retry on verification, RTDN or reconciliation.
 | 403 | `account_restricted`, `purchase_owner_mismatch` | Show restriction or switch to original account |
 | 409 | `purchase_owner_missing` | Billing must supply the account ID; retain token for support/retry |
 | 409 | `subscription_sync_busy` | Retry with backoff |
+| 410 | `purchase_erased` | Do not retry an erased account's old purchase token |
 | 413 | `request_too_large` | Correct input |
 | 503 | `temporarily_unavailable` | Retain purchase token and retry; never unlock locally |
 

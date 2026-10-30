@@ -67,6 +67,9 @@ async function fixture(options: {
         calls.push(route);
         let result: unknown;
         switch (route) {
+          case "is_erased_purchase_token":
+            result = false;
+            break;
           case "claim_subscription_sync":
             result = options.busy ? null : "lease-1";
             break;
@@ -180,7 +183,7 @@ Deno.test("unassociated provider purchase is never claimed from caller input", a
 Deno.test("busy token does not read Google or release another lease", async () => {
   const f = await fixture({ busy: true });
   await rejected(() => f.sync("token", user), "subscription_sync_busy");
-  assert(f.calls.length === 1);
+  assert(f.calls.length === 2);
 });
 Deno.test("unknown product cannot grant entitlement", async () => {
   const f = await fixture({ missingPlan: true });

@@ -9,7 +9,7 @@ import { Button, EmptyState, ErrorNote, Field, Label, Screen, Surface } from '@/
 import { fileSize } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
-import { unavailable } from '@/data/live/cloud-api';
+import LiveFile from './live-file';
 
 export default function FileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,6 +18,7 @@ export default function FileScreen() {
   const [name, setName] = useState(file?.name ?? '');
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  if (!demo) return <LiveFile id={id} />;
   if (!file)
     return (
       <Screen title="File" back>
@@ -40,7 +41,6 @@ export default function FileScreen() {
   }
   function rename() {
     try {
-      if (!demo) unavailable('Cloud file rename');
       if (!name.trim()) throw new Error('The name cannot be empty.');
       dispatch({ type: 'file-renamed', id, name: name.trim() });
       notify('File renamed');
@@ -49,10 +49,6 @@ export default function FileScreen() {
     }
   }
   function remove() {
-    if (!demo) {
-      setError('Cloud deletion requires the storage API.');
-      return;
-    }
     dispatch({ type: 'file-deleted', id });
     goBackOrExplore();
     notify('Removed from your preview workspace');

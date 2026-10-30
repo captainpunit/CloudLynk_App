@@ -36,6 +36,11 @@ Deno.serve(endpoint(async (req) => {
   const voided = notification.voidedPurchaseNotification;
   const token = sub?.purchaseToken ?? voided?.purchaseToken;
   if (sub || voided) requiredString(token, 4096);
+  if (token) {
+    const erased = await db.rpc("is_erased_purchase_token", { p_token: token });
+    dbCheck(erased.error);
+    if (erased.data) return json({ ignored: true });
+  }
   if (!sub && !voided && !notification.testNotification) {
     return json({ ignored: true });
   }

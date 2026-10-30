@@ -15,6 +15,9 @@ export function createSubscriptionSync(deps: {
     callerId?: string,
     expectedProduct?: string,
   ) {
+    const erased = await db.rpc("is_erased_purchase_token", { p_token: token });
+    dbCheck(erased.error);
+    if (erased.data) throw new HttpError(410, "purchase_erased");
     const claim = await db.rpc("claim_subscription_sync", { p_token: token });
     dbCheck(claim.error);
     if (!claim.data) throw new HttpError(409, "subscription_sync_busy");

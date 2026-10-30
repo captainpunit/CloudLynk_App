@@ -12,22 +12,28 @@ import {
   PlusBadge,
   Screen,
   Section,
+  Field,
+  Surface,
 } from '@/components/ui';
 import { VideoCard } from '@/components/media-card';
 import { compactNumber } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
+import { call } from '@/data/live/backend';
 
 export default function ChannelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, join, demo } = useWorkspace();
+  const { state, join, demo, refresh } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteUser, setInviteUser] = useState('');
   const channel = state.channels.find((item) => item.id === id);
   if (
     !channel ||
-    channel.status !== 'published' ||
-    (channel.visibility === 'private' && channel.ownerId !== state.profile?.id)
+    (channel.status !== 'published' &&
+      channel.ownerId !== state.profile?.id &&
+      state.profile?.role !== 'admin') ||
+    (demo && channel.visibility === 'private' && channel.ownerId !== state.profile?.id)
   )
     return (
       <Screen title="Channel" back>
@@ -85,7 +91,8 @@ export default function ChannelScreen() {
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           <Users size={14} color={c.muted} />
           <Label style={{ color: c.muted, fontSize: 12 }}>
-            {compactNumber(channel.members)} members · {channel.category}
+            {demo ? `${compactNumber(channel.members)} members · ` : ''}
+            {channel.category}
           </Label>
         </View>
         <Label style={{ color: c.muted }}>{channel.description}</Label>
@@ -95,7 +102,7 @@ export default function ChannelScreen() {
         title={
           joined
             ? 'Leave channel'
-            : premium && !state.demoPlanId
+            : premium && !(demo ? state.demoPlanId : state.subscribed)
               ? 'Unlock with Plus'
               : 'Join channel'
         }
@@ -104,6 +111,35 @@ export default function ChannelScreen() {
         onPress={() => void toggleJoin()}
       />
       <Section title="Inside this channel" />
+      {!demo && (channel.ownerId === state.profile?.id || state.profile?.role === 'admin') && (
+        <Surface>
+          <Button
+            title="Manage titles and uploads"
+            onPress={() => router.push({ pathname: '/upload', params: { channelId: id } })}
+          />
+          <Field
+            label="Invite a user to this private channel (user ID)"
+            value={inviteUser}
+            onChangeText={setInviteUser}
+            autoCapitalize="none"
+          />
+          <Button
+            title="Send invitation"
+            loading={busy}
+            onPress={() => {
+              setBusy(true);
+              setError(null);
+              void call('invite_channel_member', { p_channel_id: id, p_user_id: inviteUser.trim() })
+                .then(async () => {
+                  setInviteUser('');
+                  await refresh();
+                })
+                .catch((cause: Error) => setError(cause.message))
+                .finally(() => setBusy(false));
+            }}
+          />
+        </Surface>
+      )}
       {state.videos
         .filter((video) => video.channelId === id)
         .map((video) => (
