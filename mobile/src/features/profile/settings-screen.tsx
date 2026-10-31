@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, View } from 'react-native';
 import { router } from 'expo-router';
 import { LogOut, ShieldCheck } from 'lucide-react-native';
@@ -22,6 +22,11 @@ export default function SettingsScreen() {
   const [confirmation, setConfirmation] = useState('');
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // The profile can arrive after this screen mounts (sign-in, refresh); show its saved values.
+  useEffect(() => {
+    setName(state.profile?.name ?? '');
+    setBirthDate(state.profile?.birthDate ?? '');
+  }, [state.profile?.id, state.profile?.name, state.profile?.birthDate]);
   function openSubscriptions() {
     void Linking.openURL(env.subscriptionsUrl).catch(() => setError('Google Play could not open.'));
   }
