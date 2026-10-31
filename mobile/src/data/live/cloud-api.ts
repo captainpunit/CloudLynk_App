@@ -1,14 +1,14 @@
 import { supabase } from '@/lib/supabase';
-import { env } from '@/lib/env';
+import { configured } from '@/lib/env';
 import type { AccessDecision, Channel, Profile, Workspace } from '@/domain/models';
 import { mapChannel, mapFile, mapTitle, readPages } from './mapping';
 import { checked } from './backend';
 
 /** Adapter for the implemented PR1 contract. Never sends a service-role key. */
 export function assertLiveConfiguration() {
-  if (!env.supabaseUrl || !env.supabaseAnonKey || env.supabaseUrl.includes('YOUR-PROJECT')) {
+  if (!configured) {
     throw new Error(
-      'Live mode needs your Supabase project URL and public anon key. See mobile/README.md.',
+      'The app needs your Supabase project URL and public anon key. See mobile/README.md.',
     );
   }
 }
@@ -87,9 +87,7 @@ export function emptyLiveWorkspace(): Workspace {
     joinedIds: [],
     savedIds: [],
     progress: {},
-    demoPlanId: null,
     noticesRead: true,
-    reports: [],
     seasons: [],
     notices: [],
     subscribed: false,

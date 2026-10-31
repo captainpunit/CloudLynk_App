@@ -24,14 +24,13 @@ node --dns-result-order=ipv4first node_modules/expo/bin/cli start --go --android
 
 ## Read the code in this order
 
-1. `src/domain/models.ts` — the app's vocabulary: channel, video, file, profile and plan.
-2. `src/domain/access.ts` — the preview access rules and user-facing denial messages.
-3. `src/data/demo/seed.ts` — illustrative content. No real users or purchases.
+1. `src/domain/models.ts` — the app's vocabulary: channel, video, file and profile.
+2. `src/domain/access.ts` — user-facing messages for the server's access decisions.
+3. `src/data/live/` — Supabase reads, RPC calls and edge-function adapters.
 4. `src/state/workspace-reducer.ts` — pure, testable state transitions.
-5. `src/state/workspace-provider.tsx` — hydration, ordered persistence and live refresh.
+5. `src/state/workspace-provider.tsx` — backend hydration, refresh and account switching.
 6. `src/features/<feature>/` — one screen responsibility per file.
-7. `src/data/live/cloud-api.ts` — implemented Supabase contract calls.
-8. `app/` — route-only entry points and navigation layouts.
+7. `app/` — route-only entry points and navigation layouts.
 
 ```text
 app/                        Expo Router entry points
@@ -44,7 +43,6 @@ src/
     ui/                     Typography, actions, forms, feedback, layout
     media-card.tsx          Shared video/channel cards
   data/
-    demo/                   Sample catalogue
     live/                   Server adapters
   domain/                   Models, access policy, validation, formatting
   features/
@@ -54,30 +52,19 @@ src/
   theme/                    Shared design tokens
   lib/                      Environment, Supabase and generated database types
   services/                 Billing, resumable uploads, notifications and consent adapters
-assets/video/               Bundled preview playback clip
 ```
 
-## Preview mode (default)
+## Configuration
 
-No environment file is required. State is saved under `cloudlynk.demo-workspace.v1`.
-Android copies selected files to its app document directory. Browser file references are session-local;
-use Android for durable file-copy tests. Removing a library entry leaves the original device file unchanged.
-Resetting the workspace clears metadata; orphaned preview copies can be removed by clearing the app's storage.
+The app has no offline/demo mode and bundles no sample content: every channel, title,
+plan, price, quota, file and notice comes from the backend. Copy `.env.example` to `.env`
+and provide the project's public Supabase URL and anon key. Without them the app still
+opens, but sign-in and data loading report the missing configuration.
 
-Creator channels start **private and pending**. To review them, open You → Settings → Use admin preview,
-then return to You → Admin review workspace. This is explicitly a local role simulation.
-An admin does not automatically receive premium viewing access.
-
-## Live mode
-
-Copy `.env.example` to `.env`, provide the newer project's public Supabase URL/anon key, and set:
-
-```dotenv
-EXPO_PUBLIC_DATA_MODE=live
-```
-
-The existing PR1 contract supports catalogue reads, email authentication, profile name edits, membership RPCs,
-and server access checks. Empty live catalogues stay empty; sample videos are never substituted for live data.
+`EXPO_PUBLIC_APP_LINK_HOST` sets the host used in shared links (`https://<host>/open/...`);
+when empty, shared links use the app scheme. Channel categories are free text chosen by
+owners; Explore builds its category filter from the loaded catalogue.
+Empty catalogues stay empty.
 
 Live Android Premium now reads active backend plans and matching Google Play offers,
 starts purchases with `profiles.play_account_id`, and verifies purchase/restore
@@ -97,7 +84,7 @@ Storage, catalogue/series/episodes, creator publishing, signed playback, watch
 progress/bookmarks, notifications and moderation are now connected to the backend.
 See [the API binding inventory](../docs/FRONTEND_API_BINDINGS.md) for exact calls,
 test evidence and provider acceptance requirements. Live drive controls follow
-the existing flat-file contract; folders and rename remain preview-only.
+the existing flat-file contract (no folders or rename).
 
 Enable push from Notifications. Configure `EXPO_PUBLIC_EAS_PROJECT_ID`, the
 production Android FCM v1 credentials in EAS, and rebuild after installing
@@ -144,8 +131,9 @@ and minimum touch dimensions. Android system back navigation and safe areas are 
 
 ## Checks and release boundaries
 
-Policy/reducer tests cover guest restrictions, restricted accounts, premium membership, admin access,
-private/unpublished channels, idempotent membership, folder descendants and preview-plan removal.
+Unit tests cover the reducer, row mapping, purchase policy, deletion flow and TUS uploads.
+Access rules are enforced by the server (`my_access`, RLS); `npm run test:api` exercises them
+against a local Supabase stack.
 See `../docs/FRONTEND_HANDOFF.md` for integration and QA status.
 
 The SDK 57 dependency tree currently reports upstream npm audit advisories. A forced audit fix would downgrade

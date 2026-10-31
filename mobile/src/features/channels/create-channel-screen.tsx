@@ -3,21 +3,23 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Radio } from 'lucide-react-native';
 import { Button, ErrorNote, Field, Label, Pill, Screen, Surface } from '@/components/ui';
-import { categories, covers } from '@/data/demo/seed';
-import { createId, validateChannel } from '@/domain/format';
-import type { Category } from '@/domain/models';
+import { validateChannel } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { call } from '@/data/live/backend';
 import { colors as c } from '@/theme/tokens';
 
 export default function CreateChannelScreen() {
-  const { state, demo, dispatch, requireIdentity, notify, refresh } = useWorkspace();
+  const { state, requireIdentity, notify, refresh } = useWorkspace();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Category>('Travel');
+  const [category, setCategory] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [cover, setCover] = useState('');
+  // Suggest categories already used in the catalogue; owners may also type a new one.
+  const categories = [
+    ...new Set(state.channels.map((channel) => channel.category).filter((item) => item !== 'All')),
+  ];
   async function submit() {
     if (busy) return;
     const validation = validateChannel(name, description);
@@ -25,33 +27,25 @@ export default function CreateChannelScreen() {
       setError(validation);
       return;
     }
+    if (category.trim().length > 40) {
+      setError('Keep the category under 40 characters.');
+      return;
+    }
+    if (cover && !/^https:\/\/\S+$/.test(cover.trim())) {
+      setError('The cover image must be an https:// URL.');
+      return;
+    }
     if (!requireIdentity() || !state.profile) return;
     setBusy(true);
     setError(null);
     try {
-      if (!demo) {
-        await call('submit_channel', {
-          p_name: name.trim(),
-          p_description: description.trim(),
-          p_category: category,
-          ...(cover ? { p_cover_url: cover } : {}),
-        });
-        await refresh();
-      } else
-        dispatch({
-          type: 'channel-added',
-          channel: {
-            id: createId('channel'),
-            name: name.trim(),
-            description: description.trim(),
-            category,
-            cover: covers.forest,
-            ownerId: state.profile.id,
-            status: 'pending',
-            visibility: 'private',
-            members: 0,
-          },
-        });
+      await call('submit_channel', {
+        p_name: name.trim(),
+        p_description: description.trim(),
+        ...(category.trim() ? { p_category: category.trim() } : {}),
+        ...(cover.trim() ? { p_cover_url: cover.trim() } : {}),
+      });
+      await refresh();
       notify('Channel submitted for admin review');
       goBackOrExplore();
     } catch (cause) {
@@ -86,19 +80,22 @@ export default function CreateChannelScreen() {
         onChangeText={setDescription}
         maxLength={500}
       />
-      <Label style={{ fontWeight: '700' }}>Choose a category</Label>
-      {!demo && (
-        <Field
-          label="Cover image URL (https, optional)"
-          value={cover}
-          onChangeText={setCover}
-          autoCapitalize="none"
-        />
-      )}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {categories
-          .filter((item) => item !== 'All')
-          .map((item) => (
+      <Field
+        label="Cover image URL (https, optional)"
+        value={cover}
+        onChangeText={setCover}
+        autoCapitalize="none"
+      />
+      <Field
+        label="Category (optional)"
+        placeholder="What is it about?"
+        value={category}
+        onChangeText={setCategory}
+        maxLength={40}
+      />
+      {categories.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {categories.map((item) => (
             <Pill
               key={item}
               title={item}
@@ -106,7 +103,8 @@ export default function CreateChannelScreen() {
               onPress={() => setCategory(item)}
             />
           ))}
-      </View>
+        </View>
+      )}
       <Surface>
         <Label style={{ fontWeight: '700', fontSize: 13 }}>A quick review before you go live</Label>
         <Label style={{ color: c.muted, fontSize: 12 }}>

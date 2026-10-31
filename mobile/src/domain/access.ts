@@ -1,22 +1,6 @@
-import type { AccessDecision, Channel, Profile } from './models';
+import type { AccessDecision } from './models';
 
-/** Demo policy only. Live access always comes from the server's my_access RPC. */
-export function demoAccess(
-  profile: Profile | null,
-  channel: Channel | undefined,
-  subscribed: boolean,
-  joined: boolean,
-  action: 'join' | 'watch',
-): AccessDecision {
-  if (!profile) return 'sign_in_required';
-  if (profile.accountStatus !== 'active') return 'account_restricted';
-  if (!channel || channel.status !== 'published') return 'channel_unavailable';
-  if (channel.visibility === 'private' && channel.ownerId !== profile.id) return 'private_channel';
-  if (channel.visibility === 'premium' && !subscribed) return 'subscription_required';
-  if (action === 'watch' && !joined) return 'membership_required';
-  return 'allowed';
-}
-
+/** Access decisions always come from the server's my_access RPC; these are their messages. */
 export const accessMessages: Record<AccessDecision, string> = {
   allowed: '',
   sign_in_required: 'Sign in to keep your channels, files and watchlist together.',

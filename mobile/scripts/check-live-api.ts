@@ -126,7 +126,6 @@ async function main() {
         p_min_age: 0,
       }),
     );
-    check(mapTitle(movie).demoUri === undefined, 'live title has no sample playback URI');
     assert.equal(
       (
         await admin.from('stream_assets').insert({

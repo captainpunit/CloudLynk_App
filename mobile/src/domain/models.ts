@@ -1,5 +1,6 @@
 /** UI-facing models. Database rows are mapped at the repository boundary. */
-export type Category = 'All' | 'Travel' | 'Films' | 'Design' | 'Music' | 'Lifestyle';
+/** Free text chosen by the channel owner (backend: 1-40 characters). */
+export type Category = string;
 export type ChannelVisibility = 'public' | 'premium' | 'private';
 export type ChannelStatus = 'published' | 'pending' | 'hidden';
 export interface Channel {
@@ -22,8 +23,6 @@ export interface Video {
   duration: string;
   views: number;
   publishedAt: string;
-  /** Only demo assets use a public URI. Production playback requires a signed token. */
-  demoUri?: string;
   kind?: 'movie' | 'series' | 'episode';
   seasonId?: string;
   episodeNumber?: number;
@@ -50,14 +49,6 @@ export interface Profile {
   canPublish?: boolean;
   birthDate?: string;
 }
-export interface Plan {
-  id: string;
-  name: string;
-  priceLabel: string;
-  period: string;
-  storageLabel: string;
-  featured?: boolean;
-}
 export interface Workspace {
   version: 1;
   profile: Profile | null;
@@ -67,9 +58,7 @@ export interface Workspace {
   savedIds: string[];
   files: DriveFile[];
   progress: Record<string, number>;
-  demoPlanId: string | null;
   noticesRead: boolean;
-  reports: ContentReport[];
   seasons?: { id: string; seriesId: string; number: number; name: string }[];
   driveUsage?: {
     used_bytes: number;
@@ -81,14 +70,6 @@ export interface Workspace {
   notices?: { id: string; title: string; body: string; readAt: string | null; createdAt: string }[];
   subscribed?: boolean;
   completedIds?: string[];
-}
-export interface ContentReport {
-  id: string;
-  videoId: string;
-  reason: string;
-  details: string;
-  createdAt: string;
-  resolved: boolean;
 }
 export type AccessDecision =
   | 'allowed'

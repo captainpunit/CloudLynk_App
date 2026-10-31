@@ -5,9 +5,9 @@ import { useWorkspace } from '@/state/workspace-provider';
 import { enablePush, pushEnabled } from './push';
 
 export function PushLifecycle() {
-  const { demo, state, refresh } = useWorkspace();
+  const { state, refresh } = useWorkspace();
   useEffect(() => {
-    if (demo || !state.profile || Platform.OS !== 'android') return;
+    if (!state.profile || Platform.OS !== 'android') return;
     let disposed = false;
     const subscriptions: { remove(): void }[] = [];
     void (async () => {
@@ -49,6 +49,6 @@ export function PushLifecycle() {
       disposed = true;
       subscriptions.forEach((subscription) => subscription.remove());
     };
-  }, [demo, state.profile?.id, refresh]);
+  }, [state.profile?.id, refresh]);
   return null;
 }

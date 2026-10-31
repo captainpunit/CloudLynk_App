@@ -25,7 +25,7 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
   return (
     <SafeAreaProvider>
       <Screen title="Let’s try that again.">
-        <Label>We couldn’t open this screen. Your saved workspace is still on this device.</Label>
+        <Label>We couldn’t open this screen. Your account data is safe on the server.</Label>
         <Button
           title="Try again"
           onPress={() => {
