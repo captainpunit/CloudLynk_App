@@ -26,7 +26,7 @@ import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 
 export default function ProfileScreen() {
-  const { state, demo, requireIdentity } = useWorkspace();
+  const { state, requireIdentity } = useWorkspace();
   const ownChannels = state.channels.filter((channel) => channel.ownerId === state.profile?.id);
   return (
     <Screen
@@ -59,13 +59,7 @@ export default function ProfileScreen() {
                 {state.profile.email}
               </Label>
               <Label style={{ color: c.primary, fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                {(demo ? state.demoPlanId : state.subscribed)
-                  ? demo
-                    ? 'CLOUDLYNK PLUS · PREVIEW'
-                    : 'CLOUDLYNK PLUS'
-                  : demo
-                    ? 'PREVIEW MEMBER'
-                    : 'CLOUDLYNK MEMBER'}
+                {state.subscribed ? 'CLOUDLYNK PLUS' : 'CLOUDLYNK MEMBER'}
               </Label>
             </View>
           </View>
@@ -85,9 +79,7 @@ export default function ProfileScreen() {
       >
         <Sparkles size={25} color={c.accent} />
         <Heading style={{ color: c.white, fontSize: 24 }}>
-          {(demo ? state.demoPlanId : state.subscribed)
-            ? 'A little more, all yours.'
-            : 'Good things come with Plus.'}
+          {state.subscribed ? 'A little more, all yours.' : 'Good things come with Plus.'}
         </Heading>
         <Label style={{ color: '#B9CBC4', fontSize: 12 }}>
           Exclusive channels and room for your biggest ideas. ↗
@@ -205,11 +197,6 @@ export default function ProfileScreen() {
         <Label style={{ fontWeight: '600', fontSize: 13 }}>Settings & account</Label>
         <ChevronRight size={18} color={c.muted} />
       </Pressable>
-      {demo && (
-        <Label style={{ color: c.muted, textAlign: 'center', fontSize: 11 }}>
-          Preview workspace. No real cloud account or purchases.
-        </Label>
-      )}
     </Screen>
   );
 }

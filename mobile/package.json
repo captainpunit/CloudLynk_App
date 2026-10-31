@@ -8,7 +8,7 @@
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
     "doctor": "npx expo-doctor",
-    "test": "node --import tsx --test src/domain/__tests__/access.test.ts src/state/__tests__/workspace-reducer.test.ts src/state/__tests__/persistence.test.ts src/services/billing/__tests__/purchase-policy.test.ts src/services/account/__tests__/deletion-flow.test.ts src/data/live/__tests__/mapping.test.ts src/services/uploads/__tests__/tus.test.ts",
+    "test": "node --import tsx --test src/domain/__tests__/access.test.ts src/state/__tests__/workspace-reducer.test.ts src/services/billing/__tests__/purchase-policy.test.ts src/services/account/__tests__/deletion-flow.test.ts src/data/live/__tests__/mapping.test.ts src/services/uploads/__tests__/tus.test.ts",
     "test:api": "node --import tsx scripts/check-live-api.ts",
     "format": "prettier --write app src plugins app.config.ts tsconfig.json react-native.config.js",
     "format:check": "prettier --check app src plugins app.config.ts tsconfig.json react-native.config.js",

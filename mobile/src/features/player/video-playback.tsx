@@ -4,7 +4,6 @@ import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Button, Label } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
-import { playbackSource } from './video-sources';
 
 /** Mounted only after access checks. Progress listeners are released on unmount. */
 export function VideoPlayback({
@@ -23,7 +22,9 @@ export function VideoPlayback({
   const resumed = useRef(false);
   const callback = useRef(onProgress);
   callback.current = onProgress;
-  const source = playbackSource(uri);
+  const source = uri.includes('/manifest/video.m3u8')
+    ? ({ uri, contentType: 'hls', useCaching: false } as const)
+    : uri;
   const player = useVideoPlayer(source, (instance) => {
     instance.timeUpdateEventInterval = 5;
     instance.muted = Platform.OS === 'web';

@@ -6,8 +6,6 @@ import { ArrowUpRight, Play } from 'lucide-react-native';
 import { Label, PlusBadge } from './ui';
 import { colors as c } from '@/theme/tokens';
 import type { Channel, Video } from '@/domain/models';
-import { compactNumber } from '@/domain/format';
-import { useWorkspace } from '@/state/workspace-provider';
 
 export function VideoCard({
   video,
@@ -78,14 +76,12 @@ export function VideoCard({
         {video.title}
       </Label>
       <Label numberOfLines={1} style={{ color: c.muted, fontSize: 11, lineHeight: 16 }}>
-        {channel?.name ?? 'CloudLynk'}
-        {video.demoUri ? ` · ${compactNumber(video.views)} views` : ''}
+        {channel?.name ?? ''}
       </Label>
     </Pressable>
   );
 }
 export function ChannelCard({ channel }: { channel: Channel }) {
-  const { demo } = useWorkspace();
   return (
     <Pressable
       accessibilityRole="button"
@@ -114,10 +110,7 @@ export function ChannelCard({ channel }: { channel: Channel }) {
         </Label>
         {channel.visibility === 'premium' && <PlusBadge />}
       </View>
-      <Label style={{ color: c.muted, fontSize: 11 }}>
-        {channel.category}
-        {demo ? ` · ${compactNumber(channel.members)} members` : ''}
-      </Label>
+      <Label style={{ color: c.muted, fontSize: 11 }}>{channel.category}</Label>
     </Pressable>
   );
 }

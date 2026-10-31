@@ -5,7 +5,6 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowUpRight, Bell, Cloud, Play, Sparkles } from 'lucide-react-native';
-import { categories } from '@/data/demo/seed';
 import { ChannelCard, VideoCard } from '@/components/media-card';
 import {
   EmptyState,
@@ -19,17 +18,21 @@ import {
 } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
 import { useWorkspace } from '@/state/workspace-provider';
-import type { Category } from '@/domain/models';
 
 export default function ExploreScreen() {
-  const { state, demo, error, refreshing, refresh } = useWorkspace();
+  const { state, error, refreshing, refresh } = useWorkspace();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<Category>('All');
+  const [category, setCategory] = useState('All');
   const [sort, setSort] = useState('For you');
   const [kind, setKind] = useState('all');
   const channels = state.channels.filter(
     (channel) => channel.status === 'published' && channel.visibility !== 'private',
   );
+  // Categories are owner-chosen text, so the filter list comes from the loaded catalogue.
+  const categories = [
+    'All',
+    ...new Set(channels.map((channel) => channel.category).filter((item) => item !== 'All')),
+  ];
   const videos = useMemo(
     () =>
       state.videos
@@ -45,10 +48,8 @@ export default function ExploreScreen() {
               .includes(query.toLowerCase())
           );
         })
-        .sort((a, b) =>
-          sort === 'Popular' ? b.views - a.views : b.publishedAt.localeCompare(a.publishedAt),
-        ),
-    [state.channels, state.videos, category, query, sort, kind],
+        .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
+    [state.channels, state.videos, category, query, kind],
   );
   const hero = videos[0];
   return (
@@ -140,18 +141,16 @@ export default function ExploreScreen() {
             ))}
           </ScrollView>
           <ErrorNote message={error} />
-          {!demo && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {['all', 'movie', 'series', 'episode'].map((value) => (
-                <Pill
-                  key={value}
-                  title={value === 'all' ? 'All titles' : value}
-                  selected={kind === value}
-                  onPress={() => setKind(value)}
-                />
-              ))}
-            </View>
-          )}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {['all', 'movie', 'series', 'episode'].map((value) => (
+              <Pill
+                key={value}
+                title={value === 'all' ? 'All titles' : value}
+                selected={kind === value}
+                onPress={() => setKind(value)}
+              />
+            ))}
+          </View>
           {hero && !query && category === 'All' && (
             <Pressable
               accessibilityRole="button"
@@ -188,7 +187,7 @@ export default function ExploreScreen() {
                     fontWeight: '800',
                   }}
                 >
-                  {demo ? 'THE WEEKEND EDIT' : 'LATEST STORY'}
+                  LATEST STORY
                 </Label>
               </View>
               <View style={{ position: 'absolute', bottom: 22, left: 22, right: 22, gap: 10 }}>
@@ -208,9 +207,7 @@ export default function ExploreScreen() {
                   }}
                 >
                   <Label style={{ color: '#DAE1DD', fontSize: 11 }}>
-                    {demo
-                      ? `The Great Outdoors · ${hero.duration} min`
-                      : `${channels.find((channel) => channel.id === hero.channelId)?.name ?? 'CloudLynk'} · ${hero.duration}`}
+                    {`${channels.find((channel) => channel.id === hero.channelId)?.name ?? ''} · ${hero.duration}`}
                   </Label>
                   <View
                     style={{
@@ -233,7 +230,7 @@ export default function ExploreScreen() {
             <View
               style={{ flexDirection: 'row', gap: 18, borderBottomWidth: 1, borderColor: c.line }}
             >
-              {['For you', 'Latest', ...(demo ? ['Popular'] : [])].map((item) => (
+              {['For you', 'Latest'].map((item) => (
                 <Pressable
                   key={item}
                   onPress={() => setSort(item)}
@@ -334,11 +331,6 @@ export default function ExploreScreen() {
                 <ArrowUpRight color={c.accent} size={26} />
               </Pressable>
             </>
-          )}
-          {demo && (
-            <Label style={{ textAlign: 'center', color: c.muted, fontSize: 10 }}>
-              Preview workspace · Sample content · Changes saved on this device
-            </Label>
           )}
         </View>
       </ScrollView>

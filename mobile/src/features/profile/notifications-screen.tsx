@@ -1,51 +1,78 @@
-import { useEffect } from 'react';
-import { Bell, CheckCircle2, ShieldCheck } from 'lucide-react-native';
-import { View } from 'react-native';
-import { Label, Screen, Surface } from '@/components/ui';
+import { useState } from 'react';
+import { Button, EmptyState, ErrorNote, Label, Screen, Surface } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
-import { colors as c } from '@/theme/tokens';
-import LiveNotifications from './live-notifications';
+import { call } from '@/data/live/backend';
+import { disablePush, enablePush } from '@/services/notifications/push';
 
 export default function NotificationsScreen() {
-  const { state, dispatch, demo } = useWorkspace();
-  useEffect(() => {
-    if (demo) dispatch({ type: 'notices-read' });
-  }, [dispatch, demo]);
-  if (!demo) return <LiveNotifications />;
-  const notices = [
-    {
-      icon: Bell,
-      title: 'A new place for your favourite things',
-      body: 'Explore creators, join a channel, and make a little space for your files.',
-    },
-    ...(state.demoPlanId
-      ? [
-          {
-            icon: CheckCircle2,
-            title: 'Your preview Plus is active',
-            body: 'Plus channels are unlocked in this local workspace. No real subscription was purchased.',
-          },
-        ]
-      : []),
-    {
-      icon: ShieldCheck,
-      title: 'You decide what you share',
-      body: demo
-        ? 'Preview files stay on your device. Cloud backup is not enabled in preview mode.'
-        : 'Private access is checked by the server before joining or watching.',
-    },
-  ];
+  const { state, requireIdentity, refresh, refreshing, error: loadError, notify } = useWorkspace();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function run(work: () => Promise<unknown>, message: string) {
+    if (busy || !requireIdentity()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await work();
+      await refresh();
+      notify(message);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <Screen title="A little update." subtitle="The things you’ll want to know." back>
-      {notices.map(({ icon: Icon, title, body }) => (
-        <Surface key={title}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Icon color={c.primary} size={22} />
-            <Label style={{ fontWeight: '700', flex: 1 }}>{title}</Label>
-          </View>
-          <Label style={{ color: c.muted, fontSize: 13 }}>{body}</Label>
-        </Surface>
-      ))}
+    <Screen title="Your notifications" back>
+      <ErrorNote message={error ?? loadError} />
+      {!state.profile ? (
+        <Button title="Sign in to view notifications" onPress={requireIdentity} />
+      ) : (
+        <>
+          <Button
+            title="Enable device notifications"
+            disabled={busy}
+            onPress={() => void run(() => enablePush(), 'Device notifications enabled.')}
+          />
+          <Button
+            title="Disable device notifications"
+            variant="outline"
+            disabled={busy}
+            onPress={() => void run(disablePush, 'Device notifications disabled.')}
+          />
+          <Button
+            title="Refresh inbox"
+            variant="soft"
+            loading={refreshing || busy}
+            onPress={() => void refresh()}
+          />
+          {!(state.notices ?? []).length && (
+            <EmptyState title="All caught up" body="Your account notices will appear here." />
+          )}
+          {(state.notices ?? []).map((notice) => (
+            <Surface key={notice.id}>
+              <Label style={{ fontWeight: '700' }}>{notice.title}</Label>
+              <Label>{notice.body}</Label>
+              <Label>
+                {new Date(notice.createdAt).toLocaleString()} · {notice.readAt ? 'Read' : 'Unread'}
+              </Label>
+              {!notice.readAt && (
+                <Button
+                  title="Mark read"
+                  variant="soft"
+                  disabled={busy}
+                  onPress={() =>
+                    void run(
+                      () => call('mark_notice_read', { p_notice_id: notice.id }),
+                      'Notice marked read.',
+                    )
+                  }
+                />
+              )}
+            </Surface>
+          ))}
+        </>
+      )}
     </Screen>
   );
 }

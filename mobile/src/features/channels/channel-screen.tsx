@@ -16,14 +16,14 @@ import {
   Surface,
 } from '@/components/ui';
 import { VideoCard } from '@/components/media-card';
-import { compactNumber } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { call } from '@/data/live/backend';
+import { env, shareUrl } from '@/lib/env';
 
 export default function ChannelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, join, demo, refresh } = useWorkspace();
+  const { state, join, refresh } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteUser, setInviteUser] = useState('');
@@ -32,8 +32,7 @@ export default function ChannelScreen() {
     !channel ||
     (channel.status !== 'published' &&
       channel.ownerId !== state.profile?.id &&
-      state.profile?.role !== 'admin') ||
-    (demo && channel.visibility === 'private' && channel.ownerId !== state.profile?.id)
+      state.profile?.role !== 'admin')
   )
     return (
       <Screen title="Channel" back>
@@ -69,7 +68,7 @@ export default function ChannelScreen() {
           label="Share channel"
           onPress={() => {
             void Share.share({
-              message: `Discover ${channel.name} on CloudLynk: https://cloudlynk.app/open/channel/${id}`,
+              message: `Discover ${channel.name} on ${env.appName}: ${shareUrl(`/open/channel/${id}`)}`,
             }).catch(() => setError('Sharing is unavailable on this device.'));
           }}
         />
@@ -90,10 +89,7 @@ export default function ChannelScreen() {
         </Label>
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           <Users size={14} color={c.muted} />
-          <Label style={{ color: c.muted, fontSize: 12 }}>
-            {demo ? `${compactNumber(channel.members)} members · ` : ''}
-            {channel.category}
-          </Label>
+          <Label style={{ color: c.muted, fontSize: 12 }}>{channel.category}</Label>
         </View>
         <Label style={{ color: c.muted }}>{channel.description}</Label>
       </View>
@@ -102,7 +98,7 @@ export default function ChannelScreen() {
         title={
           joined
             ? 'Leave channel'
-            : premium && !(demo ? state.demoPlanId : state.subscribed)
+            : premium && !state.subscribed
               ? 'Unlock with Plus'
               : 'Join channel'
         }
@@ -111,7 +107,7 @@ export default function ChannelScreen() {
         onPress={() => void toggleJoin()}
       />
       <Section title="Inside this channel" />
-      {!demo && (channel.ownerId === state.profile?.id || state.profile?.role === 'admin') && (
+      {(channel.ownerId === state.profile?.id || state.profile?.role === 'admin') && (
         <Surface>
           <Button
             title="Manage titles and uploads"
@@ -150,11 +146,6 @@ export default function ChannelScreen() {
           title="First story coming soon"
           body="This channel has not published any videos yet."
         />
-      )}
-      {demo && (
-        <Label style={{ fontSize: 11, color: c.muted }}>
-          Sample channel and editorial artwork. Preview video footage is illustrative.
-        </Label>
       )}
     </Screen>
   );

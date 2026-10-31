@@ -6,14 +6,14 @@ import { Button, ErrorNote, Field, Label, Screen, Surface } from '@/components/u
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
-import { createDemoWorkspace } from '@/data/demo/seed';
+import { env } from '@/lib/env';
 import { invokeBackend } from '@/data/live/invoke-backend';
 import { requestVerifiedDeletion } from '@/services/account/deletion-flow';
 import { unregisterPush } from '@/services/notifications/push';
 import { captureInstallAttribution } from '@/services/attribution/installReferrer';
 
 export default function SettingsScreen() {
-  const { state, demo, dispatch, notify } = useWorkspace();
+  const { state, dispatch, notify } = useWorkspace();
   const [name, setName] = useState(state.profile?.name ?? '');
   const [birthDate, setBirthDate] = useState(state.profile?.birthDate ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +22,9 @@ export default function SettingsScreen() {
   const [confirmation, setConfirmation] = useState('');
   const [password, setPassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  function openSubscriptions() {
+    void Linking.openURL(env.subscriptionsUrl).catch(() => setError('Google Play could not open.'));
+  }
   async function saveName() {
     if (!state.profile || name.trim().length < 2) {
       setError('Use a name with at least 2 characters.');
@@ -30,23 +33,21 @@ export default function SettingsScreen() {
     setBusy(true);
     setError(null);
     try {
-      if (!demo) {
-        if (
-          birthDate &&
-          (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
-            Number.isNaN(Date.parse(birthDate)) ||
-            new Date(birthDate).toISOString().slice(0, 10) !== birthDate ||
-            Date.parse(birthDate) > Date.now())
-        )
-          throw new Error('Enter a valid date of birth as YYYY-MM-DD.');
-        const { error: failure } = await supabase
-          .from('profiles')
-          .update({ display_name: name.trim(), birth_date: birthDate || null })
-          .eq('id', state.profile.id);
-        if (failure) throw failure;
-        const current = await supabase.auth.getSession();
-        if (current.data.session?.user.id !== state.profile.id) return;
-      }
+      if (
+        birthDate &&
+        (!/^\d{4}-\d{2}-\d{2}$/.test(birthDate) ||
+          Number.isNaN(Date.parse(birthDate)) ||
+          new Date(birthDate).toISOString().slice(0, 10) !== birthDate ||
+          Date.parse(birthDate) > Date.now())
+      )
+        throw new Error('Enter a valid date of birth as YYYY-MM-DD.');
+      const { error: failure } = await supabase
+        .from('profiles')
+        .update({ display_name: name.trim(), birth_date: birthDate || null })
+        .eq('id', state.profile.id);
+      if (failure) throw failure;
+      const current = await supabase.auth.getSession();
+      if (current.data.session?.user.id !== state.profile.id) return;
       dispatch({
         type: 'identity',
         profile: { ...state.profile, name: name.trim(), birthDate: birthDate || undefined },
@@ -60,12 +61,10 @@ export default function SettingsScreen() {
   }
   async function signOut() {
     try {
-      if (!demo) {
-        await unregisterPush();
-        const { error: failure } = await supabase.auth.signOut();
-        if (failure) throw failure;
-      }
-      dispatch({ type: 'identity', profile: null, joinedIds: demo ? state.joinedIds : [] });
+      await unregisterPush();
+      const { error: failure } = await supabase.auth.signOut();
+      if (failure) throw failure;
+      dispatch({ type: 'identity', profile: null, joinedIds: [] });
       router.replace('/');
       notify('You’re signed out');
     } catch (cause) {
@@ -77,37 +76,29 @@ export default function SettingsScreen() {
     setError(null);
     setDeleting(true);
     try {
-      if (demo) {
-        dispatch({ type: 'hydrate', value: createDemoWorkspace() });
-      } else {
-        if (!state.profile?.email || confirmation !== 'DELETE' || !password) {
-          throw new Error('Enter your password and type DELETE to confirm.');
-        }
-        const email = state.profile.email;
-        await requestVerifiedDeletion(state.profile.id, confirmation, {
-          reauthenticate: async () => {
-            const signedIn = await supabase.auth.signInWithPassword({ email, password });
-            setPassword('');
-            if (signedIn.error) throw new Error('Password verification failed. Please try again.');
-            return signedIn.data.user.id;
-          },
-          request: (value) => invokeBackend('delete-account', { confirmation: value }),
-          signOut: async () => {
-            try {
-              await unregisterPush();
-            } finally {
-              await supabase.auth.signOut({ scope: 'local' });
-            }
-          },
-        });
-        dispatch({ type: 'identity', profile: null, joinedIds: [] });
+      if (!state.profile?.email || confirmation !== 'DELETE' || !password) {
+        throw new Error('Enter your password and type DELETE to confirm.');
       }
+      const email = state.profile.email;
+      await requestVerifiedDeletion(state.profile.id, confirmation, {
+        reauthenticate: async () => {
+          const signedIn = await supabase.auth.signInWithPassword({ email, password });
+          setPassword('');
+          if (signedIn.error) throw new Error('Password verification failed. Please try again.');
+          return signedIn.data.user.id;
+        },
+        request: (value) => invokeBackend('delete-account', { confirmation: value }),
+        signOut: async () => {
+          try {
+            await unregisterPush();
+          } finally {
+            await supabase.auth.signOut({ scope: 'local' });
+          }
+        },
+      });
+      dispatch({ type: 'identity', profile: null, joinedIds: [] });
       router.replace('/');
-      notify(
-        demo
-          ? 'Local preview workspace reset'
-          : 'Account deletion requested. Your account is restricted while deletion completes.',
-      );
+      notify('Account deletion requested. Your account is restricted while deletion completes.');
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Could not delete account.');
     } finally {
@@ -119,55 +110,27 @@ export default function SettingsScreen() {
     <Screen title="Make it your own." subtitle="Your account, your preferences." back>
       {state.profile && (
         <Surface>
-          {!demo && (
-            <>
-              <Label>Share your invitation ID with a channel owner for a private invitation.</Label>
-              <Label selectable>{state.profile.id}</Label>
-            </>
-          )}
+          <Label>Share your invitation ID with a channel owner for a private invitation.</Label>
+          <Label selectable>{state.profile.id}</Label>
           <Field label="Display name" value={name} onChangeText={setName} maxLength={60} />
-          {!demo && (
-            <Field
-              label="Date of birth (YYYY-MM-DD, for age-rated content)"
-              value={birthDate}
-              onChangeText={setBirthDate}
-              maxLength={10}
-              placeholder="YYYY-MM-DD"
-            />
-          )}
+          <Field
+            label="Date of birth (YYYY-MM-DD, for age-rated content)"
+            value={birthDate}
+            onChangeText={setBirthDate}
+            maxLength={10}
+            placeholder="YYYY-MM-DD"
+          />
           <Button title="Save profile" onPress={() => void saveName()} loading={busy} />
         </Surface>
       )}
       <Surface>
         <Label style={{ fontWeight: '700' }}>Your membership</Label>
-        <Label style={{ color: c.muted }}>
-          {demo
-            ? state.demoPlanId
-              ? 'Preview Plus is active on this device.'
-              : 'You’re exploring the free preview.'
-            : 'Manage paid subscriptions securely in Google Play.'}
-        </Label>
+        <Label style={{ color: c.muted }}>Manage paid subscriptions securely in Google Play.</Label>
         <Button
-          title={demo ? 'Manage preview plan' : 'Manage Google Play subscription'}
+          title="Manage Google Play subscription"
           variant="soft"
-          onPress={() =>
-            demo
-              ? router.push('/premium')
-              : void Linking.openURL('https://play.google.com/store/account/subscriptions').catch(
-                  () => setError('Google Play could not open.'),
-                )
-          }
+          onPress={openSubscriptions}
         />
-        {demo && state.demoPlanId && (
-          <Button
-            title="End preview Plus"
-            variant="outline"
-            onPress={() => {
-              dispatch({ type: 'demo-plan', id: null });
-              notify('Preview Plus ended. Premium access is locked again.');
-            }}
-          />
-        )}
       </Surface>
       <Surface>
         <ShieldCheck color={c.primary} size={24} />
@@ -177,7 +140,7 @@ export default function SettingsScreen() {
           and verified subscription events for advertising measurement. Advertising SDKs do not
           start automatically.
         </Label>
-        {!demo && state.profile && (
+        {state.profile && (
           <>
             <Button
               title="Allow advertising measurement"
@@ -208,28 +171,6 @@ export default function SettingsScreen() {
           </>
         )}
       </Surface>
-      {demo && state.profile && (
-        <Surface>
-          <Label style={{ fontWeight: '700' }}>Preview role</Label>
-          <Label style={{ fontSize: 12, color: c.muted }}>
-            Test the admin review flow locally. This switch never changes a real server role.
-          </Label>
-          <Button
-            title={state.profile.role === 'admin' ? 'Use member preview' : 'Use admin preview'}
-            variant="soft"
-            onPress={() => {
-              dispatch({
-                type: 'identity',
-                profile: {
-                  ...state.profile!,
-                  role: state.profile?.role === 'admin' ? 'member' : 'admin',
-                },
-              });
-              notify('Preview role updated');
-            }}
-          />
-        </Surface>
-      )}
       <ErrorNote message={error} />
       {state.profile && (
         <Button
@@ -241,57 +182,47 @@ export default function SettingsScreen() {
         />
       )}
       <Button
-        title={demo ? 'Reset local preview workspace' : 'Delete account'}
+        title="Delete account"
         variant="outline"
-        disabled={deleting || (!demo && !state.profile)}
+        disabled={deleting || !state.profile}
         onPress={() => setDeleteConfirm(!deleteConfirm)}
       />
       {deleteConfirm && (
         <Surface>
-          <Label style={{ fontWeight: '700' }}>
-            {demo ? 'Reset this preview?' : 'Delete your account?'}
-          </Label>
+          <Label style={{ fontWeight: '700' }}>Delete your account?</Label>
           <Label style={{ color: c.muted, fontSize: 12 }}>
-            {demo
-              ? 'Your local library, memberships and preview plan will be cleared. Your original device files are not changed.'
-              : 'This permanently removes your account, files and uploaded videos. Deletion runs in the background. It does not cancel Google Play billing. Cancel your subscription in Google Play first to stop future charges.'}
+            This permanently removes your account, files and uploaded videos. Deletion runs in the
+            background. It does not cancel Google Play billing. Cancel your subscription in Google
+            Play first to stop future charges.
           </Label>
-          {!demo && (
-            <>
-              <Button
-                title="Manage Google Play subscription"
-                variant="outline"
-                disabled={deleting}
-                onPress={() =>
-                  void Linking.openURL('https://play.google.com/store/account/subscriptions').catch(
-                    () => setError('Google Play could not open.'),
-                  )
-                }
-              />
-              <Field
-                label="Confirm your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoComplete="current-password"
-                editable={!deleting}
-              />
-              <Field
-                label="Type DELETE to confirm"
-                value={confirmation}
-                onChangeText={setConfirmation}
-                autoCapitalize="characters"
-                autoCorrect={false}
-                editable={!deleting}
-              />
-            </>
-          )}
+          <Button
+            title="Manage Google Play subscription"
+            variant="outline"
+            disabled={deleting}
+            onPress={openSubscriptions}
+          />
+          <Field
+            label="Confirm your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete="current-password"
+            editable={!deleting}
+          />
+          <Field
+            label="Type DELETE to confirm"
+            value={confirmation}
+            onChangeText={setConfirmation}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            editable={!deleting}
+          />
           <View style={{ gap: 8 }}>
             <Button
-              title={demo ? 'Yes, reset preview' : 'Request account deletion'}
+              title="Request account deletion"
               variant="danger"
               loading={deleting}
-              disabled={!demo && (confirmation !== 'DELETE' || !password)}
+              disabled={confirmation !== 'DELETE' || !password}
               onPress={() => void deleteAccount()}
             />
             <Button
@@ -308,7 +239,7 @@ export default function SettingsScreen() {
         </Surface>
       )}
       <Label style={{ color: c.muted, textAlign: 'center', fontSize: 10 }}>
-        CloudLynk · Android · Frontend preview 1.0
+        {env.appName} · Android · {env.appVersion}
       </Label>
     </Screen>
   );

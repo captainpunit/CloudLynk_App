@@ -16,10 +16,9 @@ import {
 } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
-import { compactNumber } from '@/domain/format';
 
 export default function ChannelsScreen() {
-  const { state, join, requireIdentity, demo } = useWorkspace();
+  const { state, join, requireIdentity } = useWorkspace();
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState('Discover');
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +26,7 @@ export default function ChannelsScreen() {
   const channels = state.channels.filter(
     (channel) =>
       channel.status === 'published' &&
-      (channel.visibility !== 'private' || (!demo && tab !== 'Discover')) &&
+      (channel.visibility !== 'private' || tab !== 'Discover') &&
       channel.name.toLowerCase().includes(query.toLowerCase()) &&
       (tab === 'Discover' ||
         (tab === 'Private'
@@ -61,7 +60,7 @@ export default function ChannelsScreen() {
     >
       <SearchField value={query} onChangeText={setQuery} placeholder="Find a channel" />
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        {['Discover', 'Joined', ...(!demo ? ['Private'] : [])].map((item) => (
+        {['Discover', 'Joined', 'Private'].map((item) => (
           <Pill key={item} title={item} selected={tab === item} onPress={() => setTab(item)} />
         ))}
       </View>
@@ -106,11 +105,7 @@ export default function ChannelsScreen() {
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 <Users color={c.muted} size={14} />
                 <Label style={{ color: c.muted, fontSize: 11 }}>
-                  {demo
-                    ? `${compactNumber(channel.members)} members`
-                    : channel.visibility === 'private'
-                      ? 'Private channel'
-                      : channel.category}
+                  {channel.visibility === 'private' ? 'Private channel' : channel.category}
                 </Label>
               </View>
               <Button

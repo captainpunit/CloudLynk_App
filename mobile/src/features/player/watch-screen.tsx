@@ -18,14 +18,13 @@ import { VideoCard } from '@/components/media-card';
 import { useWorkspace } from '@/state/workspace-provider';
 import type { AccessDecision } from '@/domain/models';
 import { accessMessages } from '@/domain/access';
-import { compactNumber } from '@/domain/format';
 import { colors as c } from '@/theme/tokens';
-import { VideoPlayback } from './video-playback';
 import LivePlayback from './live-playback';
+import { shareUrl } from '@/lib/env';
 
 export default function WatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, demo, access, join, dispatch, requireIdentity, bookmark } = useWorkspace();
+  const { state, access, join, requireIdentity, bookmark } = useWorkspace();
   const video = state.videos.find((item) => item.id === id);
   const channel = state.channels.find((item) => item.id === video?.channelId);
   const [decision, setDecision] = useState<AccessDecision | null>(null);
@@ -52,7 +51,6 @@ export default function WatchScreen() {
     channel?.visibility,
     state.profile?.id,
     state.profile?.accountStatus,
-    state.demoPlanId,
     state.subscribed,
     state.joinedIds.join(','),
     attempt,
@@ -86,7 +84,7 @@ export default function WatchScreen() {
     } else setAttempt((value) => value + 1);
   }
   const related = state.videos.filter((item) => item.id !== id && item.channelId === channel.id);
-  if (!demo && video.kind === 'series')
+  if (video.kind === 'series')
     return (
       <Screen title={video.title} back>
         <Label>{video.description}</Label>
@@ -114,13 +112,7 @@ export default function WatchScreen() {
   return (
     <Screen title="Now watching" back>
       <View style={{ gap: 16 }}>
-        {decision === 'allowed' && demo && video.demoUri ? (
-          <VideoPlayback
-            uri={video.demoUri}
-            resumeAt={state.progress[id] ?? 0}
-            onProgress={(seconds) => dispatch({ type: 'progress', id, seconds })}
-          />
-        ) : decision === 'allowed' && !demo ? (
+        {decision === 'allowed' ? (
           <LivePlayback titleId={id} />
         ) : (
           <View style={{ gap: 16 }}>
@@ -138,20 +130,18 @@ export default function WatchScreen() {
                     ? 'Access could not be verified.'
                     : 'Checking access…'}
               </Label>
-              {decision !== 'allowed' && (
-                <Button
-                  title={
-                    decision === 'subscription_required'
-                      ? 'Explore Plus'
-                      : decision === 'membership_required'
-                        ? 'Join and watch'
-                        : decision === 'sign_in_required'
-                          ? 'Sign in to watch'
-                          : 'Retry access check'
-                  }
-                  onPress={() => void unlock()}
-                />
-              )}
+              <Button
+                title={
+                  decision === 'subscription_required'
+                    ? 'Explore Plus'
+                    : decision === 'membership_required'
+                      ? 'Join and watch'
+                      : decision === 'sign_in_required'
+                        ? 'Sign in to watch'
+                        : 'Retry access check'
+                }
+                onPress={() => void unlock()}
+              />
             </Surface>
           </View>
         )}
@@ -159,7 +149,6 @@ export default function WatchScreen() {
         {error && <Button title="Retry" onPress={() => setAttempt((value) => value + 1)} />}
         <Heading style={{ fontSize: 26 }}>{video.title}</Heading>
         <Label style={{ color: c.muted, fontSize: 12 }}>
-          {demo ? `${compactNumber(video.views)} views · ` : ''}
           {video.duration} · {new Date(video.publishedAt).toLocaleDateString()}
         </Label>
         <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -175,7 +164,7 @@ export default function WatchScreen() {
             label="Share video"
             onPress={() => {
               void Share.share({
-                message: `${video.title} — https://cloudlynk.app/open/watch/${id}`,
+                message: `${video.title} — ${shareUrl(`/open/watch/${id}`)}`,
               }).catch(() => setError('Sharing is unavailable.'));
             }}
           />
@@ -196,11 +185,6 @@ export default function WatchScreen() {
             onPress={() => router.push({ pathname: '/channel/[id]', params: { id: channel.id } })}
           />
         </Surface>
-        {demo && (
-          <Label style={{ color: c.muted, fontSize: 11 }}>
-            Sample footage for interaction testing. Artwork and editorial titles are illustrative.
-          </Label>
-        )}
         {related.length > 0 && (
           <>
             <Section title="Stay a little longer" />

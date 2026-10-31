@@ -1,8 +1,8 @@
 # Frontend API bindings — 28 October 2026
 
-The live frontend now uses the existing PR1–PR6 backend contracts. Preview mode
-retains local sample data. Set `EXPO_PUBLIC_DATA_MODE=live` and configure the target
-Supabase URL and public key to use the backend. No service-role or provider secret
+The frontend uses the PR1–PR6 backend contracts exclusively. The former preview/demo
+mode and its sample catalogue, prices and local identity were removed on 31 October 2026.
+Configure the target Supabase URL and public key to use the backend. No service-role or provider secret
 is included in app code.
 
 | Flow | Backend binding | Frontend entry |
@@ -67,8 +67,7 @@ integrations. Their cron/provider credentials deliberately have no frontend bind
 - Account deletion displays request acceptance, not completed erasure. Canceling
   Google Play billing is a separate user action. Provider cleanup and Auth erasure
   must complete through deployed scheduled workers.
-- Folders and file rename are outside the existing flat-drive contract, so those
-  controls appear only in preview. Billing currently offers ordinary renewing
+- Folders and file rename are outside the existing flat-drive contract and are not offered. Billing currently offers ordinary renewing
   base plans; introductory/installment offers and in-app plan replacement are
   not exposed. Public member/view counters are not supplied by this backend and
   are hidden in live screens.

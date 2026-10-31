@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { env } from './env';
+import { configured, env } from './env';
 import type { Database } from './database.types';
 
 const storage = {
@@ -14,14 +14,16 @@ const storage = {
     Platform.OS === 'web' ? AsyncStorage.removeItem(key) : SecureStore.deleteItemAsync(key),
 };
 
+// createClient rejects empty values; an unconfigured build still launches and
+// assertLiveConfiguration() reports the missing settings before any request.
 export const supabase = createClient<Database>(
-  env.supabaseUrl || 'https://unconfigured.supabase.co',
-  env.supabaseAnonKey || 'unconfigured-public-key',
+  configured ? env.supabaseUrl : 'http://unconfigured.invalid',
+  configured ? env.supabaseAnonKey : 'unconfigured',
   {
     auth: {
       storage,
-      persistSession: env.mode === 'live',
-      autoRefreshToken: env.mode === 'live',
+      persistSession: configured,
+      autoRefreshToken: configured,
       detectSessionInUrl: false,
     },
   },
