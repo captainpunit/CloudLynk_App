@@ -79,6 +79,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      // The launch refresh below already loads the restored session. Resetting here
+      // would discard that request and mark the app ready before any data arrived.
+      if (event === 'INITIAL_SESSION') return;
       const userId = session?.user.id ?? null;
       if (userId !== identityId.current || event === 'SIGNED_OUT') {
         ++generation.current;
