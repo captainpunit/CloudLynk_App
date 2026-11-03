@@ -86,7 +86,6 @@ export default function AuthScreen() {
         {signUp && (
           <Field
             label="Your name"
-            placeholder="Alex Morgan"
             value={name}
             onChangeText={setName}
             autoComplete="name"

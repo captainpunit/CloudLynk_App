@@ -3,6 +3,7 @@ import { Linking, Platform } from 'react-native';
 import type { Purchase } from 'expo-iap';
 import { Button, ErrorNote, Label, Surface } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 import { fileSize } from '@/domain/format';
 import { billingIdentity, verifyPurchaseOnServer } from '@/services/billing/playBilling';
 import {
@@ -232,7 +233,7 @@ export default function LiveBilling() {
         title="Manage Google Play subscription"
         variant="outline"
         onPress={() =>
-          void Linking.openURL('https://play.google.com/store/account/subscriptions').catch(() =>
+          void Linking.openURL(env.subscriptionsUrl).catch(() =>
             setError('Google Play could not open.'),
           )
         }
