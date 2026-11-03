@@ -49,7 +49,7 @@ export function VideoPlayback({
     <View style={{ gap: 12 }}>
       <VideoView
         player={player}
-        style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: '#071413', borderRadius: 17 }}
+        style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: c.player, borderRadius: 17 }}
         nativeControls
         contentFit="contain"
         allowsPictureInPicture={!privateStream}

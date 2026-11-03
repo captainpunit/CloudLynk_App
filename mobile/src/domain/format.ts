@@ -1,3 +1,5 @@
+import type { Video, Workspace } from './models';
+
 export function compactNumber(value: number): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(value);
 }
@@ -5,6 +7,22 @@ export function fileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const unit = bytes >= 1024 ** 3 ? 3 : bytes >= 1024 ** 2 ? 2 : 1;
   return `${(bytes / 1024 ** unit).toFixed(1)} ${['B', 'KB', 'MB', 'GB'][unit]}`;
+}
+export const kindLabels = { movie: 'Movie', series: 'Series', episode: 'Episode' } as const;
+export function videoLabel(video: Pick<Video, 'kind' | 'episodeNumber'>): string {
+  if (video.kind === 'episode' && video.episodeNumber) return `Episode ${video.episodeNumber}`;
+  return video.kind ? kindLabels[video.kind] : '';
+}
+/** What Plus offers today, from active plans and the published catalogue. Null without plans. */
+export function plusSummary({ plans = [], channels }: Pick<Workspace, 'plans' | 'channels'>) {
+  if (!plans.length) return null;
+  const count = channels.filter(
+    (channel) => channel.status === 'published' && channel.visibility === 'premium',
+  ).length;
+  const storage = fileSize(Math.max(...plans.map((plan) => plan.quotaBytes)));
+  return count
+    ? `${count} Plus ${count === 1 ? 'channel' : 'channels'} and up to ${storage} of storage.`
+    : `Up to ${storage} of storage.`;
 }
 export function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;

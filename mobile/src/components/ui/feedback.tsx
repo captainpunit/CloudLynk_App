@@ -62,12 +62,12 @@ export function PlusBadge() {
         borderRadius: 6,
       }}
     >
-      <Sparkles size={10} color="#8A6221" />
+      <Sparkles size={10} color={c.goldInk} />
       <Label
         style={{
           fontSize: 9,
           fontWeight: '800',
-          color: '#8A6221',
+          color: c.goldInk,
           lineHeight: 14,
           letterSpacing: 1,
         }}

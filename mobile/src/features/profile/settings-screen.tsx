@@ -244,7 +244,7 @@ export default function SettingsScreen() {
         </Surface>
       )}
       <Label style={{ color: c.muted, textAlign: 'center', fontSize: 10 }}>
-        {env.appName} · Android · {env.appVersion}
+        {env.appName} · {env.appVersion}
       </Label>
     </Screen>
   );
