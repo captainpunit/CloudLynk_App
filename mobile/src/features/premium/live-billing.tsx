@@ -192,7 +192,7 @@ export default function LiveBilling() {
   if (Platform.OS !== 'android')
     return (
       <Surface>
-        <Label>Purchase and restore subscriptions in the CloudLynk Android app.</Label>
+        <Label>Purchase and restore subscriptions in the {env.appName} Android app.</Label>
       </Surface>
     );
   if (!state.profile) return <Button title="Sign in to view plans" onPress={requireIdentity} />;

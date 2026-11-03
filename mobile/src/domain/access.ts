@@ -6,7 +6,7 @@ export const accessMessages: Record<AccessDecision, string> = {
   sign_in_required: 'Sign in to keep your channels, files and watchlist together.',
   account_restricted: 'Your account is restricted. Please contact support.',
   channel_unavailable: 'This channel is not available right now.',
-  subscription_required: 'Unlock this channel with CloudLynk Plus.',
+  subscription_required: 'Unlock this channel with Plus.',
   membership_required: 'Join this channel to start watching.',
   private_channel: 'This channel is private. Only its owner can open it.',
 };

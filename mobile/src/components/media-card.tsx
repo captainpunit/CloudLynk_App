@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { ArrowUpRight, Play } from 'lucide-react-native';
 import { Label, PlusBadge } from './ui';
 import { colors as c } from '@/theme/tokens';
+import { videoLabel } from '@/domain/format';
 import type { Channel, Video } from '@/domain/models';
 
 export function VideoCard({
@@ -39,7 +40,7 @@ export function VideoCard({
           accessibilityLabel={video.title}
         />
         <LinearGradient
-          colors={['transparent', '#00000070']}
+          colors={['transparent', c.scrimSoft]}
           style={{ position: 'absolute', inset: 0 }}
         />
         <View
@@ -47,13 +48,15 @@ export function VideoCard({
             position: 'absolute',
             bottom: 10,
             right: 10,
-            backgroundColor: '#00000080',
+            backgroundColor: c.scrim,
             borderRadius: 5,
             paddingHorizontal: 6,
             paddingVertical: 2,
           }}
         >
-          <Label style={{ color: c.white, fontSize: 10, lineHeight: 15 }}>{video.duration}</Label>
+          <Label style={{ color: c.white, fontSize: 10, lineHeight: 15 }}>
+            {videoLabel(video)}
+          </Label>
         </View>
         {channel?.visibility === 'premium' && (
           <View style={{ position: 'absolute', top: 10, left: 10 }}>
@@ -61,7 +64,7 @@ export function VideoCard({
           </View>
         )}
         <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
-          <Play fill="white" color="white" size={17} />
+          <Play fill={c.white} color={c.white} size={17} />
         </View>
       </View>
       <Label

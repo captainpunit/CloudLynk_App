@@ -18,12 +18,13 @@ import {
 } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
 import { useWorkspace } from '@/state/workspace-provider';
+import { kindLabels, plusSummary, videoLabel } from '@/domain/format';
+import { env } from '@/lib/env';
 
 export default function ExploreScreen() {
   const { state, error, refreshing, refresh } = useWorkspace();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const [sort, setSort] = useState('For you');
   const [kind, setKind] = useState('all');
   const channels = state.channels.filter(
     (channel) => channel.status === 'published' && channel.visibility !== 'private',
@@ -52,6 +53,12 @@ export default function ExploreScreen() {
     [state.channels, state.videos, category, query, kind],
   );
   const hero = videos[0];
+  const plus = plusSummary(state);
+  // Only offer title types the catalogue actually has.
+  const kinds = [
+    'all' as const,
+    ...new Set(state.videos.flatMap((video) => (video.kind ? [video.kind] : []))),
+  ];
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.canvas }}>
       <ScrollView
@@ -80,18 +87,20 @@ export default function ExploreScreen() {
           >
             <View style={{ flexDirection: 'row', gap: 9, alignItems: 'center' }}>
               <View style={{ backgroundColor: c.primary, borderRadius: 12, padding: 8 }}>
-                <Cloud size={23} color="white" strokeWidth={2} />
+                <Cloud size={23} color={c.white} strokeWidth={2} />
               </View>
               <Label style={{ fontSize: 22, fontWeight: '800', letterSpacing: -0.9 }}>
-                cloudlynk<Label style={{ color: c.primary }}>.</Label>
+                {env.appName}
               </Label>
             </View>
             <View style={{ flexDirection: 'row', gap: 9 }}>
-              <IconButton
-                icon={Sparkles}
-                label="Explore CloudLynk Plus"
-                onPress={() => router.push('/premium')}
-              />
+              {plus && (
+                <IconButton
+                  icon={Sparkles}
+                  label={`Explore ${env.appName} Plus`}
+                  onPress={() => router.push('/premium')}
+                />
+              )}
               <View>
                 <IconButton
                   icon={Bell}
@@ -114,17 +123,6 @@ export default function ExploreScreen() {
               </View>
             </View>
           </View>
-          <View style={{ gap: 4 }}>
-            <Label style={{ color: c.muted, fontSize: 12, fontWeight: '600', letterSpacing: 1.5 }}>
-              A LITTLE CURIOSITY GOES A LONG WAY
-            </Label>
-            <Heading style={{ fontSize: 33, lineHeight: 40, letterSpacing: -1.3 }}>
-              Find your next{'\n'}favourite thing.
-            </Heading>
-            <Label style={{ color: c.muted, fontSize: 13, marginTop: 3 }}>
-              Good stories. Great creators. All in one place.
-            </Label>
-          </View>
           <SearchField value={query} onChangeText={setQuery} />
           <ScrollView
             horizontal
@@ -142,10 +140,10 @@ export default function ExploreScreen() {
           </ScrollView>
           <ErrorNote message={error} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {['all', 'movie', 'series', 'episode'].map((value) => (
+            {kinds.map((value) => (
               <Pill
                 key={value}
-                title={value === 'all' ? 'All titles' : value}
+                title={value === 'all' ? 'All titles' : kindLabels[value]}
                 selected={kind === value}
                 onPress={() => setKind(value)}
               />
@@ -164,7 +162,7 @@ export default function ExploreScreen() {
                 contentFit="cover"
               />
               <LinearGradient
-                colors={['#00000005', '#071A16E8']}
+                colors={[c.scrimClear, c.scrimHero]}
                 style={{ position: 'absolute', inset: 0 }}
               />
               <View
@@ -172,7 +170,7 @@ export default function ExploreScreen() {
                   position: 'absolute',
                   top: 20,
                   left: 20,
-                  backgroundColor: '#FFFFFFE8',
+                  backgroundColor: c.glass,
                   paddingVertical: 5,
                   paddingHorizontal: 9,
                   borderRadius: 6,
@@ -187,15 +185,10 @@ export default function ExploreScreen() {
                     fontWeight: '800',
                   }}
                 >
-                  LATEST STORY
+                  LATEST
                 </Label>
               </View>
               <View style={{ position: 'absolute', bottom: 22, left: 22, right: 22, gap: 10 }}>
-                <Label
-                  style={{ color: '#D4E4D9', fontSize: 10, fontWeight: '600', letterSpacing: 1.5 }}
-                >
-                  GO A LITTLE FURTHER
-                </Label>
                 <Heading style={{ color: c.white, fontSize: 28, lineHeight: 33, maxWidth: 240 }}>
                   {hero.title}
                 </Heading>
@@ -206,8 +199,8 @@ export default function ExploreScreen() {
                     justifyContent: 'space-between',
                   }}
                 >
-                  <Label style={{ color: '#DAE1DD', fontSize: 11 }}>
-                    {`${channels.find((channel) => channel.id === hero.channelId)?.name ?? ''} · ${hero.duration}`}
+                  <Label style={{ color: c.onDarkMuted, fontSize: 11 }}>
+                    {`${channels.find((channel) => channel.id === hero.channelId)?.name ?? ''} · ${videoLabel(hero)}`}
                   </Label>
                   <View
                     style={{
@@ -226,34 +219,7 @@ export default function ExploreScreen() {
             </Pressable>
           )}
           <View style={{ gap: 15 }}>
-            <Section title={query ? 'Search results' : 'Worth your time'} />
-            <View
-              style={{ flexDirection: 'row', gap: 18, borderBottomWidth: 1, borderColor: c.line }}
-            >
-              {['For you', 'Latest'].map((item) => (
-                <Pressable
-                  key={item}
-                  onPress={() => setSort(item)}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: sort === item }}
-                  style={{
-                    minHeight: 40,
-                    borderBottomWidth: sort === item ? 2 : 0,
-                    borderColor: c.primary,
-                  }}
-                >
-                  <Label
-                    style={{
-                      color: sort === item ? c.primary : c.muted,
-                      fontWeight: '600',
-                      fontSize: 12,
-                    }}
-                  >
-                    {item}
-                  </Label>
-                </Pressable>
-              ))}
-            </View>
+            <Section title={query ? 'Search results' : 'Latest'} />
             {videos.length ? (
               <View style={{ gap: 22 }}>
                 {Array.from({ length: Math.ceil(videos.length / 2) }, (_, index) => (
@@ -284,6 +250,7 @@ export default function ExploreScreen() {
                 onPress={() => {
                   setQuery('');
                   setCategory('All');
+                  setKind('all');
                 }}
               />
             )}
@@ -304,32 +271,25 @@ export default function ExploreScreen() {
                   <ChannelCard key={channel.id} channel={channel} />
                 ))}
               </ScrollView>
-              <Pressable
-                onPress={() => router.push('/premium')}
-                style={{
-                  borderRadius: 22,
-                  backgroundColor: c.dark,
-                  padding: 23,
-                  flexDirection: 'row',
-                  gap: 15,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={{ flex: 1, gap: 7 }}>
-                  <Label
-                    style={{ color: c.accent, fontSize: 10, fontWeight: '700', letterSpacing: 1.5 }}
-                  >
-                    YOUR WORLD, WITHOUT LIMITS
-                  </Label>
-                  <Heading style={{ color: c.white, fontSize: 23 }}>
-                    A little more with Plus.
-                  </Heading>
-                  <Label style={{ color: '#AFC3BE', fontSize: 12 }}>
-                    Exclusive channels. More space for you.
-                  </Label>
-                </View>
-                <ArrowUpRight color={c.accent} size={26} />
-              </Pressable>
+              {plus && !state.subscribed && (
+                <Pressable
+                  onPress={() => router.push('/premium')}
+                  style={{
+                    borderRadius: 22,
+                    backgroundColor: c.dark,
+                    padding: 23,
+                    flexDirection: 'row',
+                    gap: 15,
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 7 }}>
+                    <Heading style={{ color: c.white, fontSize: 23 }}>Get Plus</Heading>
+                    <Label style={{ color: c.onDarkMuted, fontSize: 12 }}>{plus}</Label>
+                  </View>
+                  <ArrowUpRight color={c.accent} size={26} />
+                </Pressable>
+              )}
             </>
           )}
         </View>

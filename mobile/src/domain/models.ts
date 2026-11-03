@@ -9,7 +9,6 @@ export interface Channel {
   description: string;
   category: Category;
   cover: string;
-  members: number;
   ownerId: string;
   visibility: ChannelVisibility;
   status: ChannelStatus;
@@ -20,8 +19,6 @@ export interface Video {
   title: string;
   description: string;
   cover: string;
-  duration: string;
-  views: number;
   publishedAt: string;
   kind?: 'movie' | 'series' | 'episode';
   seasonId?: string;
@@ -70,6 +67,7 @@ export interface Workspace {
   notices?: { id: string; title: string; body: string; readAt: string | null; createdAt: string }[];
   subscribed?: boolean;
   completedIds?: string[];
+  plans?: { name: string; billingPeriod: string; quotaBytes: number }[];
 }
 export type AccessDecision =
   | 'allowed'

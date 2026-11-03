@@ -18,6 +18,7 @@ import { VideoCard } from '@/components/media-card';
 import { useWorkspace } from '@/state/workspace-provider';
 import type { AccessDecision } from '@/domain/models';
 import { accessMessages } from '@/domain/access';
+import { videoLabel } from '@/domain/format';
 import { colors as c } from '@/theme/tokens';
 import LivePlayback from './live-playback';
 import { shareUrl } from '@/lib/env';
@@ -149,7 +150,7 @@ export default function WatchScreen() {
         {error && <Button title="Retry" onPress={() => setAttempt((value) => value + 1)} />}
         <Heading style={{ fontSize: 26 }}>{video.title}</Heading>
         <Label style={{ color: c.muted, fontSize: 12 }}>
-          {video.duration} · {new Date(video.publishedAt).toLocaleDateString()}
+          {videoLabel(video)} · {new Date(video.publishedAt).toLocaleDateString()}
         </Label>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <IconButton

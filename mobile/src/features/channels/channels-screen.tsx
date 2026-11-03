@@ -112,7 +112,7 @@ export default function ChannelsScreen() {
                 title={
                   state.joinedIds.includes(channel.id)
                     ? 'Open channel'
-                    : channel.visibility === 'premium'
+                    : channel.visibility === 'premium' && !state.subscribed
                       ? 'Explore Plus'
                       : 'Join channel'
                 }

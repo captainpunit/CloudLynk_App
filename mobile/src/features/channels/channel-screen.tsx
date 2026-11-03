@@ -113,27 +113,34 @@ export default function ChannelScreen() {
             title="Manage titles and uploads"
             onPress={() => router.push({ pathname: '/upload', params: { channelId: id } })}
           />
-          <Field
-            label="Invite a user to this private channel (user ID)"
-            value={inviteUser}
-            onChangeText={setInviteUser}
-            autoCapitalize="none"
-          />
-          <Button
-            title="Send invitation"
-            loading={busy}
-            onPress={() => {
-              setBusy(true);
-              setError(null);
-              void call('invite_channel_member', { p_channel_id: id, p_user_id: inviteUser.trim() })
-                .then(async () => {
-                  setInviteUser('');
-                  await refresh();
-                })
-                .catch((cause: Error) => setError(cause.message))
-                .finally(() => setBusy(false));
-            }}
-          />
+          {channel.visibility === 'private' && (
+            <>
+              <Field
+                label="Invite a user to this private channel (user ID)"
+                value={inviteUser}
+                onChangeText={setInviteUser}
+                autoCapitalize="none"
+              />
+              <Button
+                title="Send invitation"
+                loading={busy}
+                onPress={() => {
+                  setBusy(true);
+                  setError(null);
+                  void call('invite_channel_member', {
+                    p_channel_id: id,
+                    p_user_id: inviteUser.trim(),
+                  })
+                    .then(async () => {
+                      setInviteUser('');
+                      await refresh();
+                    })
+                    .catch((cause: Error) => setError(cause.message))
+                    .finally(() => setBusy(false));
+                }}
+              />
+            </>
+          )}
         </Surface>
       )}
       {state.videos
@@ -142,10 +149,7 @@ export default function ChannelScreen() {
           <VideoCard key={video.id} video={video} channel={channel} />
         ))}
       {!state.videos.some((video) => video.channelId === id) && (
-        <EmptyState
-          title="First story coming soon"
-          body="This channel has not published any videos yet."
-        />
+        <EmptyState title="No videos yet" body="This channel has not published any videos yet." />
       )}
     </Screen>
   );
