@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { randomUUID } from 'expo-crypto';
 import { call } from '@/data/live/backend';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 
 const installationKey = 'cloudlynk.installation.v1';
 const preferenceKey = 'cloudlynk.push.enabled.v1';
@@ -26,7 +27,7 @@ export async function enablePush(prompt = true) {
   if (!user) throw new Error('Sign in before enabling notifications.');
   const notifications = await import('expo-notifications');
   await notifications.setNotificationChannelAsync('default', {
-    name: 'CloudLynk updates',
+    name: `${env.appName} updates`,
     importance: notifications.AndroidImportance.DEFAULT,
   });
   let permission = await notifications.getPermissionsAsync();

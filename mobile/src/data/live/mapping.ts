@@ -12,7 +12,6 @@ export function mapChannel(row: Tables<'channels'>): Channel {
     category: row.category as Channel['category'],
     cover: row.cover_url ?? '',
     ownerId: row.created_by ?? '',
-    members: 0,
   };
 }
 export function mapTitle(row: Tables<'titles'>): Video {
@@ -22,8 +21,6 @@ export function mapTitle(row: Tables<'titles'>): Video {
     title: row.name,
     description: row.description,
     cover: row.cover_url ?? '',
-    duration: row.kind === 'series' ? 'Series' : 'Video',
-    views: 0,
     publishedAt: row.published_at ?? row.created_at,
     kind: row.kind as Video['kind'],
     seasonId: row.season_id ?? undefined,

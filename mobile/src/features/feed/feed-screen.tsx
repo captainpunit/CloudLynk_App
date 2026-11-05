@@ -7,13 +7,12 @@ import { VideoCard } from '@/components/media-card';
 import { useWorkspace } from '@/state/workspace-provider';
 
 export default function FeedScreen() {
-  const { state, demo } = useWorkspace();
+  const { state } = useWorkspace();
   const [tab, setTab] = useState('Following');
   const videos = state.videos.filter((video) => {
     const channel = state.channels.find((item) => item.id === video.channelId);
     return (
       channel?.status === 'published' &&
-      (!demo || channel.visibility !== 'private') &&
       (tab === 'Saved'
         ? state.savedIds.includes(video.id)
         : tab === 'Continue watching'

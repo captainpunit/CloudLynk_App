@@ -1,14 +1,14 @@
 import { supabase } from '@/lib/supabase';
-import { env } from '@/lib/env';
+import { configured } from '@/lib/env';
 import type { AccessDecision, Channel, Profile, Workspace } from '@/domain/models';
 import { mapChannel, mapFile, mapTitle, readPages } from './mapping';
 import { checked } from './backend';
 
 /** Adapter for the implemented PR1 contract. Never sends a service-role key. */
 export function assertLiveConfiguration() {
-  if (!env.supabaseUrl || !env.supabaseAnonKey || env.supabaseUrl.includes('YOUR-PROJECT')) {
+  if (!configured) {
     throw new Error(
-      'Live mode needs your Supabase project URL and public anon key. See mobile/README.md.',
+      'The app needs your Supabase project URL and public anon key. See mobile/README.md.',
     );
   }
 }
@@ -50,7 +50,7 @@ export async function fetchIdentity(): Promise<{ profile: Profile | null; joined
   return {
     profile: {
       id: row.id,
-      name: row.display_name ?? 'CloudLynk member',
+      name: row.display_name ?? session.user.email?.split('@')[0] ?? '',
       email: session.user.email ?? '',
       role: row.role === 'admin' ? 'admin' : 'member',
       accountStatus: row.account_status === 'active' ? 'active' : 'restricted',
@@ -87,18 +87,17 @@ export function emptyLiveWorkspace(): Workspace {
     joinedIds: [],
     savedIds: [],
     progress: {},
-    demoPlanId: null,
     noticesRead: true,
-    reports: [],
     seasons: [],
     notices: [],
     subscribed: false,
+    plans: [],
   };
 }
 
 export async function fetchLiveWorkspace(): Promise<Workspace> {
   const identity = await fetchIdentity();
-  const [channels, titles, seasons] = await Promise.all([
+  const [channels, titles, seasons, plans] = await Promise.all([
     fetchCatalogue(),
     readPages((from, to) =>
       supabase
@@ -110,6 +109,13 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
         .range(from, to),
     ),
     readPages((from, to) => supabase.from('seasons').select('*').order('id').range(from, to)),
+    readPages((from, to) =>
+      supabase
+        .from('plans')
+        .select('name,billing_period,quota_bytes')
+        .order('product_id')
+        .range(from, to),
+    ),
   ]);
   const snapshot = {
     ...emptyLiveWorkspace(),
@@ -121,6 +127,11 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
       seriesId: row.series_id,
       number: row.number,
       name: row.name,
+    })),
+    plans: plans.map((row) => ({
+      name: row.name,
+      billingPeriod: row.billing_period,
+      quotaBytes: row.quota_bytes,
     })),
   };
   if (!identity.profile) return snapshot;

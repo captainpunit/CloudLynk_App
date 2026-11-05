@@ -16,14 +16,14 @@ import {
   Surface,
 } from '@/components/ui';
 import { VideoCard } from '@/components/media-card';
-import { compactNumber } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { call } from '@/data/live/backend';
+import { env, shareUrl } from '@/lib/env';
 
 export default function ChannelScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { state, join, demo, refresh } = useWorkspace();
+  const { state, join, refresh } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inviteUser, setInviteUser] = useState('');
@@ -32,8 +32,7 @@ export default function ChannelScreen() {
     !channel ||
     (channel.status !== 'published' &&
       channel.ownerId !== state.profile?.id &&
-      state.profile?.role !== 'admin') ||
-    (demo && channel.visibility === 'private' && channel.ownerId !== state.profile?.id)
+      state.profile?.role !== 'admin')
   )
     return (
       <Screen title="Channel" back>
@@ -69,7 +68,7 @@ export default function ChannelScreen() {
           label="Share channel"
           onPress={() => {
             void Share.share({
-              message: `Discover ${channel.name} on CloudLynk: https://cloudlynk.app/open/channel/${id}`,
+              message: `Discover ${channel.name} on ${env.appName}: ${shareUrl(`/open/channel/${id}`)}`,
             }).catch(() => setError('Sharing is unavailable on this device.'));
           }}
         />
@@ -90,10 +89,7 @@ export default function ChannelScreen() {
         </Label>
         <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
           <Users size={14} color={c.muted} />
-          <Label style={{ color: c.muted, fontSize: 12 }}>
-            {demo ? `${compactNumber(channel.members)} members · ` : ''}
-            {channel.category}
-          </Label>
+          <Label style={{ color: c.muted, fontSize: 12 }}>{channel.category}</Label>
         </View>
         <Label style={{ color: c.muted }}>{channel.description}</Label>
       </View>
@@ -102,7 +98,7 @@ export default function ChannelScreen() {
         title={
           joined
             ? 'Leave channel'
-            : premium && !(demo ? state.demoPlanId : state.subscribed)
+            : premium && !state.subscribed
               ? 'Unlock with Plus'
               : 'Join channel'
         }
@@ -111,33 +107,40 @@ export default function ChannelScreen() {
         onPress={() => void toggleJoin()}
       />
       <Section title="Inside this channel" />
-      {!demo && (channel.ownerId === state.profile?.id || state.profile?.role === 'admin') && (
+      {(channel.ownerId === state.profile?.id || state.profile?.role === 'admin') && (
         <Surface>
           <Button
             title="Manage titles and uploads"
             onPress={() => router.push({ pathname: '/upload', params: { channelId: id } })}
           />
-          <Field
-            label="Invite a user to this private channel (user ID)"
-            value={inviteUser}
-            onChangeText={setInviteUser}
-            autoCapitalize="none"
-          />
-          <Button
-            title="Send invitation"
-            loading={busy}
-            onPress={() => {
-              setBusy(true);
-              setError(null);
-              void call('invite_channel_member', { p_channel_id: id, p_user_id: inviteUser.trim() })
-                .then(async () => {
-                  setInviteUser('');
-                  await refresh();
-                })
-                .catch((cause: Error) => setError(cause.message))
-                .finally(() => setBusy(false));
-            }}
-          />
+          {channel.visibility === 'private' && (
+            <>
+              <Field
+                label="Invite a user to this private channel (user ID)"
+                value={inviteUser}
+                onChangeText={setInviteUser}
+                autoCapitalize="none"
+              />
+              <Button
+                title="Send invitation"
+                loading={busy}
+                onPress={() => {
+                  setBusy(true);
+                  setError(null);
+                  void call('invite_channel_member', {
+                    p_channel_id: id,
+                    p_user_id: inviteUser.trim(),
+                  })
+                    .then(async () => {
+                      setInviteUser('');
+                      await refresh();
+                    })
+                    .catch((cause: Error) => setError(cause.message))
+                    .finally(() => setBusy(false));
+                }}
+              />
+            </>
+          )}
         </Surface>
       )}
       {state.videos
@@ -146,15 +149,7 @@ export default function ChannelScreen() {
           <VideoCard key={video.id} video={video} channel={channel} />
         ))}
       {!state.videos.some((video) => video.channelId === id) && (
-        <EmptyState
-          title="First story coming soon"
-          body="This channel has not published any videos yet."
-        />
-      )}
-      {demo && (
-        <Label style={{ fontSize: 11, color: c.muted }}>
-          Sample channel and editorial artwork. Preview video footage is illustrative.
-        </Label>
+        <EmptyState title="No videos yet" body="This channel has not published any videos yet." />
       )}
     </Screen>
   );

@@ -24,10 +24,13 @@ import {
 } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
+import { plusSummary } from '@/domain/format';
+import { env } from '@/lib/env';
 
 export default function ProfileScreen() {
-  const { state, demo, requireIdentity } = useWorkspace();
+  const { state, requireIdentity } = useWorkspace();
   const ownChannels = state.channels.filter((channel) => channel.ownerId === state.profile?.id);
+  const plus = plusSummary(state);
   return (
     <Screen
       title="Your little corner."
@@ -59,13 +62,7 @@ export default function ProfileScreen() {
                 {state.profile.email}
               </Label>
               <Label style={{ color: c.primary, fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                {(demo ? state.demoPlanId : state.subscribed)
-                  ? demo
-                    ? 'CLOUDLYNK PLUS · PREVIEW'
-                    : 'CLOUDLYNK PLUS'
-                  : demo
-                    ? 'PREVIEW MEMBER'
-                    : 'CLOUDLYNK MEMBER'}
+                {`${env.appName} ${state.subscribed ? 'Plus' : 'member'}`.toUpperCase()}
               </Label>
             </View>
           </View>
@@ -79,20 +76,18 @@ export default function ProfileScreen() {
           onPress={() => router.push('/auth')}
         />
       )}
-      <Pressable
-        onPress={() => router.push('/premium')}
-        style={{ padding: 22, borderRadius: 22, backgroundColor: c.dark, gap: 10 }}
-      >
-        <Sparkles size={25} color={c.accent} />
-        <Heading style={{ color: c.white, fontSize: 24 }}>
-          {(demo ? state.demoPlanId : state.subscribed)
-            ? 'A little more, all yours.'
-            : 'Good things come with Plus.'}
-        </Heading>
-        <Label style={{ color: '#B9CBC4', fontSize: 12 }}>
-          Exclusive channels and room for your biggest ideas. ↗
-        </Label>
-      </Pressable>
+      {plus && (
+        <Pressable
+          onPress={() => router.push('/premium')}
+          style={{ padding: 22, borderRadius: 22, backgroundColor: c.dark, gap: 10 }}
+        >
+          <Sparkles size={25} color={c.accent} />
+          <Heading style={{ color: c.white, fontSize: 24 }}>
+            {state.subscribed ? 'You have Plus' : 'Get Plus'}
+          </Heading>
+          <Label style={{ color: c.onDarkMuted, fontSize: 12 }}>{plus}</Label>
+        </Pressable>
+      )}
       <View style={{ flexDirection: 'row', gap: 12 }}>
         {[
           {
@@ -205,11 +200,6 @@ export default function ProfileScreen() {
         <Label style={{ fontWeight: '600', fontSize: 13 }}>Settings & account</Label>
         <ChevronRight size={18} color={c.muted} />
       </Pressable>
-      {demo && (
-        <Label style={{ color: c.muted, textAlign: 'center', fontSize: 11 }}>
-          Preview workspace. No real cloud account or purchases.
-        </Label>
-      )}
     </Screen>
   );
 }

@@ -3,6 +3,7 @@ import { Linking, Platform } from 'react-native';
 import type { Purchase } from 'expo-iap';
 import { Button, ErrorNote, Label, Surface } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
+import { env } from '@/lib/env';
 import { fileSize } from '@/domain/format';
 import { billingIdentity, verifyPurchaseOnServer } from '@/services/billing/playBilling';
 import {
@@ -191,7 +192,7 @@ export default function LiveBilling() {
   if (Platform.OS !== 'android')
     return (
       <Surface>
-        <Label>Purchase and restore subscriptions in the CloudLynk Android app.</Label>
+        <Label>Purchase and restore subscriptions in the {env.appName} Android app.</Label>
       </Surface>
     );
   if (!state.profile) return <Button title="Sign in to view plans" onPress={requireIdentity} />;
@@ -232,7 +233,7 @@ export default function LiveBilling() {
         title="Manage Google Play subscription"
         variant="outline"
         onPress={() =>
-          void Linking.openURL('https://play.google.com/store/account/subscriptions').catch(() =>
+          void Linking.openURL(env.subscriptionsUrl).catch(() =>
             setError('Google Play could not open.'),
           )
         }

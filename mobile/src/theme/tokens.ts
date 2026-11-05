@@ -13,6 +13,17 @@ export const colors = {
   dangerSoft: '#FBEDEF',
   goldSoft: '#FAF0DC',
   white: '#FFFFFF',
+  goldInk: '#8A6221',
+  onDarkMuted: '#B7CAC4',
+  player: '#071413',
+  scrim: '#00000080',
+  scrimSoft: '#00000070',
+  scrimClear: '#00000005',
+  scrimHero: '#071A16E8',
+  glass: '#FFFFFFE8',
+  glassLine: '#FFFFFF30',
+  glassSoft: '#FFFFFF18',
+  glassFaint: '#FFFFFF12',
 };
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, section: 40 };
 export const radius = { small: 10, card: 20, large: 28, pill: 999 };

@@ -15,7 +15,7 @@ const messages: Record<string, string> = {
   sign_in_required: 'Please sign in again.',
   account_restricted: 'Your account is restricted. Contact support if you need help.',
   purchase_owner_mismatch:
-    'This purchase belongs to another CloudLynk account. Sign in to the original account.',
+    'This purchase belongs to another account. Sign in to the original account.',
   purchase_owner_missing:
     'Google Play could not link this purchase to your account. Contact support.',
   purchase_erased: 'This purchase was associated with a deleted account.',

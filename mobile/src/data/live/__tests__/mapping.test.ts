@@ -34,7 +34,6 @@ test('live title mapping preserves episode hierarchy without public sample playb
   } as Tables<'titles'>);
   assert.equal(title.seasonId, 'season');
   assert.equal(title.episodeNumber, 2);
-  assert.equal(title.demoUri, undefined);
   assert.equal(title.cover, '');
 });
 test('private drive files retain server paths and pending status without local sample URIs', () => {
