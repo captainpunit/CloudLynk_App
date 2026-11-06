@@ -14,6 +14,9 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   userInterfaceStyle: 'light',
   backgroundColor: '#F7F8FA',
+  // Client-only web build. SDK 58 defaults to server rendering, which would run the
+  // Supabase session storage (window.localStorage) on the server.
+  web: { output: 'single' },
   android: {
     package: pkg,
     versionCode: 1,

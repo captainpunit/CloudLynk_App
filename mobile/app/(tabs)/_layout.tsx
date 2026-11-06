@@ -5,7 +5,6 @@ import { colors as c } from '@/theme/tokens';
 export default function MainTabs() {
   return (
     <Tabs
-      initialRouteName="index"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: c.primary,
