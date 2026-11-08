@@ -36,6 +36,15 @@ const config: ExpoConfig = {
     'expo-router',
     'expo-secure-store',
     'expo-document-picker',
+    [
+      'expo-image-picker',
+      {
+        // Covers come from the photo library only; no camera or microphone access.
+        photosPermission: 'CloudLynk uses your photos to set channel and title cover images.',
+        cameraPermission: false,
+        microphonePermission: false,
+      },
+    ],
     'expo-video',
     'expo-image',
     'expo-sharing',
