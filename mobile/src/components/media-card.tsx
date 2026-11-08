@@ -1,10 +1,10 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ArrowUpRight, Play } from 'lucide-react-native';
-import { Label, PlusBadge } from './ui';
-import { colors as c } from '@/theme/tokens';
+import { Label, PlusBadge, PressableScale, Skeleton } from './ui';
+import { colors as c, radius, space } from '@/theme/tokens';
 import { videoLabel } from '@/domain/format';
 import type { Channel, Video } from '@/domain/models';
 
@@ -18,102 +18,156 @@ export function VideoCard({
   compact?: boolean;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Watch ${video.title}`}
       onPress={() => router.push({ pathname: '/watch/[id]', params: { id: video.id } })}
-      style={({ pressed }) => ({ flex: 1, minWidth: 0, gap: 10, opacity: pressed ? 0.8 : 1 })}
+      style={{ flex: 1, minWidth: 0, gap: space.sm }}
     >
       <View
         style={{
-          aspectRatio: compact ? 0.94 : 1.7,
-          borderRadius: 17,
+          aspectRatio: compact ? 0.94 : 16 / 9,
+          borderRadius: radius.md,
           overflow: 'hidden',
           backgroundColor: c.primarySoft,
         }}
       >
         <Image
           source={video.cover}
+          recyclingKey={video.id}
           style={{ flex: 1 }}
           contentFit="cover"
-          transition={180}
+          transition={200}
           accessibilityLabel={video.title}
         />
         <LinearGradient
           colors={['transparent', c.scrimSoft]}
-          style={{ position: 'absolute', inset: 0 }}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '55%' }}
         />
+        {channel?.visibility === 'premium' && (
+          <View style={{ position: 'absolute', top: space.sm, left: space.sm }}>
+            <PlusBadge />
+          </View>
+        )}
         <View
           style={{
             position: 'absolute',
-            bottom: 10,
-            right: 10,
+            bottom: space.sm,
+            left: space.sm,
+            width: 30,
+            height: 30,
+            borderRadius: radius.pill,
+            backgroundColor: c.glassSoft,
+            borderWidth: 1,
+            borderColor: c.glassLine,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Play fill={c.white} color={c.white} size={13} style={{ marginLeft: 2 }} />
+        </View>
+        <View
+          style={{
+            position: 'absolute',
+            bottom: space.sm,
+            right: space.sm,
             backgroundColor: c.scrim,
-            borderRadius: 5,
+            borderRadius: radius.xs,
             paddingHorizontal: 6,
             paddingVertical: 2,
           }}
         >
-          <Label style={{ color: c.white, fontSize: 10, lineHeight: 15 }}>
+          <Label variant="overline" tone="inverse">
             {videoLabel(video)}
           </Label>
         </View>
-        {channel?.visibility === 'premium' && (
-          <View style={{ position: 'absolute', top: 10, left: 10 }}>
-            <PlusBadge />
-          </View>
-        )}
-        <View style={{ position: 'absolute', bottom: 12, left: 12 }}>
-          <Play fill={c.white} color={c.white} size={17} />
-        </View>
       </View>
-      <Label
-        numberOfLines={2}
-        style={{
-          fontWeight: '700',
-          fontSize: compact ? 14 : 16,
-          lineHeight: compact ? 20 : 24,
-          letterSpacing: -0.25,
-        }}
-      >
-        {video.title}
-      </Label>
-      <Label numberOfLines={1} style={{ color: c.muted, fontSize: 11, lineHeight: 16 }}>
-        {channel?.name ?? ''}
-      </Label>
-    </Pressable>
+      <View style={{ gap: 2 }}>
+        <Label
+          variant={compact ? 'callout' : 'subhead'}
+          numberOfLines={2}
+          style={compact && { fontWeight: '600' }}
+        >
+          {video.title}
+        </Label>
+        {channel?.name ? (
+          <Label variant="caption" tone="muted" numberOfLines={1}>
+            {channel.name}
+          </Label>
+        ) : null}
+      </View>
+    </PressableScale>
   );
 }
+
+export function VideoCardSkeleton({ compact = false }: { compact?: boolean }) {
+  return (
+    <View style={{ flex: 1, minWidth: 0, gap: space.sm }}>
+      <Skeleton rounded={radius.md} style={{ aspectRatio: compact ? 0.94 : 16 / 9 }} />
+      <Skeleton width="80%" height={16} />
+      <Skeleton width="45%" height={12} />
+    </View>
+  );
+}
+
 export function ChannelCard({ channel }: { channel: Channel }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={`Open ${channel.name}`}
       onPress={() => router.push({ pathname: '/channel/[id]', params: { id: channel.id } })}
-      style={{ width: 220, gap: 10 }}
+      style={{ width: 220, gap: space.sm }}
     >
-      <View style={{ height: 135, borderRadius: 18, overflow: 'hidden' }}>
-        <Image source={channel.cover} style={{ flex: 1 }} contentFit="cover" transition={180} />
+      <View
+        style={{
+          height: 132,
+          borderRadius: radius.md,
+          overflow: 'hidden',
+          backgroundColor: c.primarySoft,
+        }}
+      >
+        <Image
+          source={channel.cover}
+          recyclingKey={channel.id}
+          style={{ flex: 1 }}
+          contentFit="cover"
+          transition={200}
+        />
         <View
           style={{
             position: 'absolute',
-            right: 10,
-            bottom: 10,
-            borderRadius: 20,
-            padding: 7,
-            backgroundColor: c.white,
+            right: space.sm,
+            bottom: space.sm,
+            width: 30,
+            height: 30,
+            borderRadius: radius.pill,
+            backgroundColor: c.surface,
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <ArrowUpRight size={15} color={c.ink} />
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Label numberOfLines={1} style={{ flex: 1, fontWeight: '700', fontSize: 14 }}>
+        <Label variant="subhead" numberOfLines={1} style={{ flex: 1 }}>
           {channel.name}
         </Label>
         {channel.visibility === 'premium' && <PlusBadge />}
       </View>
-      <Label style={{ color: c.muted, fontSize: 11 }}>{channel.category}</Label>
-    </Pressable>
+      <Label variant="caption" tone="muted" numberOfLines={1}>
+        {channel.category}
+      </Label>
+    </PressableScale>
+  );
+}
+
+export function ChannelCardSkeleton() {
+  return (
+    <View style={{ width: 220, gap: space.sm }}>
+      <Skeleton height={132} rounded={radius.md} />
+      <Skeleton width="70%" height={16} />
+      <Skeleton width="40%" height={12} />
+    </View>
   );
 }

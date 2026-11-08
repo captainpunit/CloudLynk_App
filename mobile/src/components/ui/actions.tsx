@@ -1,8 +1,17 @@
-import { ActivityIndicator, Pressable } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import type { LucideIcon } from 'lucide-react-native';
 import { Label } from './typography';
-import { colors as c } from '@/theme/tokens';
+import { PressableScale } from './motion';
+import { colors as c, layout, motion, radius, text } from '@/theme/tokens';
 
+/** Round icon action. 44 px target; `dark` sits on cinema surfaces and imagery. */
 export function IconButton({
   icon: Icon,
   onPress,
@@ -15,112 +24,145 @@ export function IconButton({
   dark?: boolean;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => ({
-        width: 46,
-        height: 46,
-        borderRadius: 23,
+      scaleTo={0.92}
+      style={{
+        width: layout.touchTarget,
+        height: layout.touchTarget,
+        borderRadius: radius.pill,
         backgroundColor: dark ? c.glassSoft : c.surface,
         borderWidth: 1,
         borderColor: dark ? c.glassLine : c.line,
         justifyContent: 'center',
         alignItems: 'center',
-        opacity: pressed ? 0.6 : 1,
-      })}
+      }}
     >
-      <Icon size={20} color={dark ? c.white : c.ink} strokeWidth={1.7} />
-    </Pressable>
+      <Icon size={20} color={dark ? c.onCinema : c.ink} strokeWidth={1.8} />
+    </PressableScale>
   );
 }
+
+type ButtonVariant = 'primary' | 'soft' | 'outline' | 'danger' | 'ghost';
+const buttonColors: Record<ButtonVariant, { background: string; foreground: string }> = {
+  primary: { background: c.primary, foreground: c.white },
+  soft: { background: c.primarySoft, foreground: c.primary },
+  outline: { background: c.surface, foreground: c.primary },
+  danger: { background: c.danger, foreground: c.white },
+  ghost: { background: 'transparent', foreground: c.primary },
+};
 
 export function Button({
   title,
   onPress,
   variant = 'primary',
+  size = 'md',
   loading = false,
   disabled = false,
   icon: Icon,
 }: {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'soft' | 'outline' | 'danger';
+  variant?: ButtonVariant;
+  size?: 'md' | 'sm';
   loading?: boolean;
   disabled?: boolean;
   icon?: LucideIcon;
 }) {
-  const filled = variant === 'primary' || variant === 'danger';
-  const foreground = filled ? c.white : c.primary;
+  const inactive = disabled || loading;
+  const filled = variant === 'primary' || variant === 'danger' || variant === 'soft';
+  const { background, foreground } = buttonColors[variant];
+  const ink = disabled ? c.disabledInk : foreground;
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={title}
-      accessibilityState={{ disabled: disabled || loading, busy: loading }}
-      disabled={disabled || loading}
+      accessibilityState={{ disabled: inactive, busy: loading }}
+      disabled={inactive}
       onPress={onPress}
-      style={({ pressed }) => ({
-        minHeight: 52,
-        paddingHorizontal: 20,
-        paddingVertical: 13,
-        borderRadius: 15,
+      haptic={variant === 'primary' || variant === 'danger' ? 'tap' : undefined}
+      style={{
+        minHeight: size === 'md' ? 52 : 40,
+        paddingHorizontal: size === 'md' ? 20 : 14,
+        borderRadius: size === 'md' ? radius.md : radius.sm,
         borderWidth: variant === 'outline' ? 1 : 0,
         borderColor: c.line,
-        backgroundColor:
-          variant === 'primary'
-            ? c.primary
-            : variant === 'danger'
-              ? c.danger
-              : variant === 'soft'
-                ? c.primarySoft
-                : c.surface,
+        backgroundColor: disabled && filled ? c.disabledSurface : background,
         alignItems: 'center',
         justifyContent: 'center',
         flexDirection: 'row',
-        gap: 10,
-        opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
-      })}
+        gap: 8,
+      }}
     >
       {loading ? (
         <ActivityIndicator color={foreground} />
       ) : (
         <>
-          {Icon && <Icon size={18} color={foreground} />}
-          <Label style={{ fontWeight: '700', color: foreground }}>{title}</Label>
+          {Icon && <Icon size={size === 'md' ? 18 : 16} color={ink} strokeWidth={2} />}
+          <Label
+            variant="button"
+            style={{ color: ink, fontSize: size === 'md' ? 15 : 14 }}
+            numberOfLines={1}
+          >
+            {title}
+          </Label>
         </>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
+/** Selectable chip. The fill animates between states; touch area reaches 44 px. */
 export function Pill({
   title,
-  selected,
+  selected = false,
   onPress,
 }: {
   title: string;
   selected?: boolean;
   onPress: () => void;
 }) {
+  const progress = useSharedValue(selected ? 1 : 0);
+  useEffect(() => {
+    progress.value = withTiming(selected ? 1 : 0, { duration: motion.fast });
+  }, [progress, selected]);
+  const chip = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [c.surface, c.ink]),
+    borderColor: interpolateColor(progress.value, [0, 1], [c.line, c.ink]),
+  }));
+  const label = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [c.muted, c.white]),
+  }));
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityState={{ selected }}
+      accessibilityLabel={title}
       onPress={onPress}
-      style={{
-        minHeight: 42,
-        paddingHorizontal: 18,
-        justifyContent: 'center',
-        backgroundColor: selected ? c.ink : c.surface,
-        borderWidth: 1,
-        borderColor: selected ? c.ink : c.line,
-        borderRadius: 24,
-      }}
+      haptic="select"
+      hitSlop={{ top: 2, bottom: 2 }}
     >
-      <Label style={{ fontSize: 13, color: selected ? c.white : c.muted, fontWeight: '600' }}>
-        {title}
-      </Label>
-    </Pressable>
+      <Animated.View
+        style={[
+          {
+            minHeight: 40,
+            paddingHorizontal: 16,
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderRadius: radius.pill,
+          },
+          chip,
+        ]}
+      >
+        <Animated.Text style={[text.callout, { fontWeight: '600' }, label]}>{title}</Animated.Text>
+      </Animated.View>
+    </PressableScale>
   );
+}
+
+/** Thin divider using the line token. */
+export function Divider() {
+  return <View style={{ height: 1, backgroundColor: c.line }} />;
 }
