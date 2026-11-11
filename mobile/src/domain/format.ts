@@ -24,6 +24,14 @@ export function plusSummary({ plans = [], channels }: Pick<Workspace, 'plans' | 
     ? `${count} Plus ${count === 1 ? 'channel' : 'channels'} and up to ${storage} of storage.`
     : `Up to ${storage} of storage.`;
 }
+/** A date such as "10 Dec 2026". */
+export function shortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 export function createId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 }

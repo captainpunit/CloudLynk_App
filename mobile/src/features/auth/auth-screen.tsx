@@ -7,6 +7,7 @@ import { useWorkspace } from '@/state/workspace-provider';
 import { assertLiveConfiguration } from '@/data/live/cloud-api';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
+import { LegalLinks } from '@/components/legal-links';
 import { colors as c } from '@/theme/tokens';
 
 export default function AuthScreen() {
@@ -121,6 +122,7 @@ export default function AuthScreen() {
             Your session is securely stored on your device.
           </Label>
         </View>
+        <LegalLinks />
       </Screen>
     </KeyboardAvoidingView>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import { LogOut, ShieldCheck } from 'lucide-react-native';
 import { Button, ErrorNote, Field, Label, Screen, Surface } from '@/components/ui';
@@ -7,6 +7,8 @@ import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
+import { shortDate } from '@/domain/format';
+import { LegalLinks } from '@/components/legal-links';
 import { invokeBackend } from '@/data/live/invoke-backend';
 import { requestVerifiedDeletion } from '@/services/account/deletion-flow';
 import { unregisterPush } from '@/services/notifications/push';
@@ -27,9 +29,6 @@ export default function SettingsScreen() {
     setName(state.profile?.name ?? '');
     setBirthDate(state.profile?.birthDate ?? '');
   }, [state.profile?.id, state.profile?.name, state.profile?.birthDate]);
-  function openSubscriptions() {
-    void Linking.openURL(env.subscriptionsUrl).catch(() => setError('Google Play could not open.'));
-  }
   async function saveName() {
     if (!state.profile || name.trim().length < 2) {
       setError('Use a name with at least 2 characters.');
@@ -130,11 +129,15 @@ export default function SettingsScreen() {
       )}
       <Surface>
         <Label style={{ fontWeight: '700' }}>Your membership</Label>
-        <Label style={{ color: c.muted }}>Manage paid subscriptions securely in Google Play.</Label>
+        <Label style={{ color: c.muted }}>
+          {state.subscribedUntil
+            ? `Plus is active until ${shortDate(state.subscribedUntil)}. It does not renew by itself.`
+            : 'You do not have Plus.'}
+        </Label>
         <Button
-          title="Manage Google Play subscription"
+          title={state.subscribed ? 'Add more time' : 'See Plus plans'}
           variant="soft"
-          onPress={openSubscriptions}
+          onPress={() => router.push('/premium')}
         />
       </Surface>
       <Surface>
@@ -142,8 +145,7 @@ export default function SettingsScreen() {
         <Label style={{ fontWeight: '700' }}>Privacy comes first.</Label>
         <Label style={{ color: c.muted, fontSize: 13 }}>
           Advertising measurement is optional. Enabling it shares Google Play install attribution
-          and verified subscription events for advertising measurement. Advertising SDKs do not
-          start automatically.
+          for advertising measurement. Advertising SDKs do not start automatically.
         </Label>
         {state.profile && (
           <>
@@ -197,15 +199,8 @@ export default function SettingsScreen() {
           <Label style={{ fontWeight: '700' }}>Delete your account?</Label>
           <Label style={{ color: c.muted, fontSize: 12 }}>
             This permanently removes your account, files and uploaded videos. Deletion runs in the
-            background. It does not cancel Google Play billing. Cancel your subscription in Google
-            Play first to stop future charges.
+            background. Any Plus time you have left ends with the account.
           </Label>
-          <Button
-            title="Manage Google Play subscription"
-            variant="outline"
-            disabled={deleting}
-            onPress={openSubscriptions}
-          />
           <Field
             label="Confirm your password"
             value={password}
@@ -243,6 +238,7 @@ export default function SettingsScreen() {
           </View>
         </Surface>
       )}
+      <LegalLinks />
       <Label style={{ color: c.muted, textAlign: 'center', fontSize: 10 }}>
         {env.appName} · {env.appVersion}
       </Label>

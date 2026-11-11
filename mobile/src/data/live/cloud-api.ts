@@ -3,6 +3,7 @@ import { configured } from '@/lib/env';
 import type { AccessDecision, Channel, Profile, Workspace } from '@/domain/models';
 import { mapChannel, mapFile, mapTitle, readPages } from './mapping';
 import { checked } from './backend';
+import { accessUntil } from '@/domain/payments';
 
 /** Adapter for the implemented PR1 contract. Never sends a service-role key. */
 export function assertLiveConfiguration() {
@@ -91,6 +92,7 @@ export function emptyLiveWorkspace(): Workspace {
     seasons: [],
     notices: [],
     subscribed: false,
+    subscribedUntil: null,
     plans: [],
   };
 }
@@ -112,7 +114,9 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
     readPages((from, to) =>
       supabase
         .from('plans')
-        .select('name,billing_period,quota_bytes')
+        .select('product_id,name,billing_period,quota_bytes,price_paise')
+        .not('price_paise', 'is', null)
+        .order('price_paise')
         .order('product_id')
         .range(from, to),
     ),
@@ -129,9 +133,11 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
       name: row.name,
     })),
     plans: plans.map((row) => ({
+      productId: row.product_id,
       name: row.name,
       billingPeriod: row.billing_period,
       quotaBytes: row.quota_bytes,
+      pricePaise: row.price_paise ?? 0,
     })),
   };
   if (!identity.profile) return snapshot;
@@ -179,6 +185,7 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
       .eq('user_id', userId)
       .is('superseded_by', null),
   ]);
+  const until = accessUntil(checked(subscriptions) ?? []);
   return {
     ...snapshot,
     files: files.map(mapFile),
@@ -194,11 +201,7 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
     })),
     noticesRead: notices.every((row) => !!row.read_at),
     driveUsage: checked(usage) ?? undefined,
-    subscribed: (checked(subscriptions) ?? []).some(
-      (row) =>
-        ['active', 'in_grace', 'cancelled'].includes(row.status) &&
-        !!row.paid_until &&
-        Date.parse(row.paid_until) > Date.now(),
-    ),
+    subscribed: !!until,
+    subscribedUntil: until,
   };
 }

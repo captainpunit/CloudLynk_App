@@ -26,6 +26,8 @@ const paths: string[] = [];
 const channels: string[] = [];
 const fakeUid = randomUUID().replaceAll('-', '');
 const campaign = randomUUID();
+const planId = `api_fixture_${fakeUid.slice(0, 12)}`;
+let previousPayee: Database['public']['Tables']['payment_settings']['Row'] | null = null;
 let assertions = 0;
 function ok<T extends { data: unknown; error: { message: string } | null }>(
   result: T,
@@ -385,6 +387,121 @@ async function main() {
         'membership_required',
       'leaving revokes watch access',
     );
+    // UPI subscription: order -> reported UTR -> administrator confirmation -> access.
+    previousPayee = ok(await admin.from('payment_settings').select('*').single());
+    ok(
+      await moderator.client.rpc('save_payment_settings', {
+        p_upi_vpa: 'fixture@okbank',
+        p_payee_name: 'API Fixture',
+        p_merchant_code: '5815',
+      }),
+    );
+    ok(
+      await moderator.client.rpc('save_plan', {
+        p_product_id: planId,
+        p_name: 'API Plus',
+        p_billing_period: 'P1M',
+        p_price_paise: 4900,
+        p_quota_bytes: 1024 ** 3,
+        p_active: true,
+      }),
+    );
+    await expectDenied(
+      viewer.client.rpc('save_plan', {
+        p_product_id: planId,
+        p_name: 'Free',
+        p_billing_period: 'P1M',
+        p_price_paise: 100,
+        p_quota_bytes: 0,
+        p_active: true,
+      }),
+      'members cannot change plan prices',
+    );
+    check(
+      ok(await viewer.client.from('plans').select('price_paise').eq('product_id', planId).single())
+        .price_paise === 4900,
+      'members read the plan price from the backend',
+    );
+    check(
+      !ok(await viewer.client.from('payment_settings').select('*')).length,
+      'payee settings are hidden from members',
+    );
+    const order = ok(await viewer.client.rpc('create_upi_order', { p_product_id: planId }));
+    check(
+      order.pay_uri ===
+        `upi://pay?pa=fixture@okbank&pn=API%20Fixture&mc=5815&tr=${order.reference}&tn=API%20Plus&am=49.00&cu=INR`,
+      'order returns a complete UPI payment link',
+    );
+    check(
+      ok(await viewer.client.rpc('create_upi_order', { p_product_id: planId })).id === order.id,
+      'repeating the request returns the same order',
+    );
+    await expectDenied(
+      viewer.client.from('upi_orders').update({ status: 'paid' }).eq('id', order.id).select(),
+      'members cannot mark their own order paid',
+    );
+    check(
+      !ok(await owner.client.from('upi_orders').select('id').eq('id', order.id)).length,
+      'another member cannot read the order',
+    );
+    await expectDenied(
+      viewer.client.rpc('submit_upi_payment', { p_order_id: order.id, p_utr: '123' }),
+      'malformed UTR rejected',
+    );
+    const utr = String(Math.floor(1e11 + Math.random() * 9e11));
+    check(
+      ok(await viewer.client.rpc('submit_upi_payment', { p_order_id: order.id, p_utr: utr }))
+        .status === 'submitted',
+      'member reports the payment reference',
+    );
+    await expectDenied(
+      viewer.client.rpc('decide_upi_order', { p_order_id: order.id, p_action: 'approve' }),
+      'members cannot confirm their own payment',
+    );
+    check(
+      !ok(await viewer.client.from('subscriptions').select('id').eq('user_id', viewer.id)).length,
+      'a reported payment grants nothing by itself',
+    );
+    const queued = ok(
+      await moderator.client
+        .from('upi_orders')
+        .select('*, profiles(display_name)')
+        .eq('status', 'submitted')
+        .eq('id', order.id),
+    );
+    check(queued.length === 1 && queued[0].utr === utr, 'administrator sees the reported payment');
+    check(
+      ok(
+        await moderator.client.rpc('decide_upi_order', {
+          p_order_id: order.id,
+          p_action: 'approve',
+        }),
+      ).status === 'paid',
+      'administrator confirms the payment',
+    );
+    const granted = ok(
+      await viewer.client
+        .from('subscriptions')
+        .select('provider,status,paid_until')
+        .eq('user_id', viewer.id),
+    );
+    check(
+      granted.length === 1 &&
+        granted[0].provider === 'upi' &&
+        granted[0].status === 'active' &&
+        Date.parse(granted[0].paid_until ?? '') > Date.now() + 27 * 86400000,
+      'confirmation grants one billing period of Plus',
+    );
+    check(
+      ok(
+        await viewer.client
+          .from('notices')
+          .select('title')
+          .eq('user_id', viewer.id)
+          .eq('title', 'Payment confirmed'),
+      ).length === 1,
+      'member is notified of the confirmation',
+    );
     if (process.argv.includes('--edge')) {
       await expectDenied(
         viewer.client.functions.invoke('stream-playback-token', { body: { titleId: movie.id } }),
@@ -417,6 +534,12 @@ async function main() {
     await admin.from('audit_log').delete().in('target_id', fixtures);
     await admin.from('account_deletion_requests').delete().in('user_id', fixtures);
     for (const id of fixtures) await admin.auth.admin.deleteUser(id);
+    // Orders go with their accounts; the fixture plan and payee settings are restored after.
+    await admin.from('plans').delete().eq('product_id', planId);
+    if (previousPayee) {
+      const { id: _id, updated_at: _updated, ...payee } = previousPayee;
+      await admin.from('payment_settings').update(payee).eq('id', true);
+    }
   }
 }
 void main().catch((error: Error) => {
