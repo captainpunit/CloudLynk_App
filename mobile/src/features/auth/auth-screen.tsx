@@ -1,5 +1,5 @@
 import { goBackOrExplore } from '@/lib/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { ShieldCheck } from 'lucide-react-native';
 import { Button, ErrorNote, Field, Label, Pill, Screen } from '@/components/ui';
@@ -25,15 +25,17 @@ const titles: Record<Mode, string> = {
 };
 
 /** Sign-in errors in plain words; the auth service's own wording is for developers. */
-function authMessage(cause: unknown): string {
+function authMessage(cause: unknown, mode: Mode): string {
   const message = cause instanceof Error ? cause.message.toLowerCase() : '';
   if (message.includes('invalid login')) return 'The email or password is incorrect.';
   if (message.includes('already registered'))
     return 'An account with this email already exists. Sign in instead.';
   if (message.includes('not confirmed'))
     return 'Confirm your email first. Check your inbox for our message.';
-  if (message.includes('expired') || message.includes('invalid'))
+  if (mode === 'resetConfirm' && (message.includes('expired') || message.includes('invalid')))
     return 'That code is wrong or has expired. Ask for a new one.';
+  if (message.includes('weak') || message.includes('password should'))
+    return 'Choose a stronger password: at least 8 characters.';
   if (message.includes('rate limit') || message.includes('security purposes'))
     return 'Too many attempts. Wait a minute and try again.';
   if (message.includes('different from the old'))
@@ -52,11 +54,25 @@ export default function AuthScreen() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // A reset code works once. After it is accepted, a retry only sets the password.
+  const codeAccepted = useRef(false);
+
+  useEffect(
+    () => () => {
+      // Closing the screen between the code and the new password ends that session too.
+      if (codeAccepted.current)
+        void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    },
+    [],
+  );
 
   function show(next: Mode) {
     setError(null);
     setPassword('');
     setCode('');
+    // Leaving a half-finished reset must not leave the account signed in.
+    if (codeAccepted.current) void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    codeAccepted.current = false;
     setMode(next);
   }
 
@@ -83,14 +99,18 @@ export default function AuthScreen() {
       return;
     }
     if (mode === 'resetConfirm') {
-      const verified = await supabase.auth.verifyOtp({
-        email: address,
-        token: code.trim(),
-        type: 'recovery',
-      });
-      if (verified.error) throw verified.error;
+      if (!codeAccepted.current) {
+        const verified = await supabase.auth.verifyOtp({
+          email: address,
+          token: code.trim(),
+          type: 'recovery',
+        });
+        if (verified.error) throw verified.error;
+        codeAccepted.current = true;
+      }
       const updated = await supabase.auth.updateUser({ password });
       if (updated.error) throw updated.error;
+      codeAccepted.current = false;
     } else {
       const result =
         mode === 'signUp'
@@ -117,6 +137,7 @@ export default function AuthScreen() {
   }
 
   async function submit() {
+    if (busy) return;
     const invalid = problem();
     if (invalid) return setError(invalid);
     setBusy(true);
@@ -125,7 +146,7 @@ export default function AuthScreen() {
       assertLiveConfiguration();
       await send();
     } catch (cause) {
-      setError(authMessage(cause));
+      setError(authMessage(cause, mode));
     } finally {
       setBusy(false);
     }

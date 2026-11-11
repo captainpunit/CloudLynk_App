@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(31);
+select plan(36);
 create schema tests;
 grant usage on schema tests to authenticated;
 create table tests.ids(label text primary key,id uuid);
@@ -33,6 +33,7 @@ insert into auth.users(id,email) select gen_random_uuid(),name||'@refund.test' f
 update public.profiles set role='admin' where id=tests.uid('admin');
 insert into public.plans(product_id,name,billing_period,quota_bytes,active,price_paise) values ('refund_week','Silver','P7D',0,true,11800);
 insert into public.app_installs(user_id,installation_id,tracking_consent,meta_anon_id) values
+  (tests.uid('payer'),gen_random_uuid(),true,'anon-payer'),
   (tests.uid('buyer'),gen_random_uuid(),true,'anon-buyer'),
   (tests.uid('tester'),gen_random_uuid(),true,'anon-tester');
 select tests.act('admin');
@@ -51,6 +52,8 @@ select public.submit_upi_payment(tests.id('second'),'444444444444');
 select tests.act('admin');
 select public.decide_upi_order(tests.id('second'),'approve');
 select is(tests.days_left('payer'),14,'two payments stack to fourteen days');
+reset role;
+select is((select count(*) from public.subscriptions where user_id=tests.uid('payer') and period_start is not null),2::bigint,'each payment records where its period starts');
 
 -- Who can refund what.
 select tests.act('payer');
@@ -69,6 +72,8 @@ select is((select decision_reason from public.upi_orders where id=tests.id('firs
 select is((select s.status from public.subscriptions s join public.upi_orders o on o.subscription_id=s.id where o.id=tests.id('first')),'refunded','that payment''s period ends');
 select is(tests.days_left('payer'),7,'the later payment moves earlier by the refunded days');
 select ok(tests.subscribed('payer'),'time bought by the other payment remains');
+select is((select count(*) from public.meta_event_outbox where event_id='upi-order-'||tests.id('first')),0::bigint,'an unsent Meta event for the refunded payment is dropped');
+select is((select count(*) from public.meta_event_outbox where event_id='upi-order-'||tests.id('second')),1::bigint,'the other payment''s event stays');
 select tests.act('admin');
 select throws_ok($$select public.refund_upi_order(tests.id('first'),'Again')$$,'P0001','order_not_paid','a payment is refunded once');
 select tests.act('other');
@@ -103,6 +108,7 @@ select public.grant_play_product(tests.uid('tester'),'refund_week','play-test','
 select is((select count(*) from public.meta_event_outbox where user_id=tests.uid('tester')),0::bigint,'licence-tester purchases are not sent to Meta');
 select ok(public.void_play_purchase('play-a'),'a purchase Google refunded is ended');
 select is(tests.days_left('buyer'),7,'the other purchase moves earlier');
+select is((select count(*) from public.meta_event_outbox where user_id=tests.uid('buyer')),1::bigint,'the refunded purchase''s unsent Meta event is dropped');
 select ok(not public.void_play_purchase('play-a'),'ending it again changes nothing');
 select ok(not public.void_play_purchase('unknown-token'),'unknown purchases are ignored');
 select tests.act('buyer');
@@ -112,7 +118,8 @@ select throws_ok($$select public.void_play_purchase('play-b')$$,'42501',null,'me
 reset role;
 update public.play_external_reports set status='queued',created_at=now()-interval '2 hours' where kind='refund';
 select is((public.backend_health()->>'overdue_play_reports')::int,1,'a report stuck for an hour is flagged');
-update public.play_external_reports set status='failed' where kind='refund';
-select is((public.backend_health()->>'failed_play_reports')::int,1,'a report Google refused is flagged');
+update public.play_external_reports set status='failed' where kind='create';
+select is((select count(*) from public.claim_play_reports(5)),0::bigint,'a refund whose payment report failed is not sent');
+select is((public.backend_health()->>'failed_play_reports')::int,2,'reports Google refused are flagged, with the refund that depended on one');
 select * from finish();
 rollback;

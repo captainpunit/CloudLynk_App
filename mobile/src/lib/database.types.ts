@@ -1071,6 +1071,7 @@ export type Database = {
           "latest_order_id": string | null;
           "next_check_at": string;
           "paid_until": string | null;
+          "period_start": string | null;
           "product_id": string;
           "provider": string;
           "purchase_token": string;
@@ -1089,6 +1090,7 @@ export type Database = {
           "latest_order_id"?: string | null;
           "next_check_at"?: string;
           "paid_until"?: string | null;
+          "period_start"?: string | null;
           "product_id": string;
           "provider"?: string;
           "purchase_token": string;
@@ -1106,6 +1108,7 @@ export type Database = {
           "latest_order_id"?: string | null;
           "next_check_at"?: string;
           "paid_until"?: string | null;
+          "period_start"?: string | null;
           "product_id"?: string;
           "provider"?: string;
           "purchase_token"?: string;
@@ -1414,6 +1417,7 @@ export type Database = {
           "latest_order_id": string | null;
           "next_check_at": string;
           "paid_until": string | null;
+          "period_start": string | null;
           "product_id": string;
           "provider": string;
           "purchase_token": string;
@@ -1778,7 +1782,6 @@ export type Database = {
       };
       "end_paid_period": {
         Args: {
-          "p_period": string;
           "p_subscription_id": string;
         };
         Returns: string;

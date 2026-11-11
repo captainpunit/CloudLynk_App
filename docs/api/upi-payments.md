@@ -104,7 +104,8 @@ Errors: `admin_required`, `reason_required`, `invalid_action`, `order_not_found`
   removes it.
 - Refunds: send the money back from the bank or UPI app, then mark the payment in
   Admin → Payments → Refunds (`refund_upi_order(order_id, reason)`). That ends the time
-  the payment bought, moves later stacked periods earlier by the unused time, notifies
+  the payment bought, moves later stacked periods earlier by the unused time (each period's start is kept in
+  `subscriptions.period_start`), drops the payment's Meta event if it has not been sent, notifies
   the member, writes the audit log, and queues a refund report for Google when the
   payment had been reported. A refunded payment's UTR cannot be used again.
 

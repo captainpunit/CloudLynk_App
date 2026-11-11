@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Button, EmptyState, ErrorNote, Field, Label, Pill, Surface } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
@@ -51,6 +51,9 @@ export default function AdminPayments() {
   const [paid, setPaid] = useState<QueuedPayment[]>([]);
   const [paidUtr, setPaidUtr] = useState('');
   const [refundReason, setRefundReason] = useState('');
+  // The payment being refunded: its card shows the reason field and the confirm button.
+  const [refundId, setRefundId] = useState<string | null>(null);
+  const paidRequest = useRef(0);
   const [vpa, setVpa] = useState('');
   const [payee, setPayee] = useState('');
   const [merchantCode, setMerchantCode] = useState('');
@@ -74,7 +77,14 @@ export default function AdminPayments() {
     void loadQueue().catch(() => setError('Payments could not load. Please refresh.'));
   }, [loadQueue]);
   // Confirmed payments load when the Refunds view opens, and again for each search.
-  const loadPaid = useCallback(async (utr = '') => setPaid(await fetchPaidPayments(utr)), []);
+  const loadPaid = useCallback(async (utr = '') => {
+    // A slow earlier search must not replace the results of a later one.
+    const request = ++paidRequest.current;
+    const rows = await fetchPaidPayments(utr);
+    if (request !== paidRequest.current) return;
+    setPaid(rows);
+    setRefundId(null);
+  }, []);
   useEffect(() => {
     if (view !== 'Refunds') return;
     void loadPaid().catch(() => setError('Payments could not load. Please refresh.'));
@@ -110,6 +120,7 @@ export default function AdminPayments() {
     void run(async () => {
       await refundPayment(order.id, refundReason);
       setRefundReason('');
+      setRefundId(null);
       await loadPaid(isUtr(paidUtr) ? cleanUtr(paidUtr) : '');
     }, 'Marked refunded. That payment no longer gives Plus.');
   }
@@ -264,13 +275,6 @@ export default function AdminPayments() {
               )
             }
           />
-          <Field
-            label="Reason for the refund (the member sees it)"
-            value={refundReason}
-            onChangeText={setRefundReason}
-            multiline
-            maxLength={500}
-          />
           {paid.map((order) => (
             <Surface key={order.id}>
               <Label style={{ fontWeight: '700' }}>
@@ -286,12 +290,39 @@ export default function AdminPayments() {
               <Label selectable style={{ color: c.muted, fontSize: 12 }}>
                 Reference {order.reference} · paid to {order.payeeVpa}
               </Label>
-              <Button
-                title="Mark refunded"
-                variant="outline"
-                disabled={busy || !refundReason.trim()}
-                onPress={() => refund(order)}
-              />
+              {refundId === order.id ? (
+                <>
+                  <Field
+                    label="Reason for the refund (the member sees it)"
+                    value={refundReason}
+                    onChangeText={setRefundReason}
+                    multiline
+                    maxLength={500}
+                  />
+                  <Button
+                    title={`Mark ${rupees(order.amountPaise)} refunded`}
+                    loading={busy}
+                    disabled={!refundReason.trim()}
+                    onPress={() => refund(order)}
+                  />
+                  <Button
+                    title="Cancel"
+                    variant="outline"
+                    disabled={busy}
+                    onPress={() => setRefundId(null)}
+                  />
+                </>
+              ) : (
+                <Button
+                  title="Refund this payment"
+                  variant="outline"
+                  disabled={busy}
+                  onPress={() => {
+                    setRefundReason('');
+                    setRefundId(order.id);
+                  }}
+                />
+              )}
             </Surface>
           ))}
           {!paid.length && (
