@@ -35,7 +35,7 @@ export async function uploadLiveFile(
     data: { session },
   } = await supabase.auth.getSession();
   if (!session) throw new Error('Sign in before uploading.');
-  const key = `cloudlynk.upload.v1:${session.user.id}:${titleId ?? 'drive'}:${asset.name}:${source.size}`;
+  const key = `cloudlynk.upload.v1:${session.user.id}:${titleId ?? 'drive'}:${asset.name}:${source.size}:${asset.lastModified ?? 0}`;
   const raw = await AsyncStorage.getItem(key);
   let intent: Intent | null = null;
   try {
