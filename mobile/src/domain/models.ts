@@ -66,8 +66,18 @@ export interface Workspace {
   };
   notices?: { id: string; title: string; body: string; readAt: string | null; createdAt: string }[];
   subscribed?: boolean;
+  /** When the current Plus period ends; null without Plus. */
+  subscribedUntil?: string | null;
   completedIds?: string[];
-  plans?: { name: string; billingPeriod: string; quotaBytes: number }[];
+  plans?: Plan[];
+}
+/** A plan that can be bought now: active and priced in the backend. */
+export interface Plan {
+  productId: string;
+  name: string;
+  billingPeriod: string;
+  quotaBytes: number;
+  pricePaise: number;
 }
 export type AccessDecision =
   | 'allowed'

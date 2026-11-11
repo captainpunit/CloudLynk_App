@@ -14,12 +14,6 @@ const messages: Record<string, string> = {
   recent_sign_in_required: 'Sign in again, then request account deletion within 15 minutes.',
   sign_in_required: 'Please sign in again.',
   account_restricted: 'Your account is restricted. Contact support if you need help.',
-  purchase_owner_mismatch:
-    'This purchase belongs to another account. Sign in to the original account.',
-  purchase_owner_missing:
-    'Google Play could not link this purchase to your account. Contact support.',
-  purchase_erased: 'This purchase was associated with a deleted account.',
-  subscription_sync_busy: 'Your purchase is being verified. Try Restore purchases shortly.',
   temporarily_unavailable: 'The service is temporarily unavailable. Please try again.',
 };
 

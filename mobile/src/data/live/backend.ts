@@ -19,6 +19,26 @@ const errors: Record<string, string> = {
   series_unavailable: 'Publish the parent series before publishing this episode.',
   reason_required: 'Enter a reason for this action.',
   report_rate_limit: 'You have reached the daily report limit. Please try again tomorrow.',
+  sign_in_required: 'Sign in to continue.',
+  payments_unavailable: 'Payments are not open yet. Please try again later.',
+  plan_unavailable: 'This plan is no longer available. Choose another plan.',
+  payment_in_review:
+    'We are still checking your last payment. You can pay again once it is decided.',
+  too_many_orders: 'Too many payment attempts today. Please try again tomorrow.',
+  invalid_utr: 'Enter the 12-digit UTR shown in your UPI app.',
+  utr_already_used: 'This UTR has already been used for another payment.',
+  order_not_found: 'This payment request was not found. Start again from the plan list.',
+  order_closed: 'This payment request is closed. Start again from the plan list.',
+  too_many_attempts: 'This payment request has been reported too many times. Contact support.',
+  order_not_pending: 'This payment has already been decided.',
+  invalid_upi_address: 'Enter a valid UPI ID, for example business@bank.',
+  invalid_payee_name: 'Use letters, numbers, spaces, dots or hyphens for the payee name.',
+  invalid_merchant_code: 'The merchant category code is four digits.',
+  invalid_plan_id: 'Use lowercase letters, numbers, dots or underscores for the plan ID.',
+  invalid_plan_name: 'Use a plan name of 2 to 40 characters.',
+  invalid_billing_period: 'Choose a billing period.',
+  invalid_price: 'Enter a price of at least ₹1.',
+  invalid_quota: 'Enter the storage included with this plan.',
 };
 export function checked<T>(result: { data: T; error: { message: string } | null }): T {
   if (result.error)

@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/lib/database.types';
 import { call, checked } from '@/data/live/backend';
 import { readPages } from '@/data/live/mapping';
+import AdminPayments from './admin-payments';
 
 type Person = Pick<
   Tables<'profiles'>,
@@ -107,9 +108,16 @@ export default function AdminScreen() {
         onPress={() => void run(load, 'Admin records refreshed.')}
       />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {['Channels', 'Titles', 'Reports', 'People', 'Messages', 'Audit'].map((value) => (
-          <Pill key={value} title={value} selected={tab === value} onPress={() => setTab(value)} />
-        ))}
+        {['Channels', 'Titles', 'Reports', 'People', 'Payments', 'Messages', 'Audit'].map(
+          (value) => (
+            <Pill
+              key={value}
+              title={value}
+              selected={tab === value}
+              onPress={() => setTab(value)}
+            />
+          ),
+        )}
       </View>
       <ErrorNote message={error} />
       {['Titles', 'Reports', 'People'].includes(tab) && (
@@ -228,6 +236,7 @@ export default function AdminScreen() {
             ))}
           </Surface>
         ))}
+      {tab === 'Payments' && <AdminPayments />}
       {tab === 'Messages' && (
         <Surface>
           <Label>Send an inbox notice and device push to selected live users.</Label>

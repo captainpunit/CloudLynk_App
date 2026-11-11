@@ -28,7 +28,7 @@ Taken from `Cloudlynk_PRD_and_Workflow.docx` so it matches the existing app.
 | Mobile | Expo (SDK 57) + React Native + TypeScript + Expo Router, Android first |
 | Backend | Supabase: Postgres, Auth, Storage, Edge Functions (Deno/TypeScript) |
 | Video | Cloudflare Stream (signed playback) |
-| Payments | Google Play Billing (`expo-iap`) + server verification |
+| Payments | UPI intent; an administrator confirms each payment (`docs/api/upi-payments.md`) |
 | Ads | Meta SDK (`react-native-fbsdk-next`) + Meta Conversions API from the server |
 
 ## Folders
@@ -40,7 +40,6 @@ cloudlynk/
     src/features/             auth, files, channels, premium, player, upload
     src/services/meta/        Meta App Events (SDK)
     src/services/attribution/ Play install referrer, deep links
-    src/services/billing/     Play Billing -> server verification
     src/lib/                  env, Supabase client
   supabase/
     migrations/               SQL migrations
@@ -88,7 +87,7 @@ supabase test db              # database tests (needs Docker)
 supabase functions serve
 ```
 
-Meta SDK and Play Billing do not work in Expo Go. Use a development build.
+The Meta SDK does not work in Expo Go. Use a development build.
 
 ## Accounts the client must own
 

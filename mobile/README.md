@@ -66,17 +66,15 @@ when empty, shared links use the app scheme. Channel categories are free text ch
 owners; Explore builds its category filter from the loaded catalogue.
 Empty catalogues stay empty.
 
-Live Android Premium now reads active backend plans and matching Google Play offers,
-starts purchases with `profiles.play_account_id`, and verifies purchase/restore
-tokens through `verify-play-receipt`. It displays regular automatically renewing
-base plans with a matching billing period. Trials, installments and in-app plan
-replacement are not offered; existing purchases link to Google Play management.
-No local preview entitlement is granted in live mode. Server acknowledgement and
-RTDN/reconciliation remain responsible for durable subscription state.
+Plus is sold by UPI. The Plus screen lists active, priced backend plans, creates an
+order (`create_upi_order`), opens the returned `upi://pay` link in the member's UPI
+app and collects the 12-digit UTR (`submit_upi_payment`). Access starts only after an
+administrator confirms the payment in Admin → Payments, where the UPI ID and the
+plans are also managed. Plans last a fixed period and do not renew by themselves.
+See [UPI payments](../docs/api/upi-payments.md).
 
 Settings now requests queued account deletion through `delete-account` after
-password reauthentication and typed `DELETE` confirmation. Users must cancel
-Google Play billing separately. Deploy the deletion endpoint and scheduled workers
+password reauthentication and typed `DELETE` confirmation. Deploy the deletion endpoint and scheduled workers
 before enabling live use; acceptance means provider objects and Auth are removed,
 not merely that the request returned `queued`.
 

@@ -40,7 +40,6 @@ const config: ExpoConfig = {
     'expo-notifications',
     ...(nativeIntegrations
       ? ([
-          'expo-iap',
           [
             'react-native-fbsdk-next',
             {
