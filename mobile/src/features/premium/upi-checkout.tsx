@@ -57,6 +57,18 @@ export default function UpiCheckout() {
     onError: setError,
   });
   const request = useRef(0);
+  // Taken before any await, so two quick taps cannot both start a payment.
+  const working = useRef(false);
+  // Changes when the signed-in account changes; late results for the old one are dropped.
+  const account = useRef(0);
+  useEffect(() => {
+    account.current += 1;
+    request.current += 1;
+    setOrders([]);
+    setChoice(null);
+    setUtr('');
+    setError(null);
+  }, [userId]);
 
   const load = useCallback(async () => {
     const id = ++request.current;
@@ -81,15 +93,20 @@ export default function UpiCheckout() {
   const current = latest && !choosing && ['pay', 'report', 'review'].includes(step) ? latest : null;
   const plan = plans.find((item) => item.productId === selected) ?? plans[0];
 
-  async function run(work: () => Promise<void>) {
-    if (busy) return;
+  /** Runs one payment action at a time. `live()` is false once the account has changed. */
+  async function run(work: (live: () => boolean) => Promise<void>) {
+    if (working.current) return;
+    working.current = true;
+    const owner = account.current;
+    const live = () => owner === account.current;
     setBusy(true);
     setError(null);
     try {
-      await work();
+      await work(live);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Please try again.');
+      if (live()) setError(cause instanceof Error ? cause.message : 'Please try again.');
     } finally {
+      working.current = false;
       setBusy(false);
     }
   }
@@ -103,6 +120,8 @@ export default function UpiCheckout() {
   }
   /** Shows a new or reopened order and hands over to the UPI app. */
   function show(order: UpiOrder) {
+    // A list fetched before this order existed must not replace it when it arrives.
+    request.current += 1;
     setOrders((rows) => [order, ...rows.filter((row) => row.id !== order.id)]);
     setChoosing(false);
     setUtr('');
@@ -110,22 +129,31 @@ export default function UpiCheckout() {
   }
   function pay() {
     if (!requireIdentity() || !plan) return;
-    void run(async () => {
+    void run(async (live) => {
       logCheckoutStarted(plan.productId);
-      if (play.available) await play.buy(plan.productId);
-      else show(await startOrder(plan.productId));
+      if (play.available) return play.buy(plan.productId);
+      const order = await startOrder(plan.productId);
+      if (live()) show(order);
     });
   }
   function payByUpi(chosen: UpiChoice, state: IndianState) {
-    void run(async () => {
-      const order = await startOrder(chosen.productId);
-      show(await attachPlayChoice(order.id, chosen.externalTransactionToken, stateCode(state)));
+    void run(async (live) => {
+      const started = await startOrder(chosen.productId);
+      const order = await attachPlayChoice(
+        started.id,
+        chosen.externalTransactionToken,
+        stateCode(state),
+      );
+      if (!live()) return;
+      show(order);
       setChoice(null);
     });
   }
   function report(order: UpiOrder) {
-    void run(async () => {
+    void run(async (live) => {
       const updated = await reportPayment(order.id, cleanUtr(utr));
+      if (!live()) return;
+      request.current += 1;
       setOrders((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
       setUtr('');
       notify('Payment reported. Plus starts once we confirm it.');

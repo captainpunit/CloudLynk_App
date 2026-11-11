@@ -158,15 +158,19 @@ export default function UploadScreen() {
     if (!selected.length) throw new Error('Choose a file first.');
     const controller = new AbortController();
     abort.current = controller;
-    for (let index = 0; index < selected.length; index++) {
+    const files = [...selected];
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
       await uploadLiveFile(
-        selected[index],
+        file,
         channelId ? titleId : undefined,
-        (fraction) => setProgress(Math.round(((index + fraction) / selected.length) * 100)),
+        (fraction) => setProgress(Math.round(((index + fraction) / files.length) * 100)),
         controller.signal,
       );
+      // A finished file leaves the list at once, so retrying after a later failure
+      // does not upload it a second time.
+      setSelected((rest) => rest.filter((item) => item !== file));
     }
-    setSelected([]);
   }
   if (!state.profile)
     return (

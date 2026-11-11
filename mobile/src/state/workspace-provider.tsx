@@ -50,8 +50,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const generation = useRef(0);
   const identityId = useRef<string | null>(null);
   const pendingBookmarks = useRef(new Set<string>());
+  // Counts joins and saves. A snapshot fetched before one of them finished is out of date.
+  const mutations = useRef(0);
   const refresh = useCallback(async () => {
     const request = ++generation.current;
+    const revision = mutations.current;
     setRefreshing(true);
     setError(null);
     try {
@@ -59,7 +62,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (
+      if (request === generation.current && revision !== mutations.current) {
+        // Something was joined or saved while this loaded; load again rather than undo it.
+        setTimeout(() => void refresh(), 0);
+      } else if (
         request === generation.current &&
         (session?.user.id ?? null) === (snapshot.profile?.id ?? null)
       ) {
@@ -142,6 +148,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     await setLiveMembership(id, joined);
     const after = await supabase.auth.getSession();
     if (after.data.session?.user.id !== userId) return;
+    mutations.current += 1;
     dispatch({ type: 'membership', id, joined });
     setToast(joined ? 'Channel added to your collection' : 'You left the channel');
   }
@@ -156,6 +163,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         data: { session },
       } = await supabase.auth.getSession();
       if (session?.user.id !== userId) return;
+      mutations.current += 1;
       dispatch({ type: 'bookmark-set', id, saved: !saved });
       setToast(saved ? 'Removed from saved videos' : 'Saved for a little later');
     } finally {
