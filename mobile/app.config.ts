@@ -13,11 +13,17 @@ const config: ExpoConfig = {
   version: '0.1.0',
   scheme,
   orientation: 'portrait',
-  userInterfaceStyle: 'light',
-  backgroundColor: '#F7F8FA',
+  userInterfaceStyle: 'dark',
+  // The night canvas (theme/tokens.ts), so launch and screen changes never flash white.
+  backgroundColor: '#101219',
   android: {
     package: pkg,
     versionCode: 1,
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-foreground.png',
+      monochromeImage: './assets/adaptive-foreground.png',
+      backgroundColor: '#101219',
+    },
     // Android App Links, used by Meta ad deep links and shared links.
     intentFilters: [
       {
@@ -32,6 +38,10 @@ const config: ExpoConfig = {
     './plugins/with-short-cmake-paths',
     './plugins/with-preview-apk',
     'expo-router',
+    [
+      'expo-splash-screen',
+      { image: './assets/splash-mark.png', imageWidth: 160, backgroundColor: '#101219' },
+    ],
     'expo-secure-store',
     'expo-document-picker',
     'expo-video',
