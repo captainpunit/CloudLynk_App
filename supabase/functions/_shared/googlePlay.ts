@@ -1,6 +1,7 @@
 import { importPKCS8, SignJWT } from "jose";
 import { env } from "./env.ts";
 import type { PlayOrder, PlayPurchase } from "./playState.ts";
+import type { PlayProductPurchase } from "./playProduct.ts";
 
 export class PlayError extends Error {
   constructor(public status: number) {
@@ -49,7 +50,11 @@ async function accessToken(): Promise<string> {
     refreshing = undefined;
   }
 }
-async function playRequest(path: string, method = "GET") {
+async function playRequest(
+  path: string,
+  method = "GET",
+  payload: unknown = {},
+) {
   const response = await fetch(
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${
       encodeURIComponent(env("ANDROID_PACKAGE_NAME"))
@@ -60,7 +65,7 @@ async function playRequest(path: string, method = "GET") {
         Authorization: `Bearer ${await accessToken()}`,
         "Content-Type": "application/json",
       },
-      ...(method === "POST" ? { body: "{}" } : {}),
+      ...(method === "POST" ? { body: JSON.stringify(payload) } : {}),
       signal: AbortSignal.timeout(15_000),
     },
   );
@@ -94,4 +99,38 @@ export async function acknowledgeSubscription(
 }
 export function getOrder(orderId: string): Promise<PlayOrder> {
   return playRequest(`orders/${encodeURIComponent(orderId)}`);
+}
+export function getProductPurchase(
+  productId: string,
+  token: string,
+): Promise<PlayProductPurchase> {
+  return playRequest(
+    `purchases/products/${encodeURIComponent(productId)}/tokens/${
+      encodeURIComponent(token)
+    }`,
+  );
+}
+/** Consuming lets the same plan be bought again for the next period. */
+export async function consumeProduct(
+  productId: string,
+  token: string,
+): Promise<void> {
+  await playRequest(
+    `purchases/products/${encodeURIComponent(productId)}/tokens/${
+      encodeURIComponent(token)
+    }:consume`,
+    "POST",
+  );
+}
+export async function createExternalTransaction(
+  externalTransactionId: string,
+  transaction: unknown,
+): Promise<void> {
+  await playRequest(
+    `externalTransactions?externalTransactionId=${
+      encodeURIComponent(externalTransactionId)
+    }`,
+    "POST",
+    transaction,
+  );
 }
