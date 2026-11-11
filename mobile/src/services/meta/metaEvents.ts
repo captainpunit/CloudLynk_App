@@ -1,16 +1,24 @@
 import { AppEventsLogger, Settings } from 'react-native-fbsdk-next';
 
 /**
- * Client side Meta App Events.
+ * Client side Meta App Events. Import through `measurement.ts` only, which loads this
+ * file after the member has agreed to advertising measurement.
  *
- * Install and app open are logged by the SDK itself. Money events
- * (Subscribe, StartTrial, renewals) are sent by the backend through the
- * Conversions API after Google Play verifies the purchase, so ads report
- * only real revenue. When the app also logs one of those events, it must
- * pass the same event_id the server uses so Meta can deduplicate.
+ * Install and app open are logged by the SDK itself. Money events (Subscribe, Purchase,
+ * StartTrial) are sent by the backend through the Conversions API after the payment is
+ * confirmed, so ads report only real revenue. The app never logs them.
  */
 export function initMetaSdk() {
   Settings.initializeSDK();
+}
+
+export function pauseMetaSdk() {
+  Settings.setAutoLogAppEventsEnabled(false);
+  Settings.setAdvertiserIDCollectionEnabled(false);
+}
+
+export function anonymousId() {
+  return AppEventsLogger.getAnonymousID();
 }
 
 export function setMetaUser(userId: string) {

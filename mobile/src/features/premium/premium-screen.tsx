@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { View } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import { Heading, Label, Screen } from '@/components/ui';
@@ -5,12 +6,14 @@ import { colors as c } from '@/theme/tokens';
 import { env } from '@/lib/env';
 import { plusSummary, shortDate } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
+import { logPlansViewed } from '@/services/meta/measurement';
 import UpiCheckout from './upi-checkout';
 
 /** Plans, prices and storage come from the backend `plans` table; payment is by UPI. */
 export default function PremiumScreen() {
   const { state } = useWorkspace();
   const summary = plusSummary(state);
+  useEffect(logPlansViewed, []);
   return (
     <Screen title={`${env.appName} Plus`} back>
       <View

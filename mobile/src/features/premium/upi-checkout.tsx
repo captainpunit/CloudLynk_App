@@ -17,6 +17,7 @@ import {
 } from '@/domain/payments';
 import type { Plan } from '@/domain/models';
 import { fetchMyOrders, reportPayment, startOrder } from '@/data/live/payments';
+import { logCheckoutStarted } from '@/services/meta/measurement';
 import { useWorkspace } from '@/state/workspace-provider';
 
 /**
@@ -82,6 +83,7 @@ export default function UpiCheckout() {
     if (!requireIdentity() || !plan) return;
     void run(async () => {
       const order = await startOrder(plan.productId);
+      logCheckoutStarted(plan.productId);
       setOrders((rows) => [order, ...rows.filter((row) => row.id !== order.id)]);
       setChoosing(false);
       setUtr('');

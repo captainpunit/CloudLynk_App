@@ -12,8 +12,11 @@ type OutboxRow = {
   user_id: string | null;
   event_name: string;
   event_id: string;
+  value: number | null;
+  currency: string | null;
   payload: {
     orderId?: string;
+    upiOrderId?: string;
     purchaseToken?: string;
     eventTime: string;
     metaAnonId?: string;
@@ -42,8 +45,11 @@ Deno.serve(scheduled("meta-capi-dispatch", async () => {
           payload.orderId,
         )
         : null;
+      // A UPI payment was confirmed by an administrator, so its stored amount is the value.
+      const upiValue = payload.upiOrderId ? Number(row.value) : undefined;
       if (
         !row.user_id || !install.data?.tracking_consent ||
+        (payload.upiOrderId && !(upiValue! > 0)) ||
         (payload.orderId && (!order || order.value <= 0))
       ) {
         skipped++;
@@ -64,8 +70,8 @@ Deno.serve(scheduled("meta-capi-dispatch", async () => {
             metaAnonId: payload.metaAnonId,
             extinfo: payload.extinfo,
             advertiserTrackingEnabled: true,
-            value: order?.value,
-            currency: order?.currency,
+            value: order?.value ?? upiValue,
+            currency: order?.currency ?? row.currency ?? undefined,
           }]);
           const result = await response.json();
           if (!response.ok || result.error || result.events_received !== 1) {

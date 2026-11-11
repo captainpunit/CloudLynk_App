@@ -6,10 +6,11 @@ import { WorkspaceProvider, useWorkspace } from '@/state/workspace-provider';
 import { Button, Label, Screen } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
 import { PushLifecycle } from '@/services/notifications/push-lifecycle';
+import { AdConsentPrompt } from '@/features/privacy/ad-consent-prompt';
 
 export default function RootLayout() {
-  // Native advertising modules are deliberately not imported at startup.
-  // Consent-gated production attribution belongs behind a separate adapter.
+  // Native advertising modules are not imported at startup: AdConsentPrompt loads them
+  // only after the member agrees (see services/meta/measurement.ts).
   return (
     <SafeAreaProvider>
       <WorkspaceProvider>
@@ -74,6 +75,7 @@ function AppNavigation() {
           </View>
         )}
       </View>
+      <AdConsentPrompt />
     </View>
   );
 }
