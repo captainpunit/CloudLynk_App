@@ -9,7 +9,7 @@ import { useWorkspace } from '@/state/workspace-provider';
 import { logPlansViewed } from '@/services/meta/measurement';
 import UpiCheckout from './upi-checkout';
 
-/** Plans, prices and storage come from the backend `plans` table; payment is by UPI. */
+/** Plans, prices and storage come from the backend `plans` table. */
 export default function PremiumScreen() {
   const { state } = useWorkspace();
   const summary = plusSummary(state);

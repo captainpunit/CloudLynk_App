@@ -13,6 +13,11 @@ const messages: Record<string, string> = {
   territory_unavailable: 'This title is unavailable in your region.',
   recent_sign_in_required: 'Sign in again, then request account deletion within 15 minutes.',
   sign_in_required: 'Please sign in again.',
+  purchase_pending: 'Google Play is still collecting the payment. Plus starts once it is paid.',
+  invalid_purchase:
+    'Google Play could not confirm this purchase. Contact support if you were charged.',
+  purchase_owner_mismatch: 'This purchase belongs to a different CloudLynk account.',
+  plan_unavailable: 'This plan is no longer available.',
   account_restricted: 'Your account is restricted. Contact support if you need help.',
   temporarily_unavailable: 'The service is temporarily unavailable. Please try again.',
 };

@@ -4,6 +4,8 @@ import {
   accessUntil,
   cleanUtr,
   isUtr,
+  matchingStates,
+  stateCode,
   orderStep,
   paiseFromRupees,
   periodLength,
@@ -80,4 +82,11 @@ test('access lasts until the latest paid period that still counts', () => {
     '2027-12-11T10:00:00Z',
   );
   assert.equal(accessUntil([{ status: 'pending', paid_until: null }], now), null);
+});
+
+test('states are found by any part of the name and sent in the spelling Google expects', () => {
+  assert.deepEqual(matchingStates('  guj '), ['Gujarat']);
+  assert.deepEqual(matchingStates('pradesh').length, 5);
+  assert.deepEqual(matchingStates(''), []);
+  assert.equal(stateCode('Tamil Nadu'), 'TAMIL NADU');
 });

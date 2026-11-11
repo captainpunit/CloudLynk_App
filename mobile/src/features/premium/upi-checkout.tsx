@@ -13,16 +13,25 @@ import {
   periodLength,
   planPrice,
   rupees,
+  stateCode,
+  type IndianState,
   type UpiOrder,
 } from '@/domain/payments';
 import type { Plan } from '@/domain/models';
-import { fetchMyOrders, reportPayment, startOrder } from '@/data/live/payments';
+import { attachPlayChoice, fetchMyOrders, reportPayment, startOrder } from '@/data/live/payments';
+import type { UpiChoice } from '@/services/billing/play-choice';
+import { StatePicker } from './state-picker';
+import { usePlayChoice } from './use-play-choice';
 import { logCheckoutStarted } from '@/services/meta/measurement';
 import { useWorkspace } from '@/state/workspace-provider';
 
 /**
- * Plus checkout over UPI. The backend issues the payment link and decides access:
- * this screen only opens the link, collects the UTR and shows where the order stands.
+ * Plus checkout. The backend issues the UPI payment link and decides access: this screen
+ * only opens the link, collects the UTR and shows where the order stands.
+ *
+ * On Google Play builds the member first sees Google's choice screen. Choosing Google
+ * Play finishes there; choosing UPI returns here with a token, and the member gives
+ * their state (Google needs it for GST) before paying.
  */
 export default function UpiCheckout() {
   const { state, requireIdentity, refresh, notify } = useWorkspace();
@@ -34,6 +43,19 @@ export default function UpiCheckout() {
   const [utr, setUtr] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [choice, setChoice] = useState<UpiChoice | null>(null);
+  const [taxState, setTaxState] = useState<IndianState | null>(null);
+  const play = usePlayChoice(userId, {
+    onGranted: () => {
+      notify('Payment confirmed. Plus is active.');
+      void refresh();
+    },
+    onUpiChosen: (chosen) => {
+      setError(null);
+      setChoice(chosen);
+    },
+    onError: setError,
+  });
   const request = useRef(0);
 
   const load = useCallback(async () => {
@@ -79,15 +101,26 @@ export default function UpiCheckout() {
       ),
     );
   }
+  /** Shows a new or reopened order and hands over to the UPI app. */
+  function show(order: UpiOrder) {
+    setOrders((rows) => [order, ...rows.filter((row) => row.id !== order.id)]);
+    setChoosing(false);
+    setUtr('');
+    openUpi(order);
+  }
   function pay() {
     if (!requireIdentity() || !plan) return;
     void run(async () => {
-      const order = await startOrder(plan.productId);
       logCheckoutStarted(plan.productId);
-      setOrders((rows) => [order, ...rows.filter((row) => row.id !== order.id)]);
-      setChoosing(false);
-      setUtr('');
-      openUpi(order);
+      if (play.available) await play.buy(plan.productId);
+      else show(await startOrder(plan.productId));
+    });
+  }
+  function payByUpi(chosen: UpiChoice, state: IndianState) {
+    void run(async () => {
+      const order = await startOrder(chosen.productId);
+      show(await attachPlayChoice(order.id, chosen.externalTransactionToken, stateCode(state)));
+      setChoice(null);
     });
   }
   function report(order: UpiOrder) {
@@ -103,6 +136,30 @@ export default function UpiCheckout() {
       await Promise.all([load(), refresh()]);
     });
   }
+
+  if (choice)
+    return (
+      <Surface>
+        <Label style={{ fontWeight: '700', fontSize: 17 }}>Pay by UPI</Label>
+        <Label style={{ color: c.muted, fontSize: 13 }}>
+          Tell us your state before you pay. It is used only to work out the tax on this payment.
+        </Label>
+        <StatePicker value={taxState} onChange={setTaxState} />
+        <ErrorNote message={error} />
+        <Button
+          title="Continue to UPI"
+          loading={busy}
+          disabled={!taxState}
+          onPress={() => taxState && payByUpi(choice, taxState)}
+        />
+        <Button
+          title="Back to plans"
+          variant="outline"
+          disabled={busy}
+          onPress={() => setChoice(null)}
+        />
+      </Surface>
+    );
 
   if (current && step === 'review')
     return (
@@ -205,16 +262,19 @@ export default function UpiCheckout() {
         title={
           !state.profile
             ? 'Sign in to subscribe'
-            : plan
-              ? `Pay ${rupees(plan.pricePaise)} with UPI`
-              : 'Pay with UPI'
+            : !plan
+              ? 'Subscribe'
+              : play.available
+                ? `Subscribe for ${rupees(plan.pricePaise)}`
+                : `Pay ${rupees(plan.pricePaise)} with UPI`
         }
         loading={busy}
         onPress={pay}
       />
       <Label style={{ color: c.muted, fontSize: 12 }}>
+        {play.available ? 'Choose Google Play or UPI on the next screen. ' : ''}
         Plus does not renew by itself. Pay again when your time ends; paying early adds to the time
-        you have left. Access starts after we confirm your payment.
+        you have left. A UPI payment starts Plus after we confirm it.
       </Label>
       <LegalLinks />
     </View>

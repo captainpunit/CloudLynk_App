@@ -57,10 +57,9 @@ begin
   if p_state is null or not public.valid_tax_state(p_state) then raise exception 'invalid_state'; end if;
   select * into v_order from public.upi_orders where id = p_order_id and user_id = auth.uid() for update;
   if not found then raise exception 'order_not_found'; end if;
-  if v_order.external_transaction_token = p_token then return v_order; end if;
-  if v_order.status <> 'created' or v_order.external_transaction_token is not null then
-    raise exception 'order_closed';
-  end if;
+  -- Reopening the same plan returns the open order, which keeps the token it was given.
+  if v_order.external_transaction_token is not null then return v_order; end if;
+  if v_order.status <> 'created' then raise exception 'order_closed'; end if;
   begin
     update public.upi_orders set external_transaction_token = p_token, tax_state = p_state
       where id = v_order.id returning * into v_order;

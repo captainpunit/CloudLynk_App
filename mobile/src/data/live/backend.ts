@@ -27,6 +27,11 @@ const errors: Record<string, string> = {
   too_many_orders: 'Too many payment attempts today. Please try again tomorrow.',
   invalid_utr: 'Enter the 12-digit UTR shown in your UPI app.',
   utr_already_used: 'This UTR has already been used for another payment.',
+  invalid_state: 'Choose your state from the list.',
+  invalid_play_token: 'Google Play did not return a valid choice. Start again from the plan list.',
+  play_token_already_used:
+    'This Google Play choice was already used. Start again from the plan list.',
+  invalid_tax_percent: 'Enter a GST percentage between 0 and 50.',
   order_not_found: 'This payment request was not found. Start again from the plan list.',
   order_closed: 'This payment request is closed. Start again from the plan list.',
   too_many_attempts: 'This payment request has been reported too many times. Contact support.',

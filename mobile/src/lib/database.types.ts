@@ -1,7 +1,6 @@
 export type Json = string | number | boolean | null | {
   [key: string]: Json | undefined;
 } | Json[];
-
 export type Database = {
   "graphql_public": {
     Tables: {
@@ -601,6 +600,7 @@ export type Database = {
           "id": boolean;
           "merchant_code": string | null;
           "payee_name": string | null;
+          "tax_percent": number;
           "updated_at": string;
           "upi_enabled": boolean;
           "upi_vpa": string | null;
@@ -610,6 +610,7 @@ export type Database = {
           "id"?: boolean;
           "merchant_code"?: string | null;
           "payee_name"?: string | null;
+          "tax_percent"?: number;
           "updated_at"?: string;
           "upi_enabled"?: boolean;
           "upi_vpa"?: string | null;
@@ -618,6 +619,7 @@ export type Database = {
           "id"?: boolean;
           "merchant_code"?: string | null;
           "payee_name"?: string | null;
+          "tax_percent"?: number;
           "updated_at"?: string;
           "upi_enabled"?: boolean;
           "upi_vpa"?: string | null;
@@ -655,6 +657,61 @@ export type Database = {
           "price_paise"?: number | null;
           "product_id"?: string;
           "quota_bytes"?: number;
+        };
+        Relationships: [];
+      };
+      "play_external_reports": {
+        Row: {
+          "attempts": number;
+          "created_at": string;
+          "external_transaction_id": string;
+          "external_transaction_token": string;
+          "id": string;
+          "last_error": string | null;
+          "lease_id": string | null;
+          "lease_until": string | null;
+          "next_attempt_at": string;
+          "pre_tax_paise": number;
+          "sent_at": string | null;
+          "status": string;
+          "tax_paise": number;
+          "tax_state": string;
+          "transaction_time": string;
+        };
+        ComputedFields: never;
+        Insert: {
+          "attempts"?: number;
+          "created_at"?: string;
+          "external_transaction_id": string;
+          "external_transaction_token": string;
+          "id"?: string;
+          "last_error"?: string | null;
+          "lease_id"?: string | null;
+          "lease_until"?: string | null;
+          "next_attempt_at"?: string;
+          "pre_tax_paise": number;
+          "sent_at"?: string | null;
+          "status"?: string;
+          "tax_paise": number;
+          "tax_state": string;
+          "transaction_time": string;
+        };
+        Update: {
+          "attempts"?: number;
+          "created_at"?: string;
+          "external_transaction_id"?: string;
+          "external_transaction_token"?: string;
+          "id"?: string;
+          "last_error"?: string | null;
+          "lease_id"?: string | null;
+          "lease_until"?: string | null;
+          "next_attempt_at"?: string;
+          "pre_tax_paise"?: number;
+          "sent_at"?: string | null;
+          "status"?: string;
+          "tax_paise"?: number;
+          "tax_state"?: string;
+          "transaction_time"?: string;
         };
         Relationships: [];
       };
@@ -1144,6 +1201,7 @@ export type Database = {
           "decided_at": string | null;
           "decision_reason": string | null;
           "expires_at": string;
+          "external_transaction_token": string | null;
           "id": string;
           "pay_uri": string;
           "payee_name": string;
@@ -1154,6 +1212,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
           "utr": string | null;
@@ -1167,6 +1226,7 @@ export type Database = {
           "decided_at"?: string | null;
           "decision_reason"?: string | null;
           "expires_at": string;
+          "external_transaction_token"?: string | null;
           "id"?: string;
           "pay_uri": string;
           "payee_name": string;
@@ -1177,6 +1237,7 @@ export type Database = {
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
+          "tax_state"?: string | null;
           "updated_at"?: string;
           "user_id": string;
           "utr"?: string | null;
@@ -1189,6 +1250,7 @@ export type Database = {
           "decided_at"?: string | null;
           "decision_reason"?: string | null;
           "expires_at"?: string;
+          "external_transaction_token"?: string | null;
           "id"?: string;
           "pay_uri"?: string;
           "payee_name"?: string;
@@ -1199,6 +1261,7 @@ export type Database = {
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
+          "tax_state"?: string | null;
           "updated_at"?: string;
           "user_id"?: string;
           "utr"?: string | null;
@@ -1372,6 +1435,43 @@ export type Database = {
         };
         Returns: undefined;
       };
+      "attach_play_choice": {
+        Args: {
+          "p_order_id": string;
+          "p_state": string;
+          "p_token": string;
+        };
+        Returns: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "external_transaction_token": string | null;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "tax_state": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "upi_orders";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "backend_health": {
         Args: Record<PropertyKey, never>;
         Returns: Json;
@@ -1481,6 +1581,34 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      "claim_play_reports": {
+        Args: {
+          "p_limit"?: number;
+        };
+        Returns: {
+          "attempts": number;
+          "created_at": string;
+          "external_transaction_id": string;
+          "external_transaction_token": string;
+          "id": string;
+          "last_error": string | null;
+          "lease_id": string | null;
+          "lease_until": string | null;
+          "next_attempt_at": string;
+          "pre_tax_paise": number;
+          "sent_at": string | null;
+          "status": string;
+          "tax_paise": number;
+          "tax_state": string;
+          "transaction_time": string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "play_external_reports";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
       "claim_push_deliveries": {
         Args: {
           "p_limit"?: number;
@@ -1523,6 +1651,7 @@ export type Database = {
           "decided_at": string | null;
           "decision_reason": string | null;
           "expires_at": string;
+          "external_transaction_token": string | null;
           "id": string;
           "pay_uri": string;
           "payee_name": string;
@@ -1533,6 +1662,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
           "utr": string | null;
@@ -1558,6 +1688,7 @@ export type Database = {
           "decided_at": string | null;
           "decision_reason": string | null;
           "expires_at": string;
+          "external_transaction_token": string | null;
           "id": string;
           "pay_uri": string;
           "payee_name": string;
@@ -1568,6 +1699,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
           "utr": string | null;
@@ -1684,6 +1816,14 @@ export type Database = {
         };
         Returns: undefined;
       };
+      "finish_play_report": {
+        Args: {
+          "p_error"?: string;
+          "p_id": string;
+          "p_lease": string;
+        };
+        Returns: undefined;
+      };
       "finish_push_delivery": {
         Args: {
           "p_disable"?: boolean;
@@ -1694,6 +1834,15 @@ export type Database = {
           "p_ticket"?: string;
         };
         Returns: undefined;
+      };
+      "grant_play_product": {
+        Args: {
+          "p_order_id": string;
+          "p_product_id": string;
+          "p_token": string;
+          "p_user_id": string;
+        };
+        Returns: string;
       };
       "has_active_subscription": {
         Args: {
@@ -1904,6 +2053,7 @@ export type Database = {
           "id": boolean;
           "merchant_code": string | null;
           "payee_name": string | null;
+          "tax_percent": number;
           "updated_at": string;
           "upi_enabled": boolean;
           "upi_vpa": string | null;
@@ -2027,6 +2177,26 @@ export type Database = {
         };
         Returns: number;
       };
+      "set_payment_tax": {
+        Args: {
+          "p_percent": number;
+        };
+        Returns: {
+          "id": boolean;
+          "merchant_code": string | null;
+          "payee_name": string | null;
+          "tax_percent": number;
+          "updated_at": string;
+          "upi_enabled": boolean;
+          "upi_vpa": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "payment_settings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "set_saved_title": {
         Args: {
           "p_saved": boolean;
@@ -2080,6 +2250,7 @@ export type Database = {
           "decided_at": string | null;
           "decision_reason": string | null;
           "expires_at": string;
+          "external_transaction_token": string | null;
           "id": string;
           "pay_uri": string;
           "payee_name": string;
@@ -2090,6 +2261,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
           "utr": string | null;
@@ -2113,6 +2285,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      "valid_tax_state": {
+        Args: {
+          "p_state": string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;
@@ -2122,7 +2300,6 @@ export type Database = {
     };
   };
 };
-
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
 type DefaultSchema =
