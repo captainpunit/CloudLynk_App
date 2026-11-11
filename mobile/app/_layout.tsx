@@ -4,7 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, View } from 'react-native';
 import { WorkspaceProvider, useWorkspace } from '@/state/workspace-provider';
 import { Button, Label, Screen } from '@/components/ui';
-import { colors as c } from '@/theme/tokens';
+import { colors as c, night } from '@/theme/tokens';
 import { PushLifecycle } from '@/services/notifications/push-lifecycle';
 import { AdConsentPrompt } from '@/features/privacy/ad-consent-prompt';
 
@@ -70,8 +70,18 @@ function AppNavigation() {
         style={{ position: 'absolute', bottom: 110, left: 22, right: 22, alignItems: 'center' }}
       >
         {toast && (
-          <View style={{ borderRadius: 14, backgroundColor: c.ink, padding: 15, maxWidth: 460 }}>
-            <Label style={{ color: c.white, fontSize: 13 }}>{toast}</Label>
+          // Raised and outlined so it stands out on both the dark and the light screens.
+          <View
+            style={{
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: night.line,
+              backgroundColor: night.raised,
+              padding: 15,
+              maxWidth: 460,
+            }}
+          >
+            <Label style={{ color: night.ink, fontSize: 13 }}>{toast}</Label>
           </View>
         )}
       </View>

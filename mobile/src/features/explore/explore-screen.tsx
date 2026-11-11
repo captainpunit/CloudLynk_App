@@ -1,299 +1,252 @@
-import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useState } from 'react';
+import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { ArrowUpRight, Bell, Cloud, Play, Sparkles } from 'lucide-react-native';
+import { Bell, Bookmark, BookmarkCheck, Clapperboard, Play, Search } from 'lucide-react-native';
 import { ChannelCard, VideoCard } from '@/components/media-card';
+import { PlusOffer } from '@/components/plus-offer';
 import {
+  Button,
+  Caption,
   EmptyState,
   ErrorNote,
   Heading,
   IconButton,
-  Label,
   Pill,
-  SearchField,
+  PlusBadge,
+  Rail,
+  Screen,
   Section,
 } from '@/components/ui';
-import { colors as c } from '@/theme/tokens';
+import { gutter } from '@/theme/tokens';
+import { usePalette } from '@/theme/tone';
 import { useWorkspace } from '@/state/workspace-provider';
-import { kindLabels, plusSummary, videoLabel } from '@/domain/format';
+import { shortDate, videoLabel } from '@/domain/format';
+import type { Channel, Video } from '@/domain/models';
 import { env } from '@/lib/env';
+import {
+  browsableVideos,
+  channelOf,
+  continueWatching,
+  listedChannels,
+  resumeLabel,
+} from './catalogue';
 
-export default function ExploreScreen() {
+export default function HomeScreen() {
   const { state, error, refreshing, refresh } = useWorkspace();
-  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
-  const [kind, setKind] = useState('all');
-  const channels = state.channels.filter(
-    (channel) => channel.status === 'published' && channel.visibility !== 'private',
-  );
+  const channels = listedChannels(state);
+  const videos = browsableVideos(state);
+  const resume = continueWatching(state).slice(0, 10);
+  const fromJoined = videos.filter((video) => state.joinedIds.includes(video.channelId));
+  const plusChannels = channels.filter((channel) => channel.visibility === 'premium');
   // Categories are owner-chosen text, so the filter list comes from the loaded catalogue.
   const categories = [
     'All',
     ...new Set(channels.map((channel) => channel.category).filter((item) => item !== 'All')),
   ];
-  const videos = useMemo(
-    () =>
-      state.videos
-        .filter((video) => {
-          const channel = state.channels.find((item) => item.id === video.channelId);
-          return (
-            channel?.status === 'published' &&
-            channel.visibility !== 'private' &&
-            (category === 'All' || channel.category === category) &&
-            (kind === 'all' || video.kind === kind) &&
-            `${video.title} ${video.description} ${channel.name}`
-              .toLowerCase()
-              .includes(query.toLowerCase())
-          );
-        })
-        .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)),
-    [state.channels, state.videos, category, query, kind],
-  );
-  const hero = videos[0];
-  const plus = plusSummary(state);
-  // Only offer title types the catalogue actually has.
-  const kinds = [
-    'all' as const,
-    ...new Set(state.videos.flatMap((video) => (video.kind ? [video.kind] : []))),
-  ];
+  const [hero, ...rest] = videos;
+  const latest =
+    category === 'All'
+      ? rest
+      : videos.filter((video) => channelOf(state, video)?.category === category);
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.canvas }}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void refresh()}
-            tintColor={c.primary}
+    <Screen
+      tone="dark"
+      title={env.appName}
+      refreshing={refreshing}
+      onRefresh={() => void refresh()}
+      action={
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <IconButton
+            icon={Search}
+            label="Search channels and videos"
+            onPress={() => router.push('/channels')}
           />
-        }
-        contentContainerStyle={{ paddingBottom: 30 }}
-      >
-        <View
-          style={{
-            paddingHorizontal: 22,
-            paddingTop: 14,
-            gap: 22,
-            maxWidth: 760,
-            alignSelf: 'center',
-            width: '100%',
-          }}
-        >
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          >
-            <View style={{ flexDirection: 'row', gap: 9, alignItems: 'center' }}>
-              <View style={{ backgroundColor: c.primary, borderRadius: 12, padding: 8 }}>
-                <Cloud size={23} color={c.white} strokeWidth={2} />
-              </View>
-              <Label style={{ fontSize: 22, fontWeight: '800', letterSpacing: -0.9 }}>
-                {env.appName}
-              </Label>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 9 }}>
-              {plus && (
-                <IconButton
-                  icon={Sparkles}
-                  label={`Explore ${env.appName} Plus`}
-                  onPress={() => router.push('/premium')}
-                />
-              )}
-              <View>
-                <IconButton
-                  icon={Bell}
-                  label="Notifications"
-                  onPress={() => router.push('/notifications')}
-                />
-                {!state.noticesRead && (
-                  <View
-                    style={{
-                      position: 'absolute',
-                      top: 9,
-                      right: 11,
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: c.primary,
-                    }}
-                  />
-                )}
-              </View>
-            </View>
+          <View>
+            <IconButton
+              icon={Bell}
+              label={state.noticesRead ? 'Notifications' : 'Notifications, new'}
+              onPress={() => router.push('/notifications')}
+            />
+            {!state.noticesRead && <UnreadDot />}
           </View>
-          <SearchField value={query} onChangeText={setQuery} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {categories.map((item) => (
-              <Pill
-                key={item}
-                title={item}
-                selected={category === item}
-                onPress={() => setCategory(item)}
+        </View>
+      }
+    >
+      <ErrorNote message={error} />
+      {hero ? (
+        <Hero video={hero} channel={channelOf(state, hero)} />
+      ) : (
+        <EmptyState
+          icon={Clapperboard}
+          title="Nothing to watch yet"
+          body="Videos appear here as soon as creators publish them."
+          action={channels.length ? 'Browse channels' : undefined}
+          onPress={() => router.push('/channels')}
+        />
+      )}
+      {resume.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <Section title="Continue watching" />
+          <Rail>
+            {resume.map((video) => (
+              <VideoCard
+                key={video.id}
+                video={video}
+                channel={channelOf(state, video)}
+                meta={resumeLabel(state.progress[video.id] ?? 0)}
+                width={248}
+                compact
               />
             ))}
-          </ScrollView>
-          <ErrorNote message={error} />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {kinds.map((value) => (
-              <Pill
-                key={value}
-                title={value === 'all' ? 'All titles' : kindLabels[value]}
-                selected={kind === value}
-                onPress={() => setKind(value)}
+          </Rail>
+        </View>
+      )}
+      {fromJoined.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <Section
+            title="New from your channels"
+            action="Library"
+            onPress={() => router.push('/library')}
+          />
+          <Rail>
+            {fromJoined.slice(0, 10).map((video) => (
+              <VideoCard
+                key={video.id}
+                video={video}
+                channel={channelOf(state, video)}
+                width={248}
+                compact
               />
             ))}
-          </View>
-          {hero && !query && category === 'All' && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Watch featured: ${hero.title}`}
-              onPress={() => router.push({ pathname: '/watch/[id]', params: { id: hero.id } })}
-              style={{ height: 310, borderRadius: 24, overflow: 'hidden', backgroundColor: c.dark }}
-            >
-              <Image
-                source={hero.cover}
-                style={{ position: 'absolute', inset: 0 }}
-                contentFit="cover"
-              />
-              <LinearGradient
-                colors={[c.scrimClear, c.scrimHero]}
-                style={{ position: 'absolute', inset: 0 }}
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 20,
-                  left: 20,
-                  backgroundColor: c.glass,
-                  paddingVertical: 5,
-                  paddingHorizontal: 9,
-                  borderRadius: 6,
-                }}
-              >
-                <Label
-                  style={{
-                    fontSize: 9,
-                    lineHeight: 14,
-                    color: c.primary,
-                    letterSpacing: 1.2,
-                    fontWeight: '800',
-                  }}
-                >
-                  LATEST
-                </Label>
-              </View>
-              <View style={{ position: 'absolute', bottom: 22, left: 22, right: 22, gap: 10 }}>
-                <Heading style={{ color: c.white, fontSize: 28, lineHeight: 33, maxWidth: 240 }}>
-                  {hero.title}
-                </Heading>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Label style={{ color: c.onDarkMuted, fontSize: 11 }}>
-                    {`${channels.find((channel) => channel.id === hero.channelId)?.name ?? ''} · ${videoLabel(hero)}`}
-                  </Label>
-                  <View
-                    style={{
-                      width: 42,
-                      height: 42,
-                      borderRadius: 21,
-                      backgroundColor: c.white,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Play size={16} color={c.ink} fill={c.ink} />
-                  </View>
-                </View>
-              </View>
-            </Pressable>
+          </Rail>
+        </View>
+      )}
+      {!state.subscribed && !!state.plans?.length && plusChannels.length > 0 && <PlusOffer />}
+      {plusChannels.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <Section title={state.subscribed ? 'Your Plus channels' : 'Included with Plus'} />
+          <Rail>
+            {plusChannels.map((channel) => (
+              <ChannelCard key={channel.id} channel={channel} />
+            ))}
+          </Rail>
+        </View>
+      )}
+      {videos.length > 1 && (
+        <View style={{ gap: 14 }}>
+          <Section title="Latest" />
+          {categories.length > 2 && (
+            <Rail gap={8}>
+              {categories.map((item) => (
+                <Pill
+                  key={item}
+                  title={item}
+                  label={item === 'All' ? 'All categories' : `${item} category`}
+                  selected={category === item}
+                  onPress={() => setCategory(item)}
+                />
+              ))}
+            </Rail>
           )}
-          <View style={{ gap: 15 }}>
-            <Section title={query ? 'Search results' : 'Latest'} />
-            {videos.length ? (
-              <View style={{ gap: 22 }}>
-                {Array.from({ length: Math.ceil(videos.length / 2) }, (_, index) => (
-                  <View key={index} style={{ flexDirection: 'row', gap: 14 }}>
-                    {videos.slice(index * 2, index * 2 + 2).map((video) => (
-                      <VideoCard
-                        key={video.id}
-                        video={video}
-                        channel={channels.find((channel) => channel.id === video.channelId)}
-                        compact
-                      />
-                    ))}
-                    {videos.length % 2 !== 0 && index === Math.floor(videos.length / 2) && (
-                      <View style={{ flex: 1 }} />
-                    )}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState
-                title={query ? 'No matches just yet' : 'Fresh stories are on their way'}
-                body={
-                  query
-                    ? 'Try another word or explore a different category.'
-                    : 'Published videos will appear here when the catalogue is ready.'
-                }
-                action="Reset filters"
-                onPress={() => {
-                  setQuery('');
-                  setCategory('All');
-                  setKind('all');
-                }}
-              />
-            )}
-          </View>
-          {!query && (
-            <>
-              <Section
-                title="Find your people"
-                action="All channels"
-                onPress={() => router.push('/channels')}
-              />
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 15 }}
-              >
-                {channels.map((channel) => (
-                  <ChannelCard key={channel.id} channel={channel} />
-                ))}
-              </ScrollView>
-              {plus && !state.subscribed && (
-                <Pressable
-                  onPress={() => router.push('/premium')}
-                  style={{
-                    borderRadius: 22,
-                    backgroundColor: c.dark,
-                    padding: 23,
-                    flexDirection: 'row',
-                    gap: 15,
-                    alignItems: 'center',
-                  }}
-                >
-                  <View style={{ flex: 1, gap: 7 }}>
-                    <Heading style={{ color: c.white, fontSize: 23 }}>Get Plus</Heading>
-                    <Label style={{ color: c.onDarkMuted, fontSize: 12 }}>{plus}</Label>
-                  </View>
-                  <ArrowUpRight color={c.accent} size={26} />
-                </Pressable>
-              )}
-            </>
+          {latest.length ? (
+            <View style={{ gap: 24 }}>
+              {latest.map((video) => (
+                <VideoCard key={video.id} video={video} channel={channelOf(state, video)} />
+              ))}
+            </View>
+          ) : (
+            <Caption>{`Nothing new in ${category} yet.`}</Caption>
           )}
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      )}
+      {channels.length > 0 && (
+        <View style={{ gap: 12 }}>
+          <Section title="Channels" action="See all" onPress={() => router.push('/channels')} />
+          <Rail>
+            {channels.map((channel) => (
+              <ChannelCard key={channel.id} channel={channel} />
+            ))}
+          </Rail>
+        </View>
+      )}
+    </Screen>
+  );
+}
+
+function UnreadDot() {
+  const p = usePalette();
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: 10,
+        right: 11,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: p.ink,
+        borderWidth: 1.5,
+        borderColor: p.surface,
+      }}
+    />
+  );
+}
+
+/** The newest title, full width: the poster first, then what it is and one way in. */
+function Hero({ video, channel }: { video: Video; channel?: Channel }) {
+  const { state, bookmark, notify } = useWorkspace();
+  const p = usePalette();
+  const locked = channel?.visibility === 'premium' && !state.subscribed;
+  const saved = state.savedIds.includes(video.id);
+  const open = () => router.push({ pathname: '/watch/[id]', params: { id: video.id } });
+  return (
+    <View style={{ gap: 14 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${video.title}`}
+        onPress={open}
+        style={{ marginHorizontal: -gutter, aspectRatio: 4 / 3, backgroundColor: p.surface }}
+      >
+        <Image source={video.cover} style={{ flex: 1 }} contentFit="cover" transition={200} />
+      </Pressable>
+      <View style={{ gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {channel?.visibility === 'premium' && <PlusBadge />}
+          <Caption numberOfLines={1} style={{ flexShrink: 1 }}>
+            {[channel?.name, videoLabel(video), shortDate(video.publishedAt)]
+              .filter(Boolean)
+              .join(' · ')}
+          </Caption>
+        </View>
+        <Heading style={{ fontSize: 30, lineHeight: 36, letterSpacing: -1 }}>{video.title}</Heading>
+        {!!video.description && (
+          <Caption numberOfLines={2} style={{ fontSize: 14, lineHeight: 21 }}>
+            {video.description}
+          </Caption>
+        )}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+        <View style={{ flex: 1 }}>
+          {locked ? (
+            <Button
+              title="Subscribe to watch"
+              variant="plus"
+              label={`Subscribe to watch ${video.title}`}
+              onPress={() => router.push('/premium')}
+            />
+          ) : (
+            <Button title="Play" icon={Play} label={`Play ${video.title}`} onPress={open} />
+          )}
+        </View>
+        <IconButton
+          icon={saved ? BookmarkCheck : Bookmark}
+          label={saved ? `Remove ${video.title} from saved` : `Save ${video.title}`}
+          onPress={() => void bookmark(video.id).catch((cause: Error) => notify(cause.message))}
+        />
+      </View>
+    </View>
   );
 }

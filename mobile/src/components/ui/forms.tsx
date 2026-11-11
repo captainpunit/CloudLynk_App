@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { Search, X } from 'lucide-react-native';
 import { Label } from './typography';
-import { colors as c } from '@/theme/tokens';
+import { usePalette } from '@/theme/tone';
 
 export function SearchField({
   value,
@@ -13,38 +13,40 @@ export function SearchField({
   onChangeText: (value: string) => void;
   placeholder?: string;
 }) {
+  const p = usePalette();
   return (
     <View
       style={{
-        minHeight: 52,
+        minHeight: 50,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: c.surface,
+        backgroundColor: p.surface,
         borderWidth: 1,
-        borderColor: c.line,
-        borderRadius: 15,
-        paddingHorizontal: 15,
+        borderColor: p.line,
+        borderRadius: 25,
+        paddingLeft: 16,
         gap: 10,
       }}
     >
-      <Search size={19} color={c.muted} />
+      <Search size={19} color={p.muted} />
       <TextInput
         accessibilityLabel={placeholder}
         placeholder={placeholder}
-        placeholderTextColor={c.muted}
+        placeholderTextColor={p.muted}
         value={value}
         onChangeText={onChangeText}
-        style={{ flex: 1, minHeight: 50, color: c.ink, fontSize: 14 }}
+        style={{ flex: 1, minHeight: 48, color: p.ink, fontSize: 15 }}
         returnKeyType="search"
         autoCapitalize="none"
       />
       {value.length > 0 && (
         <Pressable
+          accessibilityRole="button"
           accessibilityLabel="Clear search"
           onPress={() => onChangeText('')}
-          style={{ padding: 8 }}
+          style={{ width: 48, height: 48, alignItems: 'center', justifyContent: 'center' }}
         >
-          <X size={16} color={c.muted} />
+          <X size={17} color={p.muted} />
         </Pressable>
       )}
     </View>
@@ -56,23 +58,24 @@ export function Field({
   error,
   ...props
 }: ComponentProps<typeof TextInput> & { label: string; error?: string }) {
+  const p = usePalette();
   return (
     <View style={{ gap: 7 }}>
       <Label style={{ fontSize: 13, fontWeight: '600' }}>{label}</Label>
       <TextInput
         {...props}
         accessibilityLabel={label}
-        placeholderTextColor={c.muted}
+        placeholderTextColor={p.muted}
         style={[
           {
             borderWidth: 1,
-            borderColor: error ? c.danger : c.line,
+            borderColor: error ? p.danger : p.line,
             borderRadius: 14,
             minHeight: 52,
             paddingHorizontal: 16,
             paddingVertical: 13,
-            color: c.ink,
-            backgroundColor: c.surface,
+            color: p.ink,
+            backgroundColor: p.surface,
             fontSize: 15,
             textAlignVertical: props.multiline ? 'top' : 'center',
           },
@@ -80,7 +83,7 @@ export function Field({
         ]}
       />
       {error && (
-        <Label accessibilityRole="alert" style={{ color: c.danger, fontSize: 12 }}>
+        <Label accessibilityRole="alert" style={{ color: p.danger, fontSize: 12 }}>
           {error}
         </Label>
       )}
