@@ -135,18 +135,41 @@ Google's programme page (read 11 November 2026; confirm in the Play Console):
 - Enrolment: Play Console → Manage account → Play apps settings → Monetization
   settings → Alternative billing.
 
-**What this means for this codebase.** The app currently offers UPI only, which the
-programme does not permit on Google Play. Before a Play submission it needs: Play
-Billing restored as the second option (the backend functions `verify-play-receipt`,
-`play-rtdn-webhook` and `subscription-reconcile` still exist), the user-choice screen,
-and a server job that reports each confirmed UPI order to Google's external
-transactions API within 24 hours of confirmation. None of that is built. Distribution
-outside Google Play (an APK from the client's website) needs none of it.
+**How this codebase meets it** (migration `20261114000000_play_user_choice_billing.sql`;
+built and tested locally, not yet run against Google):
 
-Source: <https://support.google.com/googleplay/android-developer/answer/13306652>
+- The Google Play build (`EXPO_PUBLIC_PLAY_BILLING=true`) opens Google's choice screen
+  when a member subscribes (`services/billing/play-choice.ts`, expo-iap user choice
+  billing). Plans are sold on Play as **one-time products** whose product IDs equal the
+  plan IDs, because Play's prepaid subscription lengths do not include 2 days.
+- **Google Play chosen:** the app sends the purchase token to `verify-play-product`,
+  which confirms it with Google, checks it belongs to the account, grants the plan
+  period (`grant_play_product`, provider `google_play_product`) and consumes the
+  purchase so the plan can be bought again.
+- **UPI chosen:** Google returns an external transaction token. The member picks their
+  state (Google needs it for GST), and `attach_play_choice` stores both on the order.
+  When an administrator confirms the payment, a trigger queues a row in
+  `play_external_reports`; `play-external-report` (every 5 minutes) sends it to
+  `externaltransactions.createexternaltransaction` as a one-time transaction with the
+  pre-tax and GST amounts, and retries failures.
+- GST rate: `payment_settings.tax_percent` (default 18), set in Admin → Payments → UPI
+  details. Confirm the rate with the client's accountant.
+- A build without the flag (for distribution outside Play) keeps the direct UPI checkout
+  and reports nothing.
+
+Not covered: refunds are not reported to Google (`refundexternaltransaction`) and Play
+refunds/chargebacks of one-time products do not end access automatically; both need a
+manual step until built. The 24-hour limit runs from the payment, so payments must be
+confirmed within a day (`backend_health` already flags older ones). PCI DSS
+certification is the client's responsibility.
+
+Sources: <https://support.google.com/googleplay/android-developer/answer/13306652>,
+<https://developer.android.com/google/play/billing/alternative/backend>
 
 ## Tests
 
-`supabase/tests/database/upi_payments.test.sql` (70 assertions: permissions, limits, both
+`supabase/tests/database/upi_payments.test.sql` (75 assertions: permissions, limits, both
 decisions, renewal stacking, monitoring, erasure) and the UPI block in
-`mobile/scripts/check-live-api.ts` (15 assertions over HTTP with real sessions).
+`mobile/scripts/check-live-api.ts` (15 assertions over HTTP with real sessions);
+`play_user_choice.test.sql` (25) and `upi_meta_events.test.sql` (9);
+`supabase/tests/functions/play_choice_test.ts`.
