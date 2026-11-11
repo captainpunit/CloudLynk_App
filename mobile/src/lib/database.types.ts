@@ -596,6 +596,34 @@ export type Database = {
         };
         Relationships: [];
       };
+      "payment_settings": {
+        Row: {
+          "id": boolean;
+          "merchant_code": string | null;
+          "payee_name": string | null;
+          "updated_at": string;
+          "upi_enabled": boolean;
+          "upi_vpa": string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          "id"?: boolean;
+          "merchant_code"?: string | null;
+          "payee_name"?: string | null;
+          "updated_at"?: string;
+          "upi_enabled"?: boolean;
+          "upi_vpa"?: string | null;
+        };
+        Update: {
+          "id"?: boolean;
+          "merchant_code"?: string | null;
+          "payee_name"?: string | null;
+          "updated_at"?: string;
+          "upi_enabled"?: boolean;
+          "upi_vpa"?: string | null;
+        };
+        Relationships: [];
+      };
       "plans": {
         Row: {
           "active": boolean;
@@ -603,6 +631,7 @@ export type Database = {
           "billing_period": string;
           "created_at": string;
           "name": string;
+          "price_paise": number | null;
           "product_id": string;
           "quota_bytes": number;
         };
@@ -613,6 +642,7 @@ export type Database = {
           "billing_period": string;
           "created_at"?: string;
           "name": string;
+          "price_paise"?: number | null;
           "product_id": string;
           "quota_bytes": number;
         };
@@ -622,6 +652,7 @@ export type Database = {
           "billing_period"?: string;
           "created_at"?: string;
           "name"?: string;
+          "price_paise"?: number | null;
           "product_id"?: string;
           "quota_bytes"?: number;
         };
@@ -1104,6 +1135,98 @@ export type Database = {
           },
         ];
       };
+      "upi_orders": {
+        Row: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          "amount_paise": number;
+          "attempts"?: number;
+          "billing_period": string;
+          "created_at"?: string;
+          "decided_at"?: string | null;
+          "decision_reason"?: string | null;
+          "expires_at": string;
+          "id"?: string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status"?: string;
+          "submitted_at"?: string | null;
+          "subscription_id"?: string | null;
+          "updated_at"?: string;
+          "user_id": string;
+          "utr"?: string | null;
+        };
+        Update: {
+          "amount_paise"?: number;
+          "attempts"?: number;
+          "billing_period"?: string;
+          "created_at"?: string;
+          "decided_at"?: string | null;
+          "decision_reason"?: string | null;
+          "expires_at"?: string;
+          "id"?: string;
+          "pay_uri"?: string;
+          "payee_name"?: string;
+          "payee_vpa"?: string;
+          "plan_name"?: string;
+          "product_id"?: string;
+          "reference"?: string;
+          "status"?: string;
+          "submitted_at"?: string | null;
+          "subscription_id"?: string | null;
+          "updated_at"?: string;
+          "user_id"?: string;
+          "utr"?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "upi_orders_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "plans";
+            referencedColumns: ["product_id"];
+          },
+          {
+            foreignKeyName: "upi_orders_subscription_id_fkey";
+            columns: ["subscription_id"];
+            isOneToOne: false;
+            referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "upi_orders_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       "watch_progress": {
         Row: {
           "completed": boolean;
@@ -1249,7 +1372,10 @@ export type Database = {
         };
         Returns: undefined;
       };
-      "backend_health": { Args: Record<PropertyKey, never>; Returns: Json };
+      "backend_health": {
+        Args: Record<PropertyKey, never>;
+        Returns: Json;
+      };
       "backend_health_base": {
         Args: Record<PropertyKey, never>;
         Returns: Json;
@@ -1265,13 +1391,27 @@ export type Database = {
         Returns: undefined;
       };
       "can_read_channel": {
-        Args: { "p_channel_id": string };
+        Args: {
+          "p_channel_id": string;
+        };
         Returns: boolean;
       };
-      "can_read_season": { Args: { "p_season_id": string }; Returns: boolean };
-      "can_read_title": { Args: { "p_title_id": string }; Returns: boolean };
+      "can_read_season": {
+        Args: {
+          "p_season_id": string;
+        };
+        Returns: boolean;
+      };
+      "can_read_title": {
+        Args: {
+          "p_title_id": string;
+        };
+        Returns: boolean;
+      };
       "claim_account_deletions": {
-        Args: { "p_limit"?: number };
+        Args: {
+          "p_limit"?: number;
+        };
         Returns: {
           "attempts": number;
           "completed_at": string | null;
@@ -1292,7 +1432,9 @@ export type Database = {
         };
       };
       "claim_media_deletions": {
-        Args: { "p_limit"?: number };
+        Args: {
+          "p_limit"?: number;
+        };
         Returns: {
           "attempts": number;
           "created_at": string;
@@ -1312,7 +1454,9 @@ export type Database = {
         };
       };
       "claim_meta_events": {
-        Args: { "p_limit"?: number };
+        Args: {
+          "p_limit"?: number;
+        };
         Returns: {
           "attempts": number;
           "created_at": string;
@@ -1338,7 +1482,9 @@ export type Database = {
         };
       };
       "claim_push_deliveries": {
-        Args: { "p_limit"?: number };
+        Args: {
+          "p_limit"?: number;
+        };
         Returns: {
           "attempts": number;
           "id": string;
@@ -1360,41 +1506,138 @@ export type Database = {
         };
       };
       "claim_subscription_sync": {
-        Args: { "p_token": string };
+        Args: {
+          "p_token": string;
+        };
         Returns: string;
       };
+      "create_upi_order": {
+        Args: {
+          "p_product_id": string;
+        };
+        Returns: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "upi_orders";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      "decide_upi_order": {
+        Args: {
+          "p_action": string;
+          "p_order_id": string;
+          "p_reason"?: string;
+        };
+        Returns: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "upi_orders";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "delete_drive_file": {
-        Args: { "p_file_id": string };
+        Args: {
+          "p_file_id": string;
+        };
         Returns: undefined;
       };
-      "drive_can_read_object": { Args: { "p_name": string }; Returns: boolean };
-      "drive_can_write_object": {
-        Args: { "p_name": string };
+      "drive_can_read_object": {
+        Args: {
+          "p_name": string;
+        };
         Returns: boolean;
       };
-      "drive_category": { Args: { "p_mime_type": string }; Returns: string };
+      "drive_can_write_object": {
+        Args: {
+          "p_name": string;
+        };
+        Returns: boolean;
+      };
+      "drive_category": {
+        Args: {
+          "p_mime_type": string;
+        };
+        Returns: string;
+      };
       "drive_cleanup_batch": {
-        Args: { "p_limit"?: number };
+        Args: {
+          "p_limit"?: number;
+        };
         Returns: {
           "file_id": string;
           "storage_path": string;
         }[];
       };
       "drive_cleanup_finish": {
-        Args: { "p_file_ids": (string)[] };
+        Args: {
+          "p_file_ids": (string)[];
+        };
         Returns: number;
       };
       "drive_max_file_bytes": {
         Args: Record<PropertyKey, never>;
         Returns: number;
       };
-      "drive_quota_bytes": { Args: { "p_user_id": string }; Returns: number };
+      "drive_quota_bytes": {
+        Args: {
+          "p_user_id": string;
+        };
+        Returns: number;
+      };
       "drive_usage": {
-        Args: { "p_user_id": string };
+        Args: {
+          "p_user_id": string;
+        };
         Returns: Record<string, unknown>;
       };
       "finalize_drive_upload": {
-        Args: { "p_file_id": string };
+        Args: {
+          "p_file_id": string;
+        };
         Returns: {
           "category": string;
           "created_at": string;
@@ -1426,11 +1669,19 @@ export type Database = {
         Returns: undefined;
       };
       "finish_media_deletion": {
-        Args: { "p_error"?: string; "p_lease": string; "p_uid": string };
+        Args: {
+          "p_error"?: string;
+          "p_lease": string;
+          "p_uid": string;
+        };
         Returns: undefined;
       };
       "finish_meta_event": {
-        Args: { "p_error"?: string; "p_id": string; "p_lease": string };
+        Args: {
+          "p_error"?: string;
+          "p_id": string;
+          "p_lease": string;
+        };
         Returns: undefined;
       };
       "finish_push_delivery": {
@@ -1445,22 +1696,44 @@ export type Database = {
         Returns: undefined;
       };
       "has_active_subscription": {
-        Args: { "p_user_id": string };
+        Args: {
+          "p_user_id": string;
+        };
         Returns: boolean;
       };
       "invite_channel_member": {
-        Args: { "p_channel_id": string; "p_user_id": string };
+        Args: {
+          "p_channel_id": string;
+          "p_user_id": string;
+        };
         Returns: undefined;
       };
-      "is_admin": { Args: Record<PropertyKey, never>; Returns: boolean };
-      "is_erased_purchase_token": {
-        Args: { "p_token": string };
+      "is_admin": {
+        Args: Record<PropertyKey, never>;
         Returns: boolean;
       };
-      "join_channel": { Args: { "p_channel_id": string }; Returns: undefined };
-      "leave_channel": { Args: { "p_channel_id": string }; Returns: undefined };
+      "is_erased_purchase_token": {
+        Args: {
+          "p_token": string;
+        };
+        Returns: boolean;
+      };
+      "join_channel": {
+        Args: {
+          "p_channel_id": string;
+        };
+        Returns: undefined;
+      };
+      "leave_channel": {
+        Args: {
+          "p_channel_id": string;
+        };
+        Returns: undefined;
+      };
       "mark_notice_read": {
-        Args: { "p_notice_id": string };
+        Args: {
+          "p_notice_id": string;
+        };
         Returns: undefined;
       };
       "moderate_content": {
@@ -1474,7 +1747,10 @@ export type Database = {
         Returns: undefined;
       };
       "my_access": {
-        Args: { "p_action": string; "p_channel_id"?: string };
+        Args: {
+          "p_action": string;
+          "p_channel_id"?: string;
+        };
         Returns: string;
       };
       "my_drive_usage": {
@@ -1487,8 +1763,20 @@ export type Database = {
           "used_bytes": number;
         }[];
       };
+      "notify_user": {
+        Args: {
+          "p_body": string;
+          "p_data": Json;
+          "p_title": string;
+          "p_user_id": string;
+        };
+        Returns: undefined;
+      };
       "playback_grant": {
-        Args: { "p_title_id": string; "p_user_id": string };
+        Args: {
+          "p_title_id": string;
+          "p_user_id": string;
+        };
         Returns: {
           "countries": (string)[];
           "duration_seconds": number;
@@ -1509,18 +1797,32 @@ export type Database = {
         Returns: undefined;
       };
       "publisher_allowed": {
-        Args: { "p_channel_id": string; "p_user_id": string };
+        Args: {
+          "p_channel_id": string;
+          "p_user_id": string;
+        };
         Returns: boolean;
       };
       "register_push_token": {
-        Args: { "p_installation_id": string; "p_token": string };
+        Args: {
+          "p_installation_id": string;
+          "p_token": string;
+        };
         Returns: undefined;
       };
       "release_subscription_sync": {
-        Args: { "p_lease": string; "p_token": string };
+        Args: {
+          "p_lease": string;
+          "p_token": string;
+        };
         Returns: undefined;
       };
-      "reopen_title": { Args: { "p_title_id": string }; Returns: undefined };
+      "reopen_title": {
+        Args: {
+          "p_title_id": string;
+        };
+        Returns: undefined;
+      };
       "report_title": {
         Args: {
           "p_details"?: string;
@@ -1530,7 +1832,10 @@ export type Database = {
         Returns: string;
       };
       "request_account_deletion": {
-        Args: { "p_session_id": string; "p_user_id": string };
+        Args: {
+          "p_session_id": string;
+          "p_user_id": string;
+        };
         Returns: string;
       };
       "reserve_drive_upload": {
@@ -1547,7 +1852,10 @@ export type Database = {
         }[];
       };
       "reserve_stream_upload": {
-        Args: { "p_title_id": string; "p_user_id": string };
+        Args: {
+          "p_title_id": string;
+          "p_user_id": string;
+        };
         Returns: {
           "created_at": string;
           "duration_seconds": number | null;
@@ -1573,15 +1881,72 @@ export type Database = {
         };
       };
       "reset_stream_upload": {
-        Args: { "p_title_id": string };
+        Args: {
+          "p_title_id": string;
+        };
         Returns: undefined;
       };
       "resolve_play_owner": {
-        Args: { "p_account_id": string; "p_linked_token": string };
+        Args: {
+          "p_account_id": string;
+          "p_linked_token": string;
+        };
         Returns: string;
       };
+      "save_payment_settings": {
+        Args: {
+          "p_enabled"?: boolean;
+          "p_merchant_code"?: string;
+          "p_payee_name": string;
+          "p_upi_vpa": string;
+        };
+        Returns: {
+          "id": boolean;
+          "merchant_code": string | null;
+          "payee_name": string | null;
+          "updated_at": string;
+          "upi_enabled": boolean;
+          "upi_vpa": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "payment_settings";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      "save_plan": {
+        Args: {
+          "p_active": boolean;
+          "p_billing_period": string;
+          "p_name": string;
+          "p_price_paise": number;
+          "p_product_id": string;
+          "p_quota_bytes": number;
+        };
+        Returns: {
+          "active": boolean;
+          "benefits": (string)[];
+          "billing_period": string;
+          "created_at": string;
+          "name": string;
+          "price_paise": number | null;
+          "product_id": string;
+          "quota_bytes": number;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "plans";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "save_season": {
-        Args: { "p_name": string; "p_number": number; "p_series_id": string };
+        Args: {
+          "p_name": string;
+          "p_number": number;
+          "p_series_id": string;
+        };
         Returns: {
           "created_at": string;
           "id": string;
@@ -1634,7 +1999,10 @@ export type Database = {
         };
       };
       "save_watch_progress": {
-        Args: { "p_position_seconds": number; "p_title_id": string };
+        Args: {
+          "p_position_seconds": number;
+          "p_title_id": string;
+        };
         Returns: {
           "completed": boolean;
           "position_seconds": number;
@@ -1660,7 +2028,10 @@ export type Database = {
         Returns: number;
       };
       "set_saved_title": {
-        Args: { "p_saved": boolean; "p_title_id": string };
+        Args: {
+          "p_saved": boolean;
+          "p_title_id": string;
+        };
         Returns: undefined;
       };
       "submit_channel": {
@@ -1691,11 +2062,49 @@ export type Database = {
         };
       };
       "submit_title_review": {
-        Args: { "p_title_id": string };
+        Args: {
+          "p_title_id": string;
+        };
         Returns: undefined;
       };
+      "submit_upi_payment": {
+        Args: {
+          "p_order_id": string;
+          "p_utr": string;
+        };
+        Returns: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "upi_orders";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "unregister_push_token": {
-        Args: { "p_installation_id": string };
+        Args: {
+          "p_installation_id": string;
+        };
         Returns: undefined;
       };
     };

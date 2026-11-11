@@ -19,7 +19,7 @@ Backend drive folders/rename are not part of the flat PR2 contract.
 - Personal files are separate from public channel content.
 - Preview mode is explicitly labelled, persists locally, and never pretends to charge or back up data.
 - Plans/prices/quotas are illustrative in preview. Production values must come from server/Google Play.
-- No legacy 30-minute timer, manual UPI approval or acquisition-source access rule was carried over.
+- No legacy 30-minute timer or acquisition-source access rule was carried over. Administrator-confirmed UPI payments were added on 11 November 2026 at the client's request; see `docs/api/upi-payments.md`.
 
 ## Integration matrix
 

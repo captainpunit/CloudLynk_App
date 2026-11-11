@@ -15,8 +15,8 @@ A session created within the last 15 minutes is required (sign in again first).
 Returns 202 `{ "requestId":"uuid", "status":"queued" }`. This immediately restricts
 the account and hides owned content. `account-deletion-worker` removes personal
 database rows, storage objects and Auth identity; external video removal runs through
-`media-cleanup`. Failed steps retain durable retry state. Deleting an account does
-not cancel Google Play billing: direct the user to Play subscriptions before requesting.
+`media-cleanup`. Failed steps retain durable retry state. Deleting an account also
+removes its UPI orders and subscriptions; UPI plans do not renew, so there is nothing to cancel.
 Previously issued signed URLs expire within 10 minutes. No deletion is performed by
 the implementation task itself: this endpoint acts only on explicit authenticated requests.
 
