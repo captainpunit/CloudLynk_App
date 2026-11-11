@@ -53,12 +53,9 @@ export function pushClient() {
 export function pushFailure(error?: string) {
   return {
     disable: error === "DeviceNotRegistered",
-    terminal: [
-      "DeviceNotRegistered",
-      "MessageTooBig",
-      "InvalidCredentials",
-      "MismatchSenderId",
-    ].includes(error ?? ""),
+    // Wrong push credentials are our mistake, not the device's: those are retried so
+    // notifications go out once the credentials are fixed.
+    terminal: ["DeviceNotRegistered", "MessageTooBig"].includes(error ?? ""),
     error: error ?? "push_delivery_failed",
   };
 }

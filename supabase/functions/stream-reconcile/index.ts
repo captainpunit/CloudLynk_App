@@ -59,6 +59,13 @@ Deno.serve(scheduled("stream-reconcile", async () => {
       }
     } catch {
       failed++;
+      // Move a check that keeps failing to the back, so it cannot hold up newer ones.
+      // It is dropped a day after it was made, like one that found nothing.
+      const old = Date.parse(intent.created_at) < Date.now() - 24 * 3600_000;
+      const table = db.from("stream_allocation_intents");
+      await (old ? table.delete() : table.update({
+        next_check_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+      })).eq("id", intent.id);
     }
   });
   await pool(due.data ?? [], 5, async (asset) => {

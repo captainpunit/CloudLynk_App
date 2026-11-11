@@ -4,6 +4,12 @@ import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
 import { syncSubscription } from "../_shared/subscriptions.ts";
 import { scheduled } from "../_shared/scheduled.ts";
 
+const permanentErrors = [
+  "invalid_purchase",
+  "purchase_erased",
+  "purchase_owner_mismatch",
+];
+
 Deno.serve(scheduled("subscription-reconcile", async () => {
   const due = await db.from("subscriptions").select("id,purchase_token,user_id")
     .is("superseded_by", null).lte("next_check_at", new Date().toISOString())
@@ -19,10 +25,16 @@ Deno.serve(scheduled("subscription-reconcile", async () => {
       if (
         error instanceof HttpError && error.message === "subscription_sync_busy"
       ) return;
-      failed++;
+      // Google no longer knows the purchase, or it belongs to another account.
+      // Asking again can never succeed, so the row is not checked again.
+      const permanent = error instanceof HttpError &&
+        permanentErrors.includes(error.message);
+      if (!permanent) failed++;
       const retried = await db.from("subscriptions").update({
-        next_check_at: new Date(Date.now() + 30 * 60_000).toISOString(),
-        sync_error: "provider_sync_failed",
+        next_check_at: permanent
+          ? "infinity"
+          : new Date(Date.now() + 30 * 60_000).toISOString(),
+        sync_error: permanent ? error.message : "provider_sync_failed",
       }).eq("id", row.id);
       dbCheck(retried.error);
     }

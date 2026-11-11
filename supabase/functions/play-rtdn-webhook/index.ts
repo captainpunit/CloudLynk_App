@@ -58,14 +58,32 @@ Deno.serve(endpoint(async (req) => {
   ).eq("provider_event_id", id).single();
   dbCheck(prior.error);
   if (prior.data?.processed_at) return json({ duplicate: true });
-  if (token) {
-    // Re-read Google even for delayed notifications. Delivery order is not provider state order.
-    await syncSubscription(token);
+  let outcome: string | null = null;
+  if (token && voided?.productType === 2) {
+    // A refunded one-time product. Google's subscription API does not know these tokens.
+    const ended = await db.rpc("void_play_purchase", { p_token: token });
+    dbCheck(ended.error);
+  } else if (token) {
+    try {
+      // Re-read Google even for delayed notifications. Delivery order is not provider state order.
+      await syncSubscription(token);
+    } catch (error) {
+      // Asking again cannot fix these, so the message is accepted and the reason kept.
+      // Anything else is returned as a failure and Pub/Sub delivers it again.
+      if (
+        !(error instanceof HttpError) ||
+        error.message === "subscription_sync_busy" ||
+        ![400, 403, 409, 410].includes(error.status)
+      ) throw error;
+      outcome = error.message;
+    }
   }
   const done = await db.from("payment_events").update({
     processed_at: new Date().toISOString(),
   })
     .eq("provider", "google_play").eq("provider_event_id", id);
   dbCheck(done.error);
-  return json({ received: true });
+  return json(
+    outcome ? { received: true, skipped: outcome } : { received: true },
+  );
 }));
