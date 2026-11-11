@@ -25,21 +25,25 @@ export interface UpiOrder {
 export const maxReports = 3;
 const reportWindowMs = 7 * 24 * 60 * 60 * 1000;
 
-const periods: Record<string, string> = {
-  P1M: 'month',
-  P3M: '3 months',
-  P6M: '6 months',
-  P1Y: 'year',
-};
-export const billingPeriods = Object.keys(periods);
-/** The period as a unit: "month", "3 months". */
-export function periodLabel(period: string): string {
-  return periods[period] ?? period;
+const units = { D: 'day', M: 'month', Y: 'year' } as const;
+/** Reads an ISO 8601 plan period such as P7D, P1M or P1Y (the backend's `valid_plan_period`). */
+function parsePeriod(period: string) {
+  const match = /^P(\d+)([DMY])$/.exec(period);
+  return match ? { count: Number(match[1]), unit: units[match[2] as keyof typeof units] } : null;
 }
-/** The period as a length of time: "1 month", "3 months". */
+/** Plan lengths offered when an administrator creates a plan. */
+export const billingPeriods = ['P2D', 'P7D', 'P1M', 'P3M', 'P6M', 'P1Y'];
+/** The period as a unit of price: "month", "7 days". */
+export function periodLabel(period: string): string {
+  const parsed = parsePeriod(period);
+  if (!parsed) return period;
+  return parsed.count === 1 ? parsed.unit : `${parsed.count} ${parsed.unit}s`;
+}
+/** The period as a length of time: "1 month", "7 days". */
 export function periodLength(period: string): string {
-  const label = periodLabel(period);
-  return /^\d/.test(label) ? label : `1 ${label}`;
+  const parsed = parsePeriod(period);
+  if (!parsed) return period;
+  return `${parsed.count} ${parsed.unit}${parsed.count === 1 ? '' : 's'}`;
 }
 
 /** Indian digit grouping, written out so every JavaScript engine prints the same price. */

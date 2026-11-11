@@ -2107,6 +2107,12 @@ export type Database = {
         };
         Returns: undefined;
       };
+      "valid_plan_period": {
+        Args: {
+          "p_period": string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: {
       [_ in never]: never;

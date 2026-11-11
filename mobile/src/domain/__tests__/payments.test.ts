@@ -21,6 +21,9 @@ test('prices use Indian grouping and drop empty paise', () => {
   assert.equal(planPrice({ pricePaise: 99900, billingPeriod: 'P1Y' }), '₹999 / year');
   assert.equal(periodLength('P1M'), '1 month');
   assert.equal(periodLength('P6M'), '6 months');
+  assert.equal(periodLength('P2D'), '2 days');
+  assert.equal(planPrice({ pricePaise: 12900, billingPeriod: 'P7D' }), '₹129 / 7 days');
+  assert.equal(periodLength('unknown'), 'unknown');
 });
 
 test('typed rupee amounts become whole paise', () => {
