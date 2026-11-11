@@ -1,8 +1,8 @@
 import { goBackOrExplore } from '@/lib/navigation';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
-import { Cloud, ShieldCheck } from 'lucide-react-native';
-import { Button, ErrorNote, Field, Heading, Label, Pill, Screen } from '@/components/ui';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
+import { ShieldCheck } from 'lucide-react-native';
+import { Button, ErrorNote, Field, Label, Pill, Screen } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { assertLiveConfiguration } from '@/data/live/cloud-api';
 import { supabase } from '@/lib/supabase';
@@ -10,81 +10,153 @@ import { env } from '@/lib/env';
 import { LegalLinks } from '@/components/legal-links';
 import { colors as c } from '@/theme/tokens';
 
+/**
+ * - `signIn` / `signUp`: email and password.
+ * - `resetRequest`: ask for a reset code by email.
+ * - `resetConfirm`: enter the emailed code and a new password.
+ */
+type Mode = 'signIn' | 'signUp' | 'resetRequest' | 'resetConfirm';
+
+const titles: Record<Mode, string> = {
+  signIn: 'Welcome back',
+  signUp: 'Create your account',
+  resetRequest: 'Reset your password',
+  resetConfirm: 'Choose a new password',
+};
+
+/** Sign-in errors in plain words; the auth service's own wording is for developers. */
+function authMessage(cause: unknown): string {
+  const message = cause instanceof Error ? cause.message.toLowerCase() : '';
+  if (message.includes('invalid login')) return 'The email or password is incorrect.';
+  if (message.includes('already registered'))
+    return 'An account with this email already exists. Sign in instead.';
+  if (message.includes('not confirmed'))
+    return 'Confirm your email first. Check your inbox for our message.';
+  if (message.includes('expired') || message.includes('invalid'))
+    return 'That code is wrong or has expired. Ask for a new one.';
+  if (message.includes('rate limit') || message.includes('security purposes'))
+    return 'Too many attempts. Wait a minute and try again.';
+  if (message.includes('different from the old'))
+    return 'Choose a password you have not used on this account before.';
+  if (message.includes('network') || message.includes('fetch'))
+    return 'No connection. Check your internet and try again.';
+  return 'Something went wrong. Please try again.';
+}
+
 export default function AuthScreen() {
   const { refresh, notify } = useWorkspace();
-  const [signUp, setSignUp] = useState(false);
+  const [mode, setMode] = useState<Mode>('signIn');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function show(next: Mode) {
+    setError(null);
+    setPassword('');
+    setCode('');
+    setMode(next);
+  }
+
+  /** The first problem with what was typed, or null when the form can be sent. */
+  function problem(): string | null {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Enter a valid email address.';
+    if (mode === 'resetRequest') return null;
+    if (mode === 'resetConfirm' && !/^\d{6,8}$/.test(code.trim()))
+      return 'Enter the code from our email.';
+    if (password.length < 8) return 'Your password must have at least 8 characters.';
+    if (mode === 'signUp' && name.trim().length < 2)
+      return 'Tell us your name (at least 2 characters).';
+    return null;
+  }
+
+  async function send(): Promise<void> {
+    const address = email.trim();
+    if (mode === 'resetRequest') {
+      const sent = await supabase.auth.resetPasswordForEmail(address);
+      if (sent.error) throw sent.error;
+      // The same message whether or not the address has an account.
+      notify('If that email has an account, we sent it a code.');
+      show('resetConfirm');
+      return;
+    }
+    if (mode === 'resetConfirm') {
+      const verified = await supabase.auth.verifyOtp({
+        email: address,
+        token: code.trim(),
+        type: 'recovery',
+      });
+      if (verified.error) throw verified.error;
+      const updated = await supabase.auth.updateUser({ password });
+      if (updated.error) throw updated.error;
+    } else {
+      const result =
+        mode === 'signUp'
+          ? await supabase.auth.signUp({
+              email: address,
+              password,
+              options: { data: { full_name: name.trim() } },
+            })
+          : await supabase.auth.signInWithPassword({ email: address, password });
+      if (result.error) throw result.error;
+      if (mode === 'signUp' && !result.data.session) {
+        notify('Check your email to confirm your account, then sign in.');
+        show('signIn');
+        return;
+      }
+    }
+    await refresh();
+    goBackOrExplore();
+    notify(
+      mode === 'resetConfirm'
+        ? 'Password changed. You are signed in.'
+        : `Welcome to ${env.appName}`,
+    );
+  }
+
   async function submit() {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError('Enter a valid email address.');
-      return;
-    }
-    if (password.length < 8) {
-      setError('Your password must have at least 8 characters.');
-      return;
-    }
-    if (signUp && name.trim().length < 2) {
-      setError('Tell us your name (at least 2 characters).');
-      return;
-    }
+    const invalid = problem();
+    if (invalid) return setError(invalid);
     setBusy(true);
     setError(null);
     try {
       assertLiveConfiguration();
-      const result = signUp
-        ? await supabase.auth.signUp({
-            email: email.trim(),
-            password,
-            options: { data: { full_name: name.trim() } },
-          })
-        : await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (result.error) throw result.error;
-      if (signUp && !result.data.session) {
-        notify('Check your email to confirm your account, then sign in.');
-        setSignUp(false);
-        return;
-      }
-      await refresh();
-      goBackOrExplore();
-      notify(`Welcome to ${env.appName}`);
+      await send();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Sign-in failed. Please try again.');
+      setError(authMessage(cause));
     } finally {
       setBusy(false);
     }
   }
+
+  const resetting = mode === 'resetRequest' || mode === 'resetConfirm';
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Screen
-        title={signUp ? 'Your world starts here.' : 'Welcome back.'}
-        subtitle="Good things are better when they’re yours."
+        title={titles[mode]}
+        subtitle={
+          resetting
+            ? 'We email you a code. Enter it here with a new password.'
+            : 'Join channels, save videos and subscribe to Plus.'
+        }
         back
       >
-        <View
-          style={{
-            alignSelf: 'flex-start',
-            backgroundColor: c.primarySoft,
-            padding: 22,
-            borderRadius: 26,
-          }}
-        >
-          <Cloud size={42} color={c.primary} />
-        </View>
-        <Heading style={{ fontSize: 32, lineHeight: 39 }}>
-          A space for your files.{'\n'}A place for your people.
-        </Heading>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pill title="Sign in" selected={!signUp} onPress={() => setSignUp(false)} />
-          <Pill title="Create account" selected={signUp} onPress={() => setSignUp(true)} />
-        </View>
-        {signUp && (
+        {!resetting && (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pill title="Sign in" selected={mode === 'signIn'} onPress={() => show('signIn')} />
+            <Pill
+              title="Create account"
+              selected={mode === 'signUp'}
+              onPress={() => show('signUp')}
+            />
+          </View>
+        )}
+        {mode === 'signUp' && (
           <Field
             label="Your name"
             value={name}
@@ -102,20 +174,47 @@ export default function AuthScreen() {
           autoComplete="email"
           keyboardType="email-address"
         />
-        <Field
-          label="Password"
-          placeholder="At least 8 characters"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete={signUp ? 'new-password' : 'current-password'}
-        />
+        {mode === 'resetConfirm' && (
+          <Field
+            label="Code from our email"
+            value={code}
+            onChangeText={setCode}
+            keyboardType="number-pad"
+            autoComplete="one-time-code"
+            maxLength={8}
+          />
+        )}
+        {mode !== 'resetRequest' && (
+          <Field
+            label={mode === 'resetConfirm' ? 'New password' : 'Password'}
+            placeholder="At least 8 characters"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
+            onSubmitEditing={() => void submit()}
+          />
+        )}
         <ErrorNote message={error} />
         <Button
-          title={signUp ? 'Create account' : 'Sign in'}
+          title={
+            {
+              signIn: 'Sign in',
+              signUp: 'Create account',
+              resetRequest: 'Email me a code',
+              resetConfirm: 'Change password',
+            }[mode]
+          }
           loading={busy}
           onPress={() => void submit()}
         />
+        {mode === 'signIn' && (
+          <TextLink title="Forgot password?" onPress={() => show('resetRequest')} />
+        )}
+        {mode === 'resetRequest' && (
+          <TextLink title="I already have a code" onPress={() => show('resetConfirm')} />
+        )}
+        {resetting && <TextLink title="Back to sign in" onPress={() => show('signIn')} />}
         <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'center' }}>
           <ShieldCheck size={16} color={c.muted} />
           <Label style={{ fontSize: 11, color: c.muted }}>
@@ -125,5 +224,19 @@ export default function AuthScreen() {
         <LegalLinks />
       </Screen>
     </KeyboardAvoidingView>
+  );
+}
+
+function TextLink({ title, onPress }: { title: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      hitSlop={10}
+      onPress={onPress}
+      style={{ alignSelf: 'center' }}
+    >
+      <Label style={{ color: c.primary, fontWeight: '600' }}>{title}</Label>
+    </Pressable>
   );
 }

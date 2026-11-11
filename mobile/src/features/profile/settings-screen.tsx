@@ -144,8 +144,9 @@ export default function SettingsScreen() {
         <ShieldCheck color={c.primary} size={24} />
         <Label style={{ fontWeight: '700' }}>Privacy comes first.</Label>
         <Label style={{ color: c.muted, fontSize: 13 }}>
-          Advertising measurement is optional. Enabling it shares Google Play install attribution
-          for advertising measurement. Advertising SDKs do not start automatically.
+          Advertising measurement is optional. If you allow it, CloudLynk shares with Meta that this
+          app was installed and when a subscription is paid, so we can tell which adverts work. We
+          never share what you watch.
         </Label>
         {state.profile && (
           <>

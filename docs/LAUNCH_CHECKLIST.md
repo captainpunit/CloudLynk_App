@@ -7,8 +7,8 @@ Play, Cloudflare or Meta. Written 11 November 2026 for branch `feature/upi-subsc
 ## 1. Review and merge
 
 - [ ] Backend owner reviews migrations `20261111000000` (UPI orders), `20261112000000`
-      (plan periods), `20261113000000` (Meta events) and `20261114000000` (Google Play
-      choice). Earlier backend notes said manual UPI approval was left out on purpose;
+      (plan periods), `20261113000000` (Meta events), `20261114000000` (Google Play
+      choice) and `20261115000000` (refunds). Earlier backend notes said manual UPI approval was left out on purpose;
       the client has since asked for it.
 - [ ] Merge the branch after review.
 
@@ -28,22 +28,29 @@ Play, Cloudflare or Meta. Written 11 November 2026 for branch `feature/upi-subsc
 - [ ] **Meta**: App ID, client token, dataset ID, Conversions API access token.
 - [ ] **Firebase** project for push notifications (`google-services.json`, FCM key).
 - [ ] **Web pages** on the client's domain: privacy policy, terms, account deletion
-      instructions, and `/.well-known/assetlinks.json` for app links.
+      instructions, and `/.well-known/assetlinks.json` for app links. Drafts of the three
+      texts and of the Play listing and Data safety answers are in `docs/store/`; they
+      need the business details filled in and a lawyer's review.
+- [ ] **Email sending (SMTP)** for the Supabase project. The built-in sender allows only
+      a few emails an hour, and password reset depends on email.
 
 ## 3. Backend deployment (client's team)
 
 1. Create the production Supabase project. Enable `pg_cron` and `pg_net`.
-2. `supabase db push` to apply every migration.
+2. `supabase db push` to apply every migration, then run
+   `supabase/scripts/seed-plans.sql` once to create the five plans below.
+   In Auth → Email templates → Reset password, paste `supabase/templates/recovery.html`
+   (the app resets passwords with the code in that email), and configure SMTP.
 3. Set function secrets from `supabase/.env.example` (Cloudflare, Google Play,
    Meta, push, `CRON_SECRET`, `ANDROID_PACKAGE_NAME`).
 4. Deploy all functions in `supabase/functions`, including the new
-   `verify-play-product` and `play-external-report`.
+   `verify-play-product`, `play-external-report` and `play-voided-sync`.
 5. Add `cron_secret` and `supabase_project_url` to Vault, then run
    `supabase/scripts/schedule-jobs.sql`.
 6. Make the first administrator: set `role = 'admin'` on that profile with the service
    role. Use a new password; the one shared in chat earlier must be changed.
-7. In the app, Admin → Payments: enter the UPI ID, payee name and GST rate, then the
-   five plans below, and switch payments on.
+7. In the app, Admin → Payments: enter the UPI ID, payee name and GST rate, check
+   the five plans below, and switch payments on.
 8. Call `backend-health` and confirm it returns 200.
 
 | Plan ID | Name | Period | Price |
@@ -69,9 +76,10 @@ Play, Cloudflare or Meta. Written 11 November 2026 for branch `feature/upi-subsc
 
 Build variables (EAS secrets or `.env`): `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_LINK_HOST`,
-`EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`,
-`EXPO_PUBLIC_NATIVE_INTEGRATIONS=true`, `EXPO_PUBLIC_PLAY_BILLING=true`, `META_APP_ID`,
-`META_CLIENT_TOKEN`.
+`EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`, `META_APP_ID`, `META_CLIENT_TOKEN`.
+The `production` profile in `eas.json` turns on the Meta SDK and Google Play's choice
+screen. The `direct` profile builds an APK for distribution outside Google Play, with
+UPI only; never upload that one to Play.
 
 - [ ] `eas build --platform android --profile production` (signed app bundle; EAS keeps
       the upload key).
@@ -88,7 +96,8 @@ Build variables (EAS secrets or `.env`): `EXPO_PUBLIC_SUPABASE_URL`,
 
 ## Known gaps
 
-- Refunds are not reported to Google or Meta and do not end access automatically.
+- Refunds are full refunds only, and Meta is not told about them. The money itself is
+  returned by hand from the bank or UPI app before the payment is marked refunded.
 - "Trial" is an ordinary plan and can be bought repeatedly (client's decision).
 - Each UPI payment is confirmed by hand from the bank record. A bank or payment
   provider webhook can replace this without changing the app.

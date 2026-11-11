@@ -75,13 +75,23 @@ export async function connectPlayChoice(handlers: PlayChoiceHandlers): Promise<P
   return {
     close,
     async buy(productId, playAccountId) {
-      const products = await store.fetchProducts({ skus: [productId], type: 'in-app' });
-      if (!products?.length) throw new Error('This plan is not available on Google Play yet.');
-      // The account ID lets the backend refuse a purchase made by a different account.
-      await store.requestPurchase({
-        request: { google: { skus: [productId], obfuscatedAccountId: playAccountId } },
-        type: 'in-app',
-      });
+      let listed = false;
+      try {
+        const products = await store.fetchProducts({ skus: [productId], type: 'in-app' });
+        listed = !!products?.length;
+        // The account ID lets the backend refuse a purchase made by a different account.
+        if (listed)
+          await store.requestPurchase({
+            request: { google: { skus: [productId], obfuscatedAccountId: playAccountId } },
+            type: 'in-app',
+          });
+      } catch {
+        // The library's own messages ("Store service is not connected") mean nothing to members.
+        throw new Error(
+          'Google Play is not available right now. Check that Google Play Store is signed in and up to date, then try again.',
+        );
+      }
+      if (!listed) throw new Error('This plan is not available on Google Play yet.');
     },
     async unfinished() {
       const purchases = await store.getAvailablePurchases();

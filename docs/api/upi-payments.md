@@ -102,8 +102,11 @@ Errors: `admin_required`, `reason_required`, `invalid_action`, `order_not_found`
 - Check the bank statement for each reported UTR and exact amount before confirming.
   This is manual work that grows with the number of subscribers; a bank or PSP webhook
   removes it.
-- Refunds are made from the bank or UPI app; there is no refund call. To end access
-  early, set the subscription's `paid_until` or `status` with the service role.
+- Refunds: send the money back from the bank or UPI app, then mark the payment in
+  Admin → Payments → Refunds (`refund_upi_order(order_id, reason)`). That ends the time
+  the payment bought, moves later stacked periods earlier by the unused time, notifies
+  the member, writes the audit log, and queues a refund report for Google when the
+  payment had been reported. A refunded payment's UTR cannot be used again.
 
 ## Launch plans (from the client, 11 November 2026)
 
@@ -157,9 +160,15 @@ built and tested locally, not yet run against Google):
 - A build without the flag (for distribution outside Play) keeps the direct UPI checkout
   and reports nothing.
 
-Not covered: refunds are not reported to Google (`refundexternaltransaction`) and Play
-refunds/chargebacks of one-time products do not end access automatically; both need a
-manual step until built. The 24-hour limit runs from the payment, so payments must be
+Refunds: `play-external-report` also sends refund reports (`externalTransactions:refund`,
+full refund), only after Google holds the payment report. `play-voided-sync` (every 30
+minutes) reads Google's voided purchases for the last three days and ends the time each
+refunded or reversed one-time product bought (`void_play_purchase`). Verified Play
+purchases are sent to Meta as Subscribe/Purchase with consent; licence-tester purchases
+are not. `backend_health` reports `failed_play_reports`, `overdue_play_reports` (queued
+over an hour) and flags token orders unreviewed for 12 hours.
+
+Not covered: partial refunds, and telling Meta about refunds. The 24-hour limit runs from the payment, so payments must be
 confirmed within a day (`backend_health` already flags older ones). PCI DSS
 certification is the client's responsibility.
 
