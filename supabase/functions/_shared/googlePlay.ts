@@ -134,3 +134,33 @@ export async function createExternalTransaction(
     transaction,
   );
 }
+export async function refundExternalTransaction(
+  externalTransactionId: string,
+  refund: unknown,
+): Promise<void> {
+  await playRequest(
+    `externalTransactions/${encodeURIComponent(externalTransactionId)}:refund`,
+    "POST",
+    refund,
+  );
+}
+/** Purchase tokens of one-time products Google refunded or reversed since `since`. */
+export async function listVoidedProductTokens(since: Date): Promise<string[]> {
+  const tokens: string[] = [];
+  let page = "";
+  do {
+    const result: {
+      voidedPurchases?: { purchaseToken?: string }[];
+      tokenPagination?: { nextPageToken?: string };
+    } = await playRequest(
+      `purchases/voidedpurchases?type=0&startTime=${since.getTime()}${
+        page && `&token=${encodeURIComponent(page)}`
+      }`,
+    );
+    for (const item of result.voidedPurchases ?? []) {
+      if (item.purchaseToken) tokens.push(item.purchaseToken);
+    }
+    page = result.tokenPagination?.nextPageToken ?? "";
+  } while (page && tokens.length < 5000);
+  return tokens;
+}

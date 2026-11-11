@@ -70,6 +70,9 @@ verify_jwt = false
 [functions.play-external-report]
 verify_jwt = false
 
+[functions.play-voided-sync]
+verify_jwt = false
+
 [functions.drive-cleanup]
 # Called by a scheduled job with x-cron-secret.
 verify_jwt = false

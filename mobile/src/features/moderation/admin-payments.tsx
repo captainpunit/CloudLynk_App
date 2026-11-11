@@ -5,6 +5,8 @@ import { colors as c } from '@/theme/tokens';
 import { fileSize } from '@/domain/format';
 import {
   billingPeriods,
+  cleanUtr,
+  isUtr,
   maxReports,
   paiseFromRupees,
   periodLength,
@@ -14,9 +16,11 @@ import {
 import {
   decidePayment,
   fetchAllPlans,
+  fetchPaidPayments,
   fetchPaymentQueue,
   fetchPaymentSettings,
   queuePageSize,
+  refundPayment,
   savePaymentSettings,
   savePaymentTax,
   savePlan,
@@ -36,7 +40,7 @@ const emptyPlan = {
   existing: false,
 };
 
-/** Admin: confirm reported UPI payments, and set where money goes and what plans cost. */
+/** Admin: confirm or refund reported UPI payments, and set where money goes and what plans cost. */
 export default function AdminPayments() {
   const { refresh, notify } = useWorkspace();
   const [view, setView] = useState('To confirm');
@@ -44,6 +48,9 @@ export default function AdminPayments() {
   const [page, setPage] = useState(0);
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [reason, setReason] = useState('');
+  const [paid, setPaid] = useState<QueuedPayment[]>([]);
+  const [paidUtr, setPaidUtr] = useState('');
+  const [refundReason, setRefundReason] = useState('');
   const [vpa, setVpa] = useState('');
   const [payee, setPayee] = useState('');
   const [merchantCode, setMerchantCode] = useState('');
@@ -66,6 +73,12 @@ export default function AdminPayments() {
   useEffect(() => {
     void loadQueue().catch(() => setError('Payments could not load. Please refresh.'));
   }, [loadQueue]);
+  // Confirmed payments load when the Refunds view opens, and again for each search.
+  const loadPaid = useCallback(async (utr = '') => setPaid(await fetchPaidPayments(utr)), []);
+  useEffect(() => {
+    if (view !== 'Refunds') return;
+    void loadPaid().catch(() => setError('Payments could not load. Please refresh.'));
+  }, [view, loadPaid]);
   useEffect(() => {
     void loadSetup().catch(() => setError('Payment setup could not load. Please refresh.'));
   }, [loadSetup]);
@@ -92,6 +105,13 @@ export default function AdminPayments() {
       },
       action === 'approve' ? 'Payment confirmed. Plus is active.' : 'Payment rejected.',
     );
+  }
+  function refund(order: QueuedPayment) {
+    void run(async () => {
+      await refundPayment(order.id, refundReason);
+      setRefundReason('');
+      await loadPaid(isUtr(paidUtr) ? cleanUtr(paidUtr) : '');
+    }, 'Marked refunded. That payment no longer gives Plus.');
   }
   function saveSettings() {
     void run(async () => {
@@ -129,7 +149,7 @@ export default function AdminPayments() {
   return (
     <>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {['To confirm', 'UPI details', 'Plans'].map((value) => (
+        {['To confirm', 'Refunds', 'UPI details', 'Plans'].map((value) => (
           <Pill
             key={value}
             title={value}
@@ -217,6 +237,73 @@ export default function AdminPayments() {
             loading={busy}
             onPress={() => void run(loadQueue, 'Payments refreshed.')}
           />
+        </>
+      )}
+      {view === 'Refunds' && (
+        <>
+          <Label style={{ color: c.muted, fontSize: 13 }}>
+            Send the money back from your bank or UPI app first, then mark the payment here. Marking
+            it ends the Plus time that payment bought; it does not move any money.
+          </Label>
+          <Field
+            label="Find a payment by UTR"
+            value={paidUtr}
+            onChangeText={setPaidUtr}
+            keyboardType="number-pad"
+            maxLength={12}
+          />
+          <Button
+            title={paidUtr.trim() ? 'Find payment' : 'Show latest payments'}
+            variant="soft"
+            loading={busy}
+            disabled={!!paidUtr.trim() && !isUtr(paidUtr)}
+            onPress={() =>
+              void run(
+                () => loadPaid(cleanUtr(paidUtr)),
+                paidUtr.trim() ? 'Search finished.' : 'Payments refreshed.',
+              )
+            }
+          />
+          <Field
+            label="Reason for the refund (the member sees it)"
+            value={refundReason}
+            onChangeText={setRefundReason}
+            multiline
+            maxLength={500}
+          />
+          {paid.map((order) => (
+            <Surface key={order.id}>
+              <Label style={{ fontWeight: '700' }}>
+                {rupees(order.amountPaise)} from {order.payerName}
+              </Label>
+              <Label>
+                {order.planName}, {periodLength(order.billingPeriod)}
+              </Label>
+              <Label selectable>UTR {order.utr}</Label>
+              <Label selectable style={{ color: c.muted, fontSize: 12 }}>
+                Member {order.userId}
+              </Label>
+              <Label selectable style={{ color: c.muted, fontSize: 12 }}>
+                Reference {order.reference} · paid to {order.payeeVpa}
+              </Label>
+              <Button
+                title="Mark refunded"
+                variant="outline"
+                disabled={busy || !refundReason.trim()}
+                onPress={() => refund(order)}
+              />
+            </Surface>
+          ))}
+          {!paid.length && (
+            <EmptyState
+              title="No confirmed payments"
+              body={
+                paidUtr.trim()
+                  ? 'No confirmed payment has this UTR.'
+                  : 'Payments you confirm appear here, newest first.'
+              }
+            />
+          )}
         </>
       )}
       {view === 'UPI details' && (

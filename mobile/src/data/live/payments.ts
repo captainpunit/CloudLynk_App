@@ -97,6 +97,27 @@ export async function fetchPaymentQueue(page: number): Promise<QueuedPayment[]> 
     payerName: row.profiles?.display_name ?? 'Member',
   }));
 }
+/**
+ * Confirmed payments, newest first, for refunds. A UTR narrows the list to that one payment.
+ */
+export async function fetchPaidPayments(utr?: string): Promise<QueuedPayment[]> {
+  let query = supabase
+    .from('upi_orders')
+    .select('*, profiles(display_name)')
+    .eq('status', 'paid')
+    .order('decided_at', { ascending: false })
+    .limit(queuePageSize);
+  if (utr) query = query.eq('utr', utr);
+  return (checked(await query) ?? []).map((row) => ({
+    ...mapOrder(row),
+    userId: row.user_id,
+    payerName: row.profiles?.display_name ?? 'Member',
+  }));
+}
+/** Records that a confirmed payment was returned to the member; ends the time it bought. */
+export function refundPayment(orderId: string, reason: string) {
+  return call('refund_upi_order', { p_order_id: orderId, p_reason: reason.trim() });
+}
 export function decidePayment(orderId: string, action: 'approve' | 'reject', reason?: string) {
   return call('decide_upi_order', {
     p_order_id: orderId,

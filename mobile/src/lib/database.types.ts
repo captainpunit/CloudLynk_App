@@ -667,6 +667,7 @@ export type Database = {
           "external_transaction_id": string;
           "external_transaction_token": string;
           "id": string;
+          "kind": string;
           "last_error": string | null;
           "lease_id": string | null;
           "lease_until": string | null;
@@ -685,6 +686,7 @@ export type Database = {
           "external_transaction_id": string;
           "external_transaction_token": string;
           "id"?: string;
+          "kind"?: string;
           "last_error"?: string | null;
           "lease_id"?: string | null;
           "lease_until"?: string | null;
@@ -702,6 +704,7 @@ export type Database = {
           "external_transaction_id"?: string;
           "external_transaction_token"?: string;
           "id"?: string;
+          "kind"?: string;
           "last_error"?: string | null;
           "lease_id"?: string | null;
           "lease_until"?: string | null;
@@ -1209,6 +1212,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at": string | null;
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
@@ -1234,6 +1238,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at"?: string | null;
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
@@ -1258,6 +1263,7 @@ export type Database = {
           "plan_name"?: string;
           "product_id"?: string;
           "reference"?: string;
+          "refunded_at"?: string | null;
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
@@ -1457,6 +1463,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at": string | null;
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
@@ -1591,6 +1598,7 @@ export type Database = {
           "external_transaction_id": string;
           "external_transaction_token": string;
           "id": string;
+          "kind": string;
           "last_error": string | null;
           "lease_id": string | null;
           "lease_until": string | null;
@@ -1659,6 +1667,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at": string | null;
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
@@ -1696,6 +1705,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at": string | null;
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
@@ -1765,6 +1775,13 @@ export type Database = {
           "p_user_id": string;
         };
         Returns: Record<string, unknown>;
+      };
+      "end_paid_period": {
+        Args: {
+          "p_period": string;
+          "p_subscription_id": string;
+        };
+        Returns: string;
       };
       "finalize_drive_upload": {
         Args: {
@@ -1839,6 +1856,7 @@ export type Database = {
         Args: {
           "p_order_id": string;
           "p_product_id": string;
+          "p_test"?: boolean;
           "p_token": string;
           "p_user_id": string;
         };
@@ -1951,6 +1969,43 @@ export type Database = {
           "p_user_id": string;
         };
         Returns: boolean;
+      };
+      "refund_upi_order": {
+        Args: {
+          "p_order_id": string;
+          "p_reason": string;
+        };
+        Returns: {
+          "amount_paise": number;
+          "attempts": number;
+          "billing_period": string;
+          "created_at": string;
+          "decided_at": string | null;
+          "decision_reason": string | null;
+          "expires_at": string;
+          "external_transaction_token": string | null;
+          "id": string;
+          "pay_uri": string;
+          "payee_name": string;
+          "payee_vpa": string;
+          "plan_name": string;
+          "product_id": string;
+          "reference": string;
+          "refunded_at": string | null;
+          "status": string;
+          "submitted_at": string | null;
+          "subscription_id": string | null;
+          "tax_state": string | null;
+          "updated_at": string;
+          "user_id": string;
+          "utr": string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "upi_orders";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       "register_push_token": {
         Args: {
@@ -2258,6 +2313,7 @@ export type Database = {
           "plan_name": string;
           "product_id": string;
           "reference": string;
+          "refunded_at": string | null;
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
@@ -2288,6 +2344,12 @@ export type Database = {
       "valid_tax_state": {
         Args: {
           "p_state": string;
+        };
+        Returns: boolean;
+      };
+      "void_play_purchase": {
+        Args: {
+          "p_token": string;
         };
         Returns: boolean;
       };
