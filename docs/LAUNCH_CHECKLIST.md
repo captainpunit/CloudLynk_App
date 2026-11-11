@@ -14,6 +14,9 @@ Play, Cloudflare or Meta. Written 11 November 2026 for branch `feature/upi-subsc
 
 ## 2. Accounts and decisions the client must supply
 
+The full list, with who gets each item and where each value goes, is in
+[WHAT_WE_NEED.md](WHAT_WE_NEED.md).
+
 - [ ] **Merchant UPI ID and payee name.** The ID given so far looks personal; banks often
       block or limit personal IDs for app payments.
 - [ ] **GST rate** included in the plan prices (default in the database is 18).
