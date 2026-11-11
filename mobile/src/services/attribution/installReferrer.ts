@@ -1,13 +1,20 @@
 import { Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { invokeBackend } from '@/data/live/invoke-backend';
 import { installationId } from '@/services/notifications/push';
+import {
+  deviceInfo,
+  saveMeasurementChoice,
+  startMeasurement,
+  stopMeasurement,
+} from '@/services/meta/measurement';
 
 /**
- * Reads the Google Play install referrer once and sends it to the
- * track-install function. For Meta app install ads the referrer carries
- * Meta's encrypted campaign data, which the backend stores for attribution.
+ * Records the member's choice about advertising measurement. When they agree, it reads
+ * the Google Play install referrer (for Meta install ads it carries Meta's encrypted
+ * campaign data), starts the Meta SDK and sends both to the track-install function, so
+ * the backend can attribute a later confirmed payment. When they decline, the backend
+ * clears what it held and nothing is collected.
  */
 export async function captureInstallAttribution(consent: boolean): Promise<void> {
   const {
@@ -39,7 +46,14 @@ export async function captureInstallAttribution(consent: boolean): Promise<void>
     platform: 'android',
     installationId: await installationId(),
     trackingConsent: consent,
-    ...(consent ? { installReferrer: referrer } : {}),
+    ...(consent
+      ? {
+          installReferrer: referrer,
+          metaAnonId: await startMeasurement(user.id),
+          extinfo: deviceInfo(),
+        }
+      : {}),
   });
-  await AsyncStorage.setItem(`cloudlynk.tracking.v1:${user.id}`, String(consent));
+  if (!consent) await stopMeasurement();
+  await saveMeasurementChoice(user.id, consent);
 }
