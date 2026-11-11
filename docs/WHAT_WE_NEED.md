@@ -36,6 +36,10 @@ Build values go in EAS secrets (names in `mobile/.env.example`).
 | Anon (publishable) key | EAS: `EXPO_PUBLIC_SUPABASE_ANON_KEY` |
 | A long random string you generate | Function secret `CRON_SECRET` and Vault `cron_secret` |
 | Service role key | Stays in Supabase. Never in the app or in git. |
+| Package name `com.cloudlynk.app` | Function secret `ANDROID_PACKAGE_NAME` |
+
+My cloud files are kept in Supabase Storage (bucket `user-files`, created by the
+migrations), not in Cloudflare.
 
 Also in the dashboard: enable `pg_cron` and `pg_net`; Auth → SMTP settings; Auth →
 Email templates → Reset password = `supabase/templates/recovery.html`.
@@ -49,7 +53,7 @@ Email templates → Reset password = `supabase/templates/recovery.html`.
 | Stream signing key ID and its JWK (base64) from the keys API | `CLOUDFLARE_STREAM_SIGNING_KEY_ID`, `CLOUDFLARE_STREAM_SIGNING_JWK_BASE64` |
 | Playback host, like `customer-xxxx.cloudflarestream.com` | `CLOUDFLARE_STREAM_PLAYBACK_HOST` |
 | Webhook secret, after pointing the Stream webhook at the `stream-webhook` function | `CLOUDFLARE_STREAM_WEBHOOK_SECRET` |
-| R2 bucket name and an R2 access key pair (My cloud files) | `CLOUDFLARE_R2_BUCKET`, `CLOUDFLARE_R2_ACCESS_KEY_ID`, `CLOUDFLARE_R2_SECRET_ACCESS_KEY` |
+| Largest upload and longest video allowed (defaults: 10 GB, 4 hours) | `STREAM_MAX_UPLOAD_BYTES`, `STREAM_MAX_DURATION_SECONDS` (both required) |
 
 ### Google Play (owner creates the account, team does the setup)
 
@@ -58,7 +62,7 @@ Email templates → Reset password = `supabase/templates/recovery.html`.
 | Create the app with package `com.cloudlynk.app` | Play Console |
 | Enrol in alternative billing (user choice billing) for India | Play Console → Monetization settings |
 | Five one-time products: `trial` ₹69, `silver` ₹129, `gold` ₹259, `platinum` ₹599, `diamond` ₹999 | Play Console → Products |
-| Service account JSON key, invited in Play Console with "View financial data" and "Manage orders" | Function secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
+| Service account JSON key, invited in Play Console with "View financial data" and "Manage orders and subscriptions" | Function secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
 | Licence tester emails | Play Console → Licence testing |
 | SHA-256 of the app signing key | `assetlinks.json` on the website |
 

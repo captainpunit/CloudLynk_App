@@ -88,8 +88,8 @@ Errors: `admin_required`, `reason_required`, `invalid_action`, `order_not_found`
 
 ## Operations
 
-- `backend_health` reports `unreviewed_upi_payments`: payments reported more than a day
-  ago and still undecided. A non-zero value makes the health check return 503.
+- `backend_health` reports `unreviewed_upi_payments`: payments still undecided a
+  day after they were reported (12 hours when Google must be told about the payment). A non-zero value makes the health check return 503.
 - `prune_operational_records` (already run by `account-deletion-worker`) lapses unpaid
   orders and removes ones older than 30 days that never carried a UTR.
 - Orders, subscriptions and notices are removed with the account. The audit record of a
@@ -143,7 +143,7 @@ Google's programme page (read 11 November 2026; confirm in the Play Console):
 built and tested locally, not yet run against Google):
 
 - The Google Play build (`EXPO_PUBLIC_PLAY_BILLING=true`) opens Google's choice screen
-  when a member subscribes (`services/billing/play-choice.ts`, expo-iap user choice
+  when a member subscribes (`mobile/src/services/billing/play-choice.ts`, expo-iap user choice
   billing). Plans are sold on Play as **one-time products** whose product IDs equal the
   plan IDs, because Play's prepaid subscription lengths do not include 2 days.
 - **Google Play chosen:** the app sends the purchase token to `verify-play-product`,
