@@ -231,7 +231,9 @@ Deno.test("Expo receipt lookup distinguishes missing receipts from device reject
   );
   assert(await client.receipt("missing") === null);
   assert(pushFailure("DeviceNotRegistered").disable);
-  assert(pushFailure("InvalidCredentials").terminal);
+  assert(pushFailure("MessageTooBig").terminal);
+  // Our own credential mistakes are retried, not dropped.
+  assert(!pushFailure("InvalidCredentials").terminal);
   assert(!pushFailure("MessageRateExceeded").terminal);
 });
 Deno.test("provider errors are retriable and not presented as successful tickets", async () => {

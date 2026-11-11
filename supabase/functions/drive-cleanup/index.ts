@@ -20,7 +20,7 @@ Deno.serve(scheduled("drive-cleanup", async () => {
       p_limit: BATCH,
     });
     if (error) {
-      errors.push(error.message);
+      errors.push("batch_failed");
       break;
     }
     const batch = (data ?? []) as CleanupRow[];
@@ -31,7 +31,7 @@ Deno.serve(scheduled("drive-cleanup", async () => {
       .remove(batch.map((row) => row.storage_path));
     if (removeError) {
       // Rows stay 'deleting'; the next run retries them.
-      errors.push(removeError.message);
+      errors.push("remove_failed");
       break;
     }
     removedObjects += batch.length;
@@ -45,7 +45,7 @@ Deno.serve(scheduled("drive-cleanup", async () => {
         },
       );
       if (finishError) {
-        errors.push(finishError.message);
+        errors.push("finish_failed");
         break;
       }
       removedRows += count ?? 0;

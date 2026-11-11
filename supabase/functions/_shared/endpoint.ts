@@ -39,9 +39,17 @@ export function endpoint(handler: (req: Request) => Promise<Response>) {
   };
 }
 export function requireCron(req: Request) {
-  if (req.headers.get("x-cron-secret") !== env("CRON_SECRET")) {
-    throw new HttpError(403, "forbidden");
+  // Compared without stopping at the first different character, so response time
+  // says nothing about how much of a guess was right.
+  const given = new TextEncoder().encode(
+    req.headers.get("x-cron-secret") ?? "",
+  );
+  const secret = new TextEncoder().encode(env("CRON_SECRET"));
+  let different = given.length ^ secret.length;
+  for (let i = 0; i < secret.length; i++) {
+    different |= (given[i] ?? 0) ^ secret[i];
   }
+  if (different) throw new HttpError(403, "forbidden");
 }
 export async function rawBody(req: Request): Promise<Uint8Array> {
   const reader = req.body?.getReader();

@@ -34,9 +34,12 @@ Deno.serve(scheduled("meta-capi-dispatch", async () => {
   await Promise.all((claimed.data ?? []).map(async (row: OutboxRow) => {
     let error: string | null = null;
     try {
-      const install = await db.from("app_installs").select("tracking_consent")
-        .eq("user_id", row.user_id).order("updated_at", { ascending: false })
-        .limit(1).maybeSingle();
+      // The account was deleted after the event was queued: nothing may be sent.
+      const install = row.user_id
+        ? await db.from("app_installs").select("tracking_consent")
+          .eq("user_id", row.user_id).order("updated_at", { ascending: false })
+          .limit(1).maybeSingle()
+        : { data: null, error: null };
       dbCheck(install.error);
       const payload = row.payload;
       const order = payload.orderId
