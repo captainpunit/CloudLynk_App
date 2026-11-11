@@ -13,6 +13,7 @@ begin
     ('drive-cleanup','*/10 * * * *'),
     ('subscription-reconcile','*/5 * * * *'),
     ('play-external-report','*/5 * * * *'),
+    ('play-voided-sync','*/30 * * * *'),
     ('meta-capi-dispatch','* * * * *'),
     ('stream-reconcile','*/5 * * * *'),
     ('media-cleanup','*/5 * * * *'),

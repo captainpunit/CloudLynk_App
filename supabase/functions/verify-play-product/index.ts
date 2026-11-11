@@ -48,6 +48,7 @@ Deno.serve(endpoint(async (req) => {
     p_product_id: productId,
     p_token: token,
     p_order_id: purchase.orderId ?? null,
+    p_test: purchase.purchaseType === 0,
   });
   if (granted.error?.message === "plan_unavailable") {
     throw new HttpError(400, "plan_unavailable");

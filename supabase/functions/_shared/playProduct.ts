@@ -2,6 +2,7 @@
 export type PlayProductPurchase = {
   purchaseState?: number; // 0 purchased, 1 cancelled, 2 pending
   consumptionState?: number; // 0 not yet consumed, 1 consumed
+  purchaseType?: number; // 0 licence-tester purchase; absent for a real one
   orderId?: string;
   obfuscatedExternalAccountId?: string;
 };

@@ -1,4 +1,7 @@
-import { externalTransactionBody } from "../../functions/_shared/externalTransaction.ts";
+import {
+  externalRefundBody,
+  externalTransactionBody,
+} from "../../functions/_shared/externalTransaction.ts";
 import { productPurchaseProblem } from "../../functions/_shared/playProduct.ts";
 
 function equal(actual: unknown, expected: unknown) {
@@ -20,6 +23,7 @@ Deno.test("external transaction body matches Google's India format", () => {
       tax_paise: 1800,
       tax_state: "GUJARAT",
       transaction_time: "2026-11-11T10:00:00+05:30",
+      kind: "create",
     }),
     {
       originalPreTaxAmount: { priceMicros: "100000000", currency: "INR" },
@@ -51,5 +55,22 @@ Deno.test("only a paid Play purchase owned by the account is granted", () => {
   equal(
     productPurchaseProblem({ purchaseState: 0 }, "acct")?.code,
     "purchase_owner_mismatch",
+  );
+});
+
+Deno.test("a refund report is a full refund at the refund time", () => {
+  equal(
+    externalRefundBody({
+      id: "1",
+      lease_id: "2",
+      external_transaction_id: "upi-abc",
+      external_transaction_token: "token",
+      pre_tax_paise: 10000,
+      tax_paise: 1800,
+      tax_state: "GUJARAT",
+      transaction_time: "2026-11-12T00:00:00Z",
+      kind: "refund",
+    }),
+    { refundTime: "2026-11-12T00:00:00.000Z", fullRefund: {} },
   );
 });

@@ -8,6 +8,7 @@ export type ExternalReport = {
   tax_paise: number;
   tax_state: string;
   transaction_time: string;
+  kind: "create" | "refund";
 };
 
 // Google prices are micro-units of the currency: 1 paisa = 10,000 micros.
@@ -33,5 +34,13 @@ export function externalTransactionBody(report: ExternalReport) {
       regionCode: "IN",
       administrativeArea: report.tax_state,
     },
+  };
+}
+
+/** Request body for externaltransactions.refundexternaltransaction: always the full amount. */
+export function externalRefundBody(report: ExternalReport) {
+  return {
+    refundTime: new Date(report.transaction_time).toISOString(),
+    fullRefund: {},
   };
 }

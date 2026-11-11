@@ -140,12 +140,15 @@ $$;
 
 -- Grants a plan bought as a one-time Google Play product. Called by verify-play-product
 -- after Google confirms the purchase. Safe to repeat for the same purchase token.
-create function public.grant_play_product(p_user_id uuid, p_product_id text, p_token text, p_order_id text)
+-- p_test marks a licence tester's purchase: it grants access but is not a conversion.
+create function public.grant_play_product(p_user_id uuid, p_product_id text, p_token text, p_order_id text,
+  p_test boolean default false)
 returns timestamptz
 language plpgsql security definer set search_path='' as $$
 declare
   v_plan public.plans;
   v_until timestamptz;
+  v_install public.app_installs;
 begin
   perform 1 from public.profiles where id = p_user_id and account_status = 'active' for update;
   if not found then raise exception 'account_restricted' using errcode='42501'; end if;
@@ -164,6 +167,20 @@ begin
   perform public.notify_user(p_user_id, 'Payment confirmed',
     v_plan.name || ' is active until ' || to_char(v_until at time zone 'Asia/Kolkata', 'FMDD Mon YYYY') || '.',
     jsonb_build_object('kind', 'play_product', 'product_id', v_plan.product_id, 'status', 'paid'));
+  -- Meta conversion, with consent only. The value is the plan's price: the member paid
+  -- Google the price of the Play product, which is set to match it.
+  select * into v_install from public.app_installs
+    where user_id = p_user_id order by updated_at desc limit 1;
+  if found and v_install.tracking_consent and not coalesce(p_test, false) and v_plan.price_paise > 0 then
+    insert into public.meta_event_outbox(event_id, event_name, user_id, value, currency, payload)
+    values('play-product-' || encode(extensions.digest(p_token, 'sha256'), 'hex'),
+      case when exists(select 1 from public.subscriptions where user_id = p_user_id and purchase_token <> p_token)
+        then 'Purchase' else 'Subscribe' end,
+      p_user_id, v_plan.price_paise / 100.0, 'INR',
+      jsonb_strip_nulls(jsonb_build_object('confirmedValue', true, 'eventTime', now(),
+        'metaAnonId', v_install.meta_anon_id, 'extinfo', v_install.extinfo)))
+    on conflict (event_id) do nothing;
+  end if;
   return v_until;
 end; $$;
 
@@ -173,8 +190,8 @@ revoke all on function public.valid_tax_state(text) from public, anon;
 revoke all on function public.queue_play_external_report() from public, anon, authenticated;
 revoke all on function public.claim_play_reports(int) from public, anon, authenticated;
 revoke all on function public.finish_play_report(uuid,uuid,text) from public, anon, authenticated;
-revoke all on function public.grant_play_product(uuid,text,text,text) from public, anon, authenticated;
+revoke all on function public.grant_play_product(uuid,text,text,text,boolean) from public, anon, authenticated;
 grant execute on function public.set_payment_tax(numeric), public.attach_play_choice(uuid,text,text),
   public.valid_tax_state(text) to authenticated, service_role;
 grant execute on function public.claim_play_reports(int), public.finish_play_report(uuid,uuid,text),
-  public.grant_play_product(uuid,text,text,text) to service_role;
+  public.grant_play_product(uuid,text,text,text,boolean) to service_role;

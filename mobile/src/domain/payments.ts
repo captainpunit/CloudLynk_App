@@ -1,6 +1,6 @@
 /** Pure rules for plan prices, UPI bank references and what a subscriber can do with an order. */
 
-export type OrderStatus = 'created' | 'submitted' | 'paid' | 'rejected' | 'expired';
+export type OrderStatus = 'created' | 'submitted' | 'paid' | 'rejected' | 'expired' | 'refunded';
 
 export interface UpiOrder {
   id: string;

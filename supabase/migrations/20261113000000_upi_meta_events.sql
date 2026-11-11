@@ -20,7 +20,7 @@ begin
   values('upi-order-' || new.id, case when v_first then 'Subscribe' else 'Purchase' end,
     new.user_id, new.amount_paise / 100.0, 'INR',
     jsonb_strip_nulls(jsonb_build_object(
-      'upiOrderId', new.id, 'eventTime', coalesce(new.decided_at, now()),
+      'upiOrderId', new.id, 'confirmedValue', true, 'eventTime', coalesce(new.decided_at, now()),
       'metaAnonId', v_install.meta_anon_id, 'extinfo', v_install.extinfo)))
   on conflict (event_id) do nothing;
   return new;

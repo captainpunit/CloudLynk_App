@@ -2,13 +2,19 @@ import { json } from "../_shared/http.ts";
 import { dbCheck } from "../_shared/endpoint.ts";
 import { scheduled } from "../_shared/scheduled.ts";
 import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
-import { createExternalTransaction, PlayError } from "../_shared/googlePlay.ts";
 import {
+  createExternalTransaction,
+  PlayError,
+  refundExternalTransaction,
+} from "../_shared/googlePlay.ts";
+import {
+  externalRefundBody,
   type ExternalReport,
   externalTransactionBody,
 } from "../_shared/externalTransaction.ts";
 
-// Reports confirmed UPI payments made through Google Play's user choice screen.
+// Reports confirmed UPI payments made through Google Play's user choice screen, and
+// refunds of them.
 // Google requires each one within 24 hours, so this runs every few minutes and retries.
 Deno.serve(scheduled("play-external-report", async () => {
   const claimed = await db.rpc("claim_play_reports", { p_limit: 20 });
@@ -18,10 +24,17 @@ Deno.serve(scheduled("play-external-report", async () => {
   for (const report of (claimed.data ?? []) as ExternalReport[]) {
     let error: string | null = null;
     try {
-      await createExternalTransaction(
-        report.external_transaction_id,
-        externalTransactionBody(report),
-      );
+      if (report.kind === "refund") {
+        await refundExternalTransaction(
+          report.external_transaction_id,
+          externalRefundBody(report),
+        );
+      } else {
+        await createExternalTransaction(
+          report.external_transaction_id,
+          externalTransactionBody(report),
+        );
+      }
       sent++;
     } catch (cause) {
       // 409: Google already holds this transaction ID from an earlier attempt.

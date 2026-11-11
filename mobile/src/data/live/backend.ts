@@ -36,6 +36,7 @@ const errors: Record<string, string> = {
   order_closed: 'This payment request is closed. Start again from the plan list.',
   too_many_attempts: 'This payment request has been reported too many times. Contact support.',
   order_not_pending: 'This payment has already been decided.',
+  order_not_paid: 'Only a confirmed payment can be marked refunded.',
   invalid_upi_address: 'Enter a valid UPI ID, for example business@bank.',
   invalid_payee_name: 'Use letters, numbers, spaces, dots or hyphens for the payee name.',
   invalid_merchant_code: 'The merchant category code is four digits.',
