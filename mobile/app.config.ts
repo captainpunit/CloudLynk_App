@@ -4,6 +4,7 @@ const pkg = process.env.EXPO_PUBLIC_ANDROID_PACKAGE ?? 'com.cloudlynk.app';
 const scheme = process.env.EXPO_PUBLIC_APP_SCHEME ?? 'cloudlynk';
 const linkHost = process.env.EXPO_PUBLIC_APP_LINK_HOST ?? 'cloudlynk.app';
 const nativeIntegrations = process.env.EXPO_PUBLIC_NATIVE_INTEGRATIONS === 'true';
+const playBilling = process.env.EXPO_PUBLIC_PLAY_BILLING === 'true';
 
 const config: ExpoConfig = {
   name: 'CloudLynk',
@@ -55,6 +56,8 @@ const config: ExpoConfig = {
           ],
         ] as ExpoConfig['plugins'] & unknown[])
       : []),
+    // Google Play billing with the user choice screen; only in the Google Play build.
+    ...(playBilling ? ['expo-iap'] : []),
     ['expo-build-properties', { android: { minSdkVersion: 24 } }],
   ],
   experiments: { typedRoutes: true },

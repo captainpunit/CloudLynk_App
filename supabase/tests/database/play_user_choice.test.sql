@@ -42,7 +42,7 @@ select throws_ok($$select public.attach_play_choice(tests.id('first'),'tok-1','G
 select throws_ok($$select public.attach_play_choice(tests.id('first'),'','GUJARAT')$$,'P0001','invalid_play_token','a token is required');
 select is((public.attach_play_choice(tests.id('first'),'tok-1','GUJARAT')).tax_state,'GUJARAT','the choice is stored on the order');
 select is((public.attach_play_choice(tests.id('first'),'tok-1','GUJARAT')).external_transaction_token,'tok-1','repeating the same choice is harmless');
-select throws_ok($$select public.attach_play_choice(tests.id('first'),'tok-2','GUJARAT')$$,'P0001','order_closed','a token cannot be replaced');
+select is((public.attach_play_choice(tests.id('first'),'tok-2','KERALA')).external_transaction_token,'tok-1','an order keeps the first token it was given');
 select tests.act('other');
 select throws_ok($$select public.attach_play_choice(tests.id('first'),'tok-1','GUJARAT')$$,'P0001','order_not_found','members cannot touch another member''s order');
 insert into tests.ids values('second',(public.create_upi_order('choice_week')).id);

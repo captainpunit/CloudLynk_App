@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/lib/database.types';
 import type { OrderStatus, UpiOrder } from '@/domain/payments';
 import { call, checked } from './backend';
+import { invokeBackend } from './invoke-backend';
 
 export function mapOrder(row: Tables<'upi_orders'> | null): UpiOrder {
   if (!row) throw new Error('The request could not be completed. Refresh and try again.');
@@ -40,6 +41,36 @@ export async function fetchMyOrders(userId: string, limit = 5): Promise<UpiOrder
 /** Starts an order for a plan, or returns the one already open for the same offer. */
 export async function startOrder(productId: string): Promise<UpiOrder> {
   return mapOrder(await call('create_upi_order', { p_product_id: productId }));
+}
+/** Stores what Google Play's choice screen returned, so the payment can be reported to Google. */
+export async function attachPlayChoice(
+  orderId: string,
+  externalTransactionToken: string,
+  state: string,
+): Promise<UpiOrder> {
+  return mapOrder(
+    await call('attach_play_choice', {
+      p_order_id: orderId,
+      p_token: externalTransactionToken,
+      p_state: state,
+    }),
+  );
+}
+/** Has the backend confirm a Google Play purchase with Google and grant the plan. */
+export function verifyPlayProduct(productId: string, purchaseToken: string) {
+  return invokeBackend<{ status: string; expiresAt: string }>('verify-play-product', {
+    productId,
+    purchaseToken,
+  });
+}
+/** The ID Google Play ties a purchase to, so another account cannot claim it. */
+export async function fetchPlayAccountId(userId: string): Promise<string> {
+  const row = checked(
+    await supabase.from('profiles').select('play_account_id').eq('id', userId).single(),
+  );
+  if (!row?.play_account_id)
+    throw new Error('Your billing account is not ready. Try again in a moment.');
+  return row.play_account_id;
 }
 export async function reportPayment(orderId: string, utr: string): Promise<UpiOrder> {
   return mapOrder(await call('submit_upi_payment', { p_order_id: orderId, p_utr: utr }));
@@ -90,6 +121,10 @@ export function savePaymentSettings(input: {
     p_enabled: input.enabled,
     ...(input.merchantCode.trim() ? { p_merchant_code: input.merchantCode.trim() } : {}),
   });
+}
+/** GST included in plan prices; used to split a UPI payment when it is reported to Google. */
+export function savePaymentTax(percent: number) {
+  return call('set_payment_tax', { p_percent: percent });
 }
 
 export type PlanRow = Tables<'plans'>;

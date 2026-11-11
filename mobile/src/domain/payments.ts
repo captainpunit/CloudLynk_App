@@ -105,3 +105,56 @@ export function accessUntil(
   }
   return latest;
 }
+
+/**
+ * Indian states and union territories. Google Play needs the member's state to report a
+ * UPI payment made through its choice screen, because GST depends on it.
+ */
+export const indianStates = [
+  'Andaman and Nicobar Islands',
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chandigarh',
+  'Chhattisgarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jammu and Kashmir',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Ladakh',
+  'Lakshadweep',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Puducherry',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+] as const;
+export type IndianState = (typeof indianStates)[number];
+
+/** The spelling the backend and Google expect. */
+export const stateCode = (state: IndianState) => state.toUpperCase();
+
+/** States whose name contains the typed text, for the picker. */
+export function matchingStates(query: string): IndianState[] {
+  const text = query.trim().toLowerCase();
+  return text ? indianStates.filter((state) => state.toLowerCase().includes(text)) : [];
+}

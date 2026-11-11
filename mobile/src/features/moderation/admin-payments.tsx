@@ -18,6 +18,7 @@ import {
   fetchPaymentSettings,
   queuePageSize,
   savePaymentSettings,
+  savePaymentTax,
   savePlan,
   type PlanRow,
   type QueuedPayment,
@@ -47,6 +48,7 @@ export default function AdminPayments() {
   const [payee, setPayee] = useState('');
   const [merchantCode, setMerchantCode] = useState('');
   const [enabled, setEnabled] = useState(false);
+  const [tax, setTax] = useState('');
   const [plan, setPlan] = useState(emptyPlan);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export default function AdminPayments() {
     setPayee(settings?.payee_name ?? '');
     setMerchantCode(settings?.merchant_code ?? '');
     setEnabled(settings?.upi_enabled ?? false);
+    setTax(String(settings?.tax_percent ?? ''));
     setPlans(rows);
   }, []);
   useEffect(() => {
@@ -95,6 +98,12 @@ export default function AdminPayments() {
       await savePaymentSettings({ upiVpa: vpa, payeeName: payee, merchantCode, enabled });
       await loadSetup();
     }, 'UPI details saved.');
+  }
+  function saveTax() {
+    void run(async () => {
+      await savePaymentTax(Number(tax));
+      await loadSetup();
+    }, 'GST rate saved.');
   }
   function submitPlan() {
     const pricePaise = paiseFromRupees(plan.price);
@@ -246,6 +255,24 @@ export default function AdminPayments() {
             loading={busy}
             disabled={!vpa.trim() || !payee.trim()}
             onPress={saveSettings}
+          />
+          <Field
+            label="GST included in plan prices (percent)"
+            value={tax}
+            onChangeText={setTax}
+            keyboardType="decimal-pad"
+            maxLength={5}
+          />
+          <Label style={{ color: c.muted, fontSize: 13 }}>
+            Used to report UPI payments made through Google Play. Ask your accountant; enter 0 if
+            you do not charge GST.
+          </Label>
+          <Button
+            title="Save GST rate"
+            variant="outline"
+            loading={busy}
+            disabled={!/^\d{1,2}(\.\d{1,2})?$/.test(tax.trim())}
+            onPress={saveTax}
           />
         </Surface>
       )}
