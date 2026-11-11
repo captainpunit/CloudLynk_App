@@ -23,10 +23,17 @@ test('Plus is only offered with active plans and states real values', () => {
     },
   ];
   assert.equal(plusSummary({ plans: [], channels: [channel] }), null);
-  assert.equal(plusSummary({ plans, channels: [] }), 'Up to 2.0 GB of storage.');
+  assert.equal(
+    plusSummary({ plans, channels: [] }),
+    'Watch every Plus channel, with up to 2.0 GB of storage.',
+  );
+  assert.equal(
+    plusSummary({ plans: plans.map((plan) => ({ ...plan, quotaBytes: 0 })), channels: [channel] }),
+    'Watch the Plus channel.',
+  );
   assert.equal(
     plusSummary({ plans, channels: [channel] }),
-    '1 Plus channel and up to 2.0 GB of storage.',
+    'Watch the Plus channel, with up to 2.0 GB of storage.',
   );
 });
 

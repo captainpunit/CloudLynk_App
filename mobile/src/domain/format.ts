@@ -19,10 +19,11 @@ export function plusSummary({ plans = [], channels }: Pick<Workspace, 'plans' | 
   const count = channels.filter(
     (channel) => channel.status === 'published' && channel.visibility === 'premium',
   ).length;
-  const storage = fileSize(Math.max(...plans.map((plan) => plan.quotaBytes)));
-  return count
-    ? `${count} Plus ${count === 1 ? 'channel' : 'channels'} and up to ${storage} of storage.`
-    : `Up to ${storage} of storage.`;
+  const quota = Math.max(...plans.map((plan) => plan.quotaBytes));
+  const watch = count
+    ? `Watch ${count === 1 ? 'the Plus channel' : `all ${count} Plus channels`}`
+    : 'Watch every Plus channel';
+  return quota > 0 ? `${watch}, with up to ${fileSize(quota)} of storage.` : `${watch}.`;
 }
 /** A date such as "10 Dec 2026". */
 export function shortDate(iso: string): string {

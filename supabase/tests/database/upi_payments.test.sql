@@ -57,10 +57,13 @@ select is((select count(*) from public.plans where product_id like 'upi_%'),3::b
 select tests.act('admin');
 select throws_ok($$select public.save_plan('upi_new','New plan','P1M',50,0,true)$$,'P0001','invalid_price','prices below one rupee rejected');
 select throws_ok($$select public.save_plan('Bad Id','New plan','P1M',5000,0,true)$$,'P0001','invalid_plan_id','plan ids are restricted');
-select throws_ok($$select public.save_plan('upi_new','New plan','P2M',5000,0,true)$$,'P0001','invalid_billing_period','unknown periods rejected');
+select throws_ok($$select public.save_plan('upi_new','New plan','P13M',5000,0,true)$$,'P0001','invalid_billing_period','unknown periods rejected');
 select is((public.save_plan('upi_new','Plus Quarterly','P3M',27900,1073741824,false)).price_paise,27900,'admin creates a plan');
+select is((public.save_plan('upi_trial','Trial','P2D',6900,0,true)).billing_period,'P2D','day-based plans are allowed');
+select throws_ok($$select public.save_plan('upi_bad','Too long','P400D',5000,0,true)$$,'P0001','invalid_billing_period','periods beyond the allowed range rejected');
+select throws_ok($$select public.save_plan('upi_bad','Odd','P1W',5000,0,true)$$,'P0001','invalid_billing_period','only day, month and year periods are accepted');
 select is((public.save_plan('upi_new','Plus Quarterly','P3M',25900,1073741824,false)).price_paise,25900,'admin reprices a plan');
-select is((select count(*) from public.plans where product_id like 'upi_%'),5::bigint,'admins see inactive plans');
+select is((select count(*) from public.plans where product_id like 'upi_%'),6::bigint,'admins see inactive plans');
 
 -- Creating an order.
 select tests.act('guest');
@@ -136,6 +139,16 @@ select public.decide_upi_order(tests.id('switched'),'approve');
 reset role;
 select is((select max(paid_until) from public.subscriptions where user_id=tests.uid('payer')),now()+interval '1 month'+interval '1 year','renewal stacks on the remaining time');
 
+-- A 2-day plan adds exactly two days to the remaining time.
+select tests.act('payer');
+insert into tests.ids values('trial',(public.create_upi_order('upi_trial')).id);
+select matches((select pay_uri from public.upi_orders where id=tests.id('trial')),'&am=69\.00&cu=INR$','trial order carries its own price');
+select public.submit_upi_payment(tests.id('trial'),'666666666666');
+select tests.act('admin');
+select public.decide_upi_order(tests.id('trial'),'approve');
+reset role;
+select is((select max(paid_until) from public.subscriptions where user_id=tests.uid('payer')),now()+interval '1 month'+interval '1 year'+interval '2 days','a day-based plan extends access by its days');
+
 -- Limits.
 select tests.act('other');
 select public.submit_upi_payment(tests.id('other'),'444444444441');
@@ -168,7 +181,7 @@ update public.upi_orders set created_at=now()-interval '31 days' where reference
 select public.prune_operational_records();
 select is((select status from public.upi_orders where reference='CLTEST00000001'),'expired','lapsed open orders are closed');
 select is((select count(*) from public.upi_orders where reference='CLTEST00000002'),0::bigint,'old unpaid orders are removed');
-select is((select count(*) from public.upi_orders where status='paid'),2::bigint,'paid orders are kept');
+select is((select count(*) from public.upi_orders where status='paid'),3::bigint,'paid orders are kept');
 select is((select count(*) from public.subscriptions where provider='upi' and superseded_by is null and next_check_at<=now()+interval '100 years'),0::bigint,'UPI subscriptions are never due for Play reconciliation');
 
 -- Erasing an account removes its orders.

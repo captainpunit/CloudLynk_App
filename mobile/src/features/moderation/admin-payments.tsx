@@ -7,7 +7,6 @@ import {
   billingPeriods,
   maxReports,
   paiseFromRupees,
-  periodLabel,
   periodLength,
   planPrice,
   rupees,
@@ -312,7 +311,7 @@ export default function AdminPayments() {
               {billingPeriods.map((period) => (
                 <Pill
                   key={period}
-                  title={`Every ${periodLabel(period)}`}
+                  title={periodLength(period)}
                   selected={plan.billingPeriod === period}
                   onPress={() => setPlan({ ...plan, billingPeriod: period })}
                 />

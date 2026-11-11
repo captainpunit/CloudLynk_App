@@ -274,7 +274,8 @@ function PlanOption({
       <View style={{ flex: 1, gap: 2 }}>
         <Label style={{ fontWeight: '700', fontSize: 16 }}>{plan.name}</Label>
         <Label style={{ color: c.muted, fontSize: 12 }}>
-          {fileSize(plan.quotaBytes)} of storage
+          {periodLength(plan.billingPeriod)} of Plus
+          {plan.quotaBytes > 0 ? `, ${fileSize(plan.quotaBytes)} of storage` : ''}
         </Label>
       </View>
       <Label style={{ fontWeight: '700', fontSize: 16 }}>{planPrice(plan)}</Label>
