@@ -29,7 +29,8 @@ export type PlayChoice = {
   buy: (productId: string, playAccountId: string) => Promise<void>;
   /** Purchases Google holds that the backend has not consumed yet (interrupted earlier). */
   unfinished: () => Promise<PlayPurchase[]>;
-  close: () => void;
+  /** Resolves once the store connection has ended. */
+  close: () => Promise<void>;
 };
 
 const paid = (purchase: Purchase): PlayPurchase | null =>
@@ -61,15 +62,15 @@ export async function connectPlayChoice(handlers: PlayChoiceHandlers): Promise<P
         });
     }),
   ];
-  const close = () => {
+  const close = async () => {
     listeners.forEach((listener) => listener.remove());
-    void store.endConnection().catch(() => undefined);
+    await store.endConnection().catch(() => undefined);
   };
   try {
     if (!(await store.initConnection({ enableBillingProgramAndroid: 'user-choice-billing' })))
       throw new Error('not connected');
   } catch {
-    close();
+    await close();
     throw new Error('Google Play billing could not connect. Check your connection and try again.');
   }
   return {

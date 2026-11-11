@@ -17,6 +17,14 @@ type Callbacks = {
 };
 
 /**
+ * The store library holds one connection for the whole app. Each checkout waits for the
+ * one before it to close, so a connection that finishes opening late (after an account
+ * switch) cannot end the connection of the checkout that replaced it.
+ */
+let lastClosed: Promise<void> = Promise.resolve();
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * Connects the Plus checkout to Google Play's choice screen on Google Play builds.
  * A Google Play purchase is sent to the backend, which confirms it with Google before
  * granting anything. Purchases interrupted earlier are sent again when the screen opens.
@@ -42,36 +50,55 @@ export function usePlayChoice(userId: string | undefined, callbacks: Callbacks) 
           if (active) latest.current.onError(cause.message);
         });
     };
-    void connectPlayChoice({
-      onPurchase: verify,
-      onUpiChosen: (choice) => {
-        if (active) latest.current.onUpiChosen(choice);
-      },
-      onError: (message) => {
-        if (active) latest.current.onError(message);
-      },
-    })
+    const opened = lastClosed.then(() =>
+      connectPlayChoice({
+        onPurchase: verify,
+        onUpiChosen: (choice) => {
+          if (active) latest.current.onUpiChosen(choice);
+        },
+        onError: (message) => {
+          if (active) latest.current.onError(message);
+        },
+      }),
+    );
+    void opened
       .then(async (connection) => {
-        if (!active) return connection.close();
+        if (!active) return;
         store.current = connection;
-        // Best effort: a store that cannot list purchases now reports it when buying.
-        (await connection.unfinished().catch(() => [])).forEach(verify);
+        // A purchase paid for earlier but not yet granted must be found, so listing is
+        // tried a few times. If it still fails, the store reports it when buying.
+        for (let attempt = 0; active && attempt < 3; attempt++) {
+          try {
+            (await connection.unfinished()).forEach(verify);
+            return;
+          } catch {
+            await wait(4000);
+          }
+        }
       })
       .catch((cause: Error) => {
         if (active) latest.current.onError(cause.message);
       });
     return () => {
       active = false;
-      store.current?.close();
       store.current = null;
+      lastClosed = opened.then(
+        (connection) => connection.close(),
+        () => undefined,
+      );
     };
   }, [userId]);
 
   const buy = useCallback(
     async (productId: string) => {
-      if (!userId || !store.current)
+      const connection = store.current;
+      if (!userId || !connection)
         throw new Error('Google Play billing is not ready yet. Try again in a moment.');
-      await store.current.buy(productId, await fetchPlayAccountId(userId));
+      const accountId = await fetchPlayAccountId(userId);
+      // The account may have changed while its ID was fetched; never buy for the old one.
+      if (store.current !== connection)
+        throw new Error('Google Play billing is not ready yet. Try again in a moment.');
+      await connection.buy(productId, accountId);
     },
     [userId],
   );

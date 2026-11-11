@@ -148,7 +148,10 @@ export async function refundExternalTransaction(
 export async function listVoidedProductTokens(since: Date): Promise<string[]> {
   const tokens: string[] = [];
   let page = "";
+  let pages = 0;
   do {
+    // Stopping early would report success while refunds are left unread.
+    if (++pages > 500) throw new Error("voided_purchases_too_many_pages");
     const result: {
       voidedPurchases?: { purchaseToken?: string }[];
       tokenPagination?: { nextPageToken?: string };
@@ -161,6 +164,6 @@ export async function listVoidedProductTokens(since: Date): Promise<string[]> {
       if (item.purchaseToken) tokens.push(item.purchaseToken);
     }
     page = result.tokenPagination?.nextPageToken ?? "";
-  } while (page && tokens.length < 5000);
+  } while (page);
   return tokens;
 }

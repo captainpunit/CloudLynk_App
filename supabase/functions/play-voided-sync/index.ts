@@ -5,11 +5,14 @@ import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
 import { listVoidedProductTokens } from "../_shared/googlePlay.ts";
 
 // Ends the Plus time bought by Google Play purchases that Google has refunded or
-// reversed. Looks back three days on every run, so a missed run loses nothing;
-// void_play_purchase ignores purchases it has already ended.
+// reversed. Runs every 30 minutes and looks back three days; the first run after
+// 03:00 UTC looks back the full 30 days Google keeps, so refunds missed during a long
+// outage are still found. void_play_purchase ignores purchases it has already ended.
 Deno.serve(scheduled("play-voided-sync", async () => {
+  const now = new Date();
+  const daily = now.getUTCHours() === 3 && now.getUTCMinutes() < 30;
   const tokens = await listVoidedProductTokens(
-    new Date(Date.now() - 3 * 86400_000),
+    new Date(now.getTime() - (daily ? 30 : 3) * 86400_000),
   );
   let ended = 0;
   for (const token of tokens) {

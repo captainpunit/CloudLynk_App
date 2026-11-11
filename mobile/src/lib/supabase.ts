@@ -20,6 +20,9 @@ const storage = {
  */
 const requestTimeoutMs = 25_000;
 const fetchWithTimeout: typeof fetch = async (input, init) => {
+  // File transfers take as long as the file needs; only requests for data have a deadline.
+  const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+  if (url.includes('/storage/v1/')) return fetch(input, init);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
   const outer = init?.signal;
