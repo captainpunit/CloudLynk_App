@@ -44,8 +44,10 @@ The full list, with who gets each item and where each value goes, is in
    `supabase/scripts/seed-plans.sql` once to create the five plans below.
    In Auth → Email templates → Reset password, paste `supabase/templates/recovery.html`
    (the app resets passwords with the code in that email), and configure SMTP.
-3. Set function secrets from `supabase/.env.example` (Cloudflare, Google Play,
-   Meta, push, `CRON_SECRET`, `ANDROID_PACKAGE_NAME`).
+3. Set every function secret named in `supabase/.env.example` (Cloudflare including
+   the two `STREAM_MAX_*` limits, Google Play, Meta, push, `CRON_SECRET`,
+   `ANDROID_PACKAGE_NAME`). The two `RTDN_*` values are only for auto-renewing Play
+   subscriptions, which the launch plans do not use.
 4. Deploy all functions in `supabase/functions`, including the new
    `verify-play-product`, `play-external-report` and `play-voided-sync`.
 5. Add `cron_secret` and `supabase_project_url` to Vault, then run
@@ -54,7 +56,8 @@ The full list, with who gets each item and where each value goes, is in
    role. Use a new password; the one shared in chat earlier must be changed.
 7. In the app, Admin → Payments: enter the UPI ID, payee name and GST rate, check
    the five plans below, and switch payments on.
-8. Call `backend-health` and confirm it returns 200.
+8. Call `backend-health` with the header `x-cron-secret: <CRON_SECRET>` and confirm it
+   returns 200.
 
 | Plan ID | Name | Period | Price |
 | --- | --- | --- | --- |
@@ -78,7 +81,7 @@ The full list, with who gets each item and where each value goes, is in
 ## 5. App build
 
 Build variables (EAS secrets or `.env`): `EXPO_PUBLIC_SUPABASE_URL`,
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_APP_LINK_HOST`,
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_EAS_PROJECT_ID`, `EXPO_PUBLIC_APP_LINK_HOST`,
 `EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`, `META_APP_ID`, `META_CLIENT_TOKEN`.
 The `production` profile in `eas.json` turns on the Meta SDK and Google Play's choice
 screen. The `direct` profile builds an APK for distribution outside Google Play, with
