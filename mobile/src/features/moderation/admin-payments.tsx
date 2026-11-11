@@ -63,7 +63,13 @@ export default function AdminPayments() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadQueue = useCallback(async () => setQueue(await fetchPaymentQueue(page)), [page]);
+  const queueRequest = useRef(0);
+  const loadQueue = useCallback(async () => {
+    // A slow load of another page must not replace the page now shown.
+    const request = ++queueRequest.current;
+    const rows = await fetchPaymentQueue(page);
+    if (request === queueRequest.current) setQueue(rows);
+  }, [page]);
   const loadSetup = useCallback(async () => {
     const [settings, rows] = await Promise.all([fetchPaymentSettings(), fetchAllPlans()]);
     setVpa(settings?.upi_vpa ?? '');
@@ -80,13 +86,20 @@ export default function AdminPayments() {
   const loadPaid = useCallback(async (utr = '') => {
     // A slow earlier search must not replace the results of a later one.
     const request = ++paidRequest.current;
-    const rows = await fetchPaidPayments(utr);
-    if (request !== paidRequest.current) return;
-    setPaid(rows);
-    setRefundId(null);
+    try {
+      const rows = await fetchPaidPayments(utr);
+      if (request !== paidRequest.current) return;
+      setPaid(rows);
+      setRefundId(null);
+    } catch (cause) {
+      // Only the newest search may report a failure.
+      if (request === paidRequest.current) throw cause;
+    }
   }, []);
   useEffect(() => {
     if (view !== 'Refunds') return;
+    // Opening the view shows the latest payments, so an old search is cleared.
+    setPaidUtr('');
     void loadPaid().catch(() => setError('Payments could not load. Please refresh.'));
   }, [view, loadPaid]);
   useEffect(() => {

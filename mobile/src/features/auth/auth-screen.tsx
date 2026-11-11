@@ -56,9 +56,12 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
   // A reset code works once. After it is accepted, a retry only sets the password.
   const codeAccepted = useRef(false);
+  // Counts form changes, so a request that finishes after the form moved on can tell.
+  const form = useRef(0);
 
   useEffect(
     () => () => {
+      form.current += 1;
       // Closing the screen between the code and the new password ends that session too.
       if (codeAccepted.current)
         void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
@@ -67,6 +70,7 @@ export default function AuthScreen() {
   );
 
   function show(next: Mode) {
+    form.current += 1;
     setError(null);
     setPassword('');
     setCode('');
@@ -74,6 +78,16 @@ export default function AuthScreen() {
     if (codeAccepted.current) void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
     codeAccepted.current = false;
     setMode(next);
+  }
+
+  function changeEmail(value: string) {
+    // An accepted code belongs to the address it was sent to. A different address
+    // starts again, so the new password can never land on the earlier account.
+    if (codeAccepted.current) {
+      codeAccepted.current = false;
+      void supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    }
+    setEmail(value);
   }
 
   /** The first problem with what was typed, or null when the form can be sent. */
@@ -99,6 +113,7 @@ export default function AuthScreen() {
       return;
     }
     if (mode === 'resetConfirm') {
+      const started = form.current;
       if (!codeAccepted.current) {
         const verified = await supabase.auth.verifyOtp({
           email: address,
@@ -106,6 +121,11 @@ export default function AuthScreen() {
           type: 'recovery',
         });
         if (verified.error) throw verified.error;
+        // The member left the form while the code was checked: do not stay signed in.
+        if (started !== form.current) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+          return;
+        }
         codeAccepted.current = true;
       }
       const updated = await supabase.auth.updateUser({ password });
@@ -190,7 +210,7 @@ export default function AuthScreen() {
           label="Email address"
           placeholder="you@example.com"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={changeEmail}
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"

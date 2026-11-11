@@ -39,6 +39,13 @@ end; $$;
 -- payment bought. The profile row is locked by every function that grants time, so the
 -- value read here is the one the grant itself stacked on.
 alter table public.subscriptions add column period_start timestamptz;
+-- Periods bought before this column existed: each began where the member's previous
+-- period ended, or at the payment itself when there was none to stack on.
+update public.subscriptions s set period_start = b.starts_at from (
+  select id, greatest(created_at, coalesce(
+    lag(paid_until) over (partition by user_id order by paid_until, created_at), created_at)) as starts_at
+  from public.subscriptions where provider in ('upi','google_play_product')) b
+where s.id = b.id;
 create function public.set_period_start() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
