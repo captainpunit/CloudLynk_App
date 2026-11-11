@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import { EmptyState, Screen } from '@/components/ui';
 export default function NotFound() {
   return (
-    <Screen title="A little off the path." back>
+    <Screen title="Page not found" back>
       <EmptyState
         title="That page isn’t here"
-        body="Let’s get you back to something good."
-        action="Back to Explore"
+        body="The link may be old, or the page was removed."
+        action="Back to Home"
         onPress={() => router.replace('/')}
       />
     </Screen>

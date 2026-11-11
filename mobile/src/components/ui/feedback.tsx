@@ -1,8 +1,9 @@
 import { View } from 'react-native';
-import { Search, Sparkles, type LucideIcon } from 'lucide-react-native';
-import { Label, Heading } from './typography';
+import { Search, type LucideIcon } from 'lucide-react-native';
+import { Caption, Label, Heading } from './typography';
 import { Button } from './actions';
-import { colors as c } from '@/theme/tokens';
+import { plus } from '@/theme/tokens';
+import { usePalette } from '@/theme/tone';
 
 export function EmptyState({
   icon: Icon = Search,
@@ -17,62 +18,60 @@ export function EmptyState({
   action?: string;
   onPress?: () => void;
 }) {
+  const p = usePalette();
   return (
-    <View style={{ paddingVertical: 44, gap: 14, alignItems: 'center', paddingHorizontal: 16 }}>
+    <View style={{ paddingVertical: 40, gap: 12, alignItems: 'center', paddingHorizontal: 16 }}>
       <View
         style={{
-          width: 70,
-          height: 70,
-          borderRadius: 24,
-          backgroundColor: c.primarySoft,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
+          borderWidth: 1,
+          borderColor: p.line,
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        <Icon size={28} color={c.primary} />
+        <Icon size={26} color={p.muted} strokeWidth={1.6} />
       </View>
-      <Heading style={{ fontSize: 21, textAlign: 'center' }}>{title}</Heading>
-      <Label style={{ color: c.muted, textAlign: 'center', maxWidth: 300 }}>{body}</Label>
-      {action && onPress && <Button title={action} onPress={onPress} />}
+      <Heading style={{ fontSize: 20, lineHeight: 27, textAlign: 'center' }}>{title}</Heading>
+      <Caption style={{ textAlign: 'center', maxWidth: 300, fontSize: 14, lineHeight: 21 }}>
+        {body}
+      </Caption>
+      {action && onPress && (
+        <View style={{ marginTop: 6 }}>
+          <Button title={action} onPress={onPress} compact />
+        </View>
+      )}
     </View>
   );
 }
 
 export function ErrorNote({ message }: { message: string | null }) {
+  const p = usePalette();
   return message ? (
     <View
       accessibilityRole="alert"
-      style={{ padding: 15, borderRadius: 14, backgroundColor: c.dangerSoft }}
+      style={{ padding: 15, borderRadius: 14, backgroundColor: p.dangerSoft }}
     >
-      <Label style={{ color: c.danger, fontSize: 13 }}>{message}</Label>
+      <Label style={{ color: p.danger, fontSize: 14, lineHeight: 20 }}>{message}</Label>
     </View>
   ) : null;
 }
 
+/** The one mark for Plus content, the same on every surface. */
 export function PlusBadge() {
   return (
     <View
+      accessibilityLabel="Plus"
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: c.goldSoft,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 6,
+        backgroundColor: plus.fill,
+        paddingHorizontal: 7,
+        borderRadius: 5,
       }}
     >
-      <Sparkles size={10} color={c.goldInk} />
-      <Label
-        style={{
-          fontSize: 9,
-          fontWeight: '800',
-          color: c.goldInk,
-          lineHeight: 14,
-          letterSpacing: 1,
-        }}
-      >
-        PLUS
+      <Label style={{ fontSize: 12, lineHeight: 18, fontWeight: '800', color: plus.onFill }}>
+        Plus
       </Label>
     </View>
   );

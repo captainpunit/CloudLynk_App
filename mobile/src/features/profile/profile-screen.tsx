@@ -1,205 +1,186 @@
-import { Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
+import { View } from 'react-native';
 import { router } from 'expo-router';
-import {
-  Bookmark,
-  ChevronRight,
-  Cloud,
-  Plus,
-  Radio,
-  Settings,
-  ShieldCheck,
-  Sparkles,
-  Upload,
-} from 'lucide-react-native';
+import { Bell, Cloud, Library, Plus, Settings, ShieldCheck, Upload } from 'lucide-react-native';
 import {
   Button,
-  EmptyState,
+  Caption,
   Heading,
   IconButton,
   Label,
+  ListRow,
+  PlusBadge,
   Screen,
   Section,
-  Surface,
 } from '@/components/ui';
+import { ChannelRow } from '@/components/media-card';
+import { PlusOffer } from '@/components/plus-offer';
 import { useWorkspace } from '@/state/workspace-provider';
-import { colors as c } from '@/theme/tokens';
-import { plusSummary } from '@/domain/format';
-import { env } from '@/lib/env';
+import { usePalette } from '@/theme/tone';
+import { fileSize, plusSummary, shortDate } from '@/domain/format';
+import type { Channel } from '@/domain/models';
+import { count } from '@/features/explore/catalogue';
 
 export default function ProfileScreen() {
-  const { state, requireIdentity } = useWorkspace();
-  const ownChannels = state.channels.filter((channel) => channel.ownerId === state.profile?.id);
-  const plus = plusSummary(state);
+  const { state } = useWorkspace();
+  const profile = state.profile;
+  const ownChannels = state.channels.filter((channel) => channel.ownerId === profile?.id);
+  const creator = !!profile?.canPublish || profile?.role === 'admin';
   return (
     <Screen
-      title="Your little corner."
-      subtitle="Everything that makes this space yours."
+      tone="dark"
+      title="You"
       action={
         <IconButton icon={Settings} label="Settings" onPress={() => router.push('/settings')} />
       }
     >
-      {state.profile ? (
-        <Surface>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 17 }}>
-            <View
-              style={{
-                width: 65,
-                height: 65,
-                borderRadius: 23,
-                backgroundColor: c.primarySoft,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <Heading style={{ color: c.primary }}>
-                {state.profile.name.slice(0, 1).toUpperCase()}
-              </Heading>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Heading style={{ fontSize: 23 }}>{state.profile.name}</Heading>
-              <Label numberOfLines={1} selectable style={{ color: c.muted, fontSize: 12 }}>
-                {state.profile.email}
-              </Label>
-              <Label style={{ color: c.primary, fontSize: 10, fontWeight: '700', marginTop: 4 }}>
-                {`${env.appName} ${state.subscribed ? 'Plus' : 'member'}`.toUpperCase()}
-              </Label>
-            </View>
-          </View>
-        </Surface>
-      ) : (
-        <EmptyState
-          icon={Cloud}
-          title="Make this space yours"
-          body="Keep your files, favourite videos and channels in one happy place."
-          action="Sign in / get started"
-          onPress={() => router.push('/auth')}
+      {profile ? <Identity name={profile.name} email={profile.email} /> : <SignedOut />}
+      <PlusStatus />
+      <View>
+        <ListRow
+          icon={Library}
+          title="Library"
+          detail="Continue watching, saved videos and your channels"
+          onPress={() => router.push('/library')}
         />
-      )}
-      {plus && (
-        <Pressable
-          onPress={() => router.push('/premium')}
-          style={{ padding: 22, borderRadius: 22, backgroundColor: c.dark, gap: 10 }}
-        >
-          <Sparkles size={25} color={c.accent} />
-          <Heading style={{ color: c.white, fontSize: 24 }}>
-            {state.subscribed ? 'You have Plus' : 'Get Plus'}
-          </Heading>
-          <Label style={{ color: c.onDarkMuted, fontSize: 12 }}>{plus}</Label>
-        </Pressable>
-      )}
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        {[
-          {
-            value: state.joinedIds.length,
-            label: 'Channels',
-            href: '/channels' as const,
-            icon: Radio,
-          },
-          {
-            value: state.savedIds.length,
-            label: 'Saved stories',
-            href: '/feed' as const,
-            icon: Bookmark,
-          },
-          { value: state.files.length, label: 'Files', href: '/cloud' as const, icon: Cloud },
-        ].map(({ value, label, href, icon: Icon }) => (
-          <Pressable
-            key={label}
-            onPress={() => router.push(href)}
-            style={{
-              flex: 1,
-              padding: 15,
-              gap: 5,
-              backgroundColor: c.surface,
-              borderRadius: 17,
-              borderWidth: 1,
-              borderColor: c.line,
-            }}
-          >
-            <Icon size={20} color={c.primary} />
-            <Heading style={{ fontSize: 24 }}>{value}</Heading>
-            <Label style={{ color: c.muted, fontSize: 10 }}>{label}</Label>
-          </Pressable>
-        ))}
-      </View>
-      <Section
-        title="Made by you"
-        action="New channel"
-        onPress={() => {
-          if (requireIdentity()) router.push('/create-channel');
-        }}
-      />
-      {!ownChannels.length ? (
-        <Surface>
-          <Radio size={25} color={c.primary} />
-          <Heading style={{ fontSize: 19 }}>Your next idea belongs here.</Heading>
-          <Label style={{ color: c.muted, fontSize: 13 }}>
-            Create a channel, share your work, and find your people.
-          </Label>
-          <Button
-            title="Create your first channel"
-            icon={Plus}
-            variant="soft"
-            onPress={() => {
-              if (requireIdentity()) router.push('/create-channel');
-            }}
+        <ListRow
+          icon={Bell}
+          title="Notifications"
+          marker={!state.noticesRead}
+          onPress={() => router.push('/notifications')}
+        />
+        <ListRow
+          icon={Cloud}
+          title="My cloud"
+          detail={
+            state.driveUsage
+              ? `${fileSize(state.driveUsage.used_bytes)} of ${fileSize(state.driveUsage.quota_bytes)} used`
+              : count(state.files.length, 'file')
+          }
+          onPress={() => router.push('/cloud')}
+        />
+        {profile?.role === 'admin' && (
+          <ListRow
+            icon={ShieldCheck}
+            title="Admin review"
+            detail="Channels, titles, reports and payments"
+            onPress={() => router.push('/admin')}
           />
-        </Surface>
-      ) : (
-        ownChannels.map((channel) => (
-          <Surface key={channel.id}>
-            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-              <Image source={channel.cover} style={{ width: 54, height: 54, borderRadius: 13 }} />
-              <View style={{ flex: 1 }}>
-                <Label style={{ fontWeight: '700' }}>{channel.name}</Label>
-                <Label style={{ color: c.primary, fontSize: 11 }}>
-                  {channel.status === 'pending'
-                    ? 'Waiting for admin review'
-                    : `${channel.status} · ${channel.visibility}`}
-                </Label>
-              </View>
-            </View>
-            <Button
-              title="Add a video"
-              icon={Upload}
-              variant="soft"
-              onPress={() =>
-                router.push({ pathname: '/upload', params: { channelId: channel.id } })
-              }
-            />
-            {channel.status === 'published' && (
-              <Button
-                title="Open channel"
-                variant="outline"
-                onPress={() =>
-                  router.push({ pathname: '/channel/[id]', params: { id: channel.id } })
+        )}
+      </View>
+      {(creator || ownChannels.length > 0) && (
+        <View style={{ gap: 16 }}>
+          <Section
+            title="Your channels"
+            action={creator ? 'New channel' : undefined}
+            onPress={() => router.push('/create-channel')}
+          />
+          {ownChannels.length ? (
+            ownChannels.map((channel) => (
+              <ChannelRow
+                key={channel.id}
+                channel={channel}
+                detail={channelStatus(channel)}
+                trailing={
+                  <Button
+                    title="Add video"
+                    icon={Upload}
+                    variant="soft"
+                    compact
+                    label={`Add a video to ${channel.name}`}
+                    onPress={() =>
+                      router.push({ pathname: '/upload', params: { channelId: channel.id } })
+                    }
+                  />
                 }
               />
-            )}
-          </Surface>
-        ))
+            ))
+          ) : (
+            <View style={{ gap: 12, alignItems: 'flex-start' }}>
+              <Caption>Start a channel. It goes live after an admin approves it.</Caption>
+              <Button
+                title="Create a channel"
+                icon={Plus}
+                variant="soft"
+                compact
+                onPress={() => router.push('/create-channel')}
+              />
+            </View>
+          )}
+        </View>
       )}
-      {state.profile?.role === 'admin' && (
-        <Button
-          title="Admin review workspace"
-          icon={ShieldCheck}
-          variant="outline"
-          onPress={() => router.push('/admin')}
-        />
-      )}
-      <Pressable
-        onPress={() => router.push('/settings')}
+    </Screen>
+  );
+}
+
+function channelStatus(channel: Channel) {
+  if (channel.status === 'pending') return 'Waiting for admin review';
+  if (channel.status === 'hidden') return 'Hidden by an admin';
+  const access = { public: 'Free', premium: 'Plus', private: 'Private' }[channel.visibility];
+  return `Live · ${access}`;
+}
+
+function Identity({ name, email }: { name: string; email: string }) {
+  const p = usePalette();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+      <View
         style={{
-          flexDirection: 'row',
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          backgroundColor: p.raised,
+          justifyContent: 'center',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingVertical: 10,
         }}
       >
-        <Label style={{ fontWeight: '600', fontSize: 13 }}>Settings & account</Label>
-        <ChevronRight size={18} color={c.muted} />
-      </Pressable>
-    </Screen>
+        <Label style={{ fontSize: 24, lineHeight: 30, fontWeight: '700' }}>
+          {name.slice(0, 1).toUpperCase()}
+        </Label>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Heading style={{ fontSize: 22, lineHeight: 28 }}>{name}</Heading>
+        <Caption numberOfLines={1} selectable>
+          {email}
+        </Caption>
+      </View>
+    </View>
+  );
+}
+
+function SignedOut() {
+  return (
+    <View style={{ gap: 14, alignItems: 'flex-start' }}>
+      <Label>Sign in to join channels, save videos and subscribe to Plus.</Label>
+      <Button title="Sign in or create an account" onPress={() => router.push('/auth')} />
+    </View>
+  );
+}
+
+/** Whether the member has Plus, until when, and the way to get or extend it. */
+function PlusStatus() {
+  const { state } = useWorkspace();
+  const p = usePalette();
+  if (!state.subscribed) return state.plans?.length ? <PlusOffer /> : null;
+  const summary = plusSummary(state);
+  return (
+    <View style={{ backgroundColor: p.plusSoft, borderRadius: 16, padding: 18, gap: 10 }}>
+      <View style={{ flexDirection: 'row' }}>
+        <PlusBadge />
+      </View>
+      <Heading style={{ fontSize: 20, lineHeight: 27, letterSpacing: -0.4 }}>
+        {state.subscribedUntil
+          ? `Plus is active until ${shortDate(state.subscribedUntil)}`
+          : 'Plus is active'}
+      </Heading>
+      {summary && (
+        <Caption style={{ color: p.ink, fontSize: 14, lineHeight: 21 }}>{summary}</Caption>
+      )}
+      <Caption style={{ color: p.ink }}>
+        Plus does not renew by itself. Add more time before it ends to keep watching.
+      </Caption>
+      <View style={{ flexDirection: 'row' }}>
+        <Button title="Add more time" compact onPress={() => router.push('/premium')} />
+      </View>
+    </View>
   );
 }

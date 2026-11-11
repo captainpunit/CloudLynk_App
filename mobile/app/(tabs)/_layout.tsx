@@ -1,58 +1,46 @@
 import { Tabs } from 'expo-router';
-import { Compass, Cloud, Radio, UserRound, PanelsTopLeft } from 'lucide-react-native';
-import { colors as c } from '@/theme/tokens';
+import { House, Library, MonitorPlay, UserRound, type LucideIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { night } from '@/theme/tokens';
+
+function tab(title: string, Icon: LucideIcon) {
+  return {
+    title,
+    tabBarAccessibilityLabel: title,
+    tabBarIcon: ({ focused }: { focused: boolean }) => (
+      <Icon size={24} color={focused ? night.ink : night.muted} strokeWidth={focused ? 2.2 : 1.7} />
+    ),
+  };
+}
 
 export default function MainTabs() {
+  // Room for the icon and its label above the system navigation area.
+  const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
       initialRouteName="index"
+      backBehavior="history"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: c.primary,
-        tabBarInactiveTintColor: c.muted,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: 3 },
+        tabBarActiveTintColor: night.ink,
+        tabBarInactiveTintColor: night.muted,
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarStyle: {
-          backgroundColor: c.surface,
-          borderTopColor: c.line,
-          paddingTop: 10,
-          height: 78,
+          backgroundColor: night.canvas,
+          borderTopColor: night.line,
+          height: 62 + bottom,
+          paddingTop: 6,
+          paddingBottom: bottom + 6,
         },
-        tabBarItemStyle: { paddingBottom: 5 },
-        sceneStyle: { backgroundColor: c.canvas },
+        sceneStyle: { backgroundColor: night.canvas },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <Compass size={23} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="feed"
-        options={{
-          title: 'My feed',
-          tabBarIcon: ({ color }) => <PanelsTopLeft size={23} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="channels"
-        options={{
-          title: 'Channels',
-          tabBarIcon: ({ color }) => <Radio size={23} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="cloud"
-        options={{
-          title: 'My cloud',
-          tabBarIcon: ({ color }) => <Cloud size={23} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{ title: 'You', tabBarIcon: ({ color }) => <UserRound size={23} color={color} /> }}
-      />
+      <Tabs.Screen name="index" options={tab('Home', House)} />
+      <Tabs.Screen name="channels" options={tab('Channels', MonitorPlay)} />
+      <Tabs.Screen name="library" options={tab('Library', Library)} />
+      <Tabs.Screen name="profile" options={tab('You', UserRound)} />
+      {/* My cloud opens from Library and You; it keeps the tab bar but has no tab of its own. */}
+      <Tabs.Screen name="cloud" options={{ title: 'My cloud', href: null }} />
     </Tabs>
   );
 }

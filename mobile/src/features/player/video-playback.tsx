@@ -4,6 +4,7 @@ import { useEvent } from 'expo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Button, Label } from '@/components/ui';
 import { colors as c } from '@/theme/tokens';
+import { usePalette } from '@/theme/tone';
 
 /** Mounted only after access checks. Progress listeners are released on unmount. */
 export function VideoPlayback({
@@ -19,6 +20,7 @@ export function VideoPlayback({
   privateStream?: boolean;
   onRetry?: () => void;
 }) {
+  const p = usePalette();
   const resumed = useRef(false);
   const callback = useRef(onProgress);
   callback.current = onProgress;
@@ -54,10 +56,10 @@ export function VideoPlayback({
         contentFit="contain"
         allowsPictureInPicture={!privateStream}
       />
-      {status === 'loading' && <Label style={{ color: c.muted }}>Getting your video ready…</Label>}
+      {status === 'loading' && <Label style={{ color: p.muted }}>Getting your video ready…</Label>}
       {status === 'error' && (
         <View style={{ gap: 10 }}>
-          <Label accessibilityRole="alert" style={{ color: c.danger }}>
+          <Label accessibilityRole="alert" style={{ color: p.danger }}>
             {privateStream
               ? 'The video could not be loaded. Retry to check playback access.'
               : (error?.message ?? 'The video could not be loaded. Check your connection.')}

@@ -1,149 +1,240 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
-import { Image } from 'expo-image';
+import { View } from 'react-native';
 import { router } from 'expo-router';
-import { Plus, Radio, Users } from 'lucide-react-native';
+import { Plus, MonitorPlay } from 'lucide-react-native';
 import {
   Button,
   EmptyState,
   ErrorNote,
   IconButton,
-  Label,
   Pill,
-  PlusBadge,
+  Rail,
   Screen,
   SearchField,
+  Section,
 } from '@/components/ui';
+import { ChannelRow, VideoRow } from '@/components/media-card';
 import { useWorkspace } from '@/state/workspace-provider';
-import { colors as c } from '@/theme/tokens';
+import type { Channel } from '@/domain/models';
+import { browsableVideos, channelOf, count } from '@/features/explore/catalogue';
+
+type Filter = 'All' | 'Joined' | 'Plus' | 'Private';
+const filterLabels: Record<Filter, string> = {
+  All: 'Show all channels',
+  Joined: 'Show channels you joined',
+  Plus: 'Show Plus channels',
+  Private: 'Show private channels you were invited to',
+};
 
 export default function ChannelsScreen() {
-  const { state, join, requireIdentity } = useWorkspace();
+  const { state, refresh, refreshing } = useWorkspace();
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState('Discover');
+  const [filter, setFilter] = useState<Filter>('All');
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<string | null>(null);
-  const channels = state.channels.filter(
+  const published = state.channels.filter((channel) => channel.status === 'published');
+  const filters: Filter[] = [
+    'All',
+    'Joined',
+    'Plus',
+    ...(published.some((channel) => channel.visibility === 'private') ? ['Private' as const] : []),
+  ];
+  const search = query.trim().toLowerCase();
+  const channels = published.filter(
     (channel) =>
-      channel.status === 'published' &&
-      (channel.visibility !== 'private' || tab !== 'Discover') &&
-      channel.name.toLowerCase().includes(query.toLowerCase()) &&
-      (tab === 'Discover' ||
-        (tab === 'Private'
-          ? channel.visibility === 'private'
-          : state.joinedIds.includes(channel.id))),
+      inFilter(channel, filter, state.joinedIds) &&
+      `${channel.name} ${channel.category} ${channel.description}`.toLowerCase().includes(search),
   );
-  async function handleJoin(id: string) {
-    setPending(id);
-    setError(null);
-    try {
-      await join(id, true);
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not join. Please retry.');
-    } finally {
-      setPending(null);
-    }
-  }
+  const videos = browsableVideos(state, new Set(published.map((channel) => channel.id)));
+  const videoCount = (id: string) => videos.filter((video) => video.channelId === id).length;
+  const matchingVideos = search
+    ? videos
+        .filter((video) => `${video.title} ${video.description}`.toLowerCase().includes(search))
+        .slice(0, 20)
+    : [];
+  const canCreate = !!state.profile?.canPublish || state.profile?.role === 'admin';
+  const row = (channel: Channel) => (
+    <ChannelRow
+      key={channel.id}
+      channel={channel}
+      detail={[
+        state.joinedIds.includes(channel.id) && 'Joined',
+        channel.visibility === 'private' ? 'Private' : channel.category,
+        count(videoCount(channel.id), 'video'),
+      ]
+        .filter(Boolean)
+        .join(' · ')}
+      trailing={<ChannelAction channel={channel} onError={setError} />}
+    />
+  );
   return (
     <Screen
-      title="Find your people."
-      subtitle="A channel for every kind of curious."
+      tone="dark"
+      title="Channels"
+      refreshing={refreshing}
+      onRefresh={() => void refresh()}
       action={
-        <IconButton
-          icon={Plus}
-          label="Create a channel"
-          onPress={() => {
-            if (requireIdentity()) router.push('/create-channel');
-          }}
-        />
+        canCreate && (
+          <IconButton
+            icon={Plus}
+            label="Create a channel"
+            onPress={() => router.push('/create-channel')}
+          />
+        )
       }
     >
-      <SearchField value={query} onChangeText={setQuery} placeholder="Find a channel" />
-      <View style={{ flexDirection: 'row', gap: 8 }}>
-        {['Discover', 'Joined', 'Private'].map((item) => (
-          <Pill key={item} title={item} selected={tab === item} onPress={() => setTab(item)} />
+      <SearchField value={query} onChangeText={setQuery} placeholder="Search channels and videos" />
+      <Rail gap={8}>
+        {filters.map((item) => (
+          <Pill
+            key={item}
+            title={item}
+            label={filterLabels[item]}
+            selected={filter === item}
+            onPress={() => setFilter(item)}
+          />
         ))}
-      </View>
+      </Rail>
       <ErrorNote message={error} />
-      <View style={{ gap: 14 }}>
-        {channels.map((channel) => (
-          <View
-            key={channel.id}
-            style={{
-              borderRadius: 20,
-              backgroundColor: c.surface,
-              padding: 13,
-              borderWidth: 1,
-              borderColor: c.line,
-              gap: 14,
-            }}
-          >
-            <Pressable
-              accessibilityLabel={`Open ${channel.name}`}
-              onPress={() => router.push({ pathname: '/channel/[id]', params: { id: channel.id } })}
-            >
-              <Image
-                source={channel.cover}
-                style={{ height: 150, borderRadius: 13 }}
-                contentFit="cover"
-              />
-              <View style={{ flexDirection: 'row', gap: 7, alignItems: 'center', marginTop: 13 }}>
-                <Label style={{ fontSize: 18, fontWeight: '700', flex: 1 }}>{channel.name}</Label>
-                {channel.visibility === 'premium' && <PlusBadge />}
-              </View>
-              <Label numberOfLines={2} style={{ color: c.muted, fontSize: 12, marginTop: 4 }}>
-                {channel.description}
-              </Label>
-            </Pressable>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                <Users color={c.muted} size={14} />
-                <Label style={{ color: c.muted, fontSize: 11 }}>
-                  {channel.visibility === 'private' ? 'Private channel' : channel.category}
-                </Label>
-              </View>
-              <Button
-                title={
-                  state.joinedIds.includes(channel.id)
-                    ? 'Open channel'
-                    : channel.visibility === 'premium' && !state.subscribed
-                      ? 'Explore Plus'
-                      : 'Join channel'
-                }
-                variant={state.joinedIds.includes(channel.id) ? 'soft' : 'primary'}
-                loading={pending === channel.id}
-                onPress={() =>
-                  state.joinedIds.includes(channel.id)
-                    ? router.push({ pathname: '/channel/[id]', params: { id: channel.id } })
-                    : void handleJoin(channel.id)
-                }
-              />
-            </View>
+      {filter === 'All' && !search ? (
+        byCategory(channels).map(([category, group]) => (
+          <View key={category} style={{ gap: 14 }}>
+            <Section title={category} />
+            {group.map(row)}
           </View>
-        ))}
-      </View>
-      {!channels.length && (
-        <EmptyState
-          icon={Radio}
-          title={tab === 'Joined' ? 'Your people are out there' : 'No channels found'}
-          body={
-            tab === 'Joined'
-              ? 'Join a channel to collect its latest stories here.'
-              : 'Try a different name or clear your search.'
-          }
-          action="Discover channels"
-          onPress={() => {
-            setTab('Discover');
+        ))
+      ) : (
+        <View style={{ gap: 14 }}>
+          {search && channels.length > 0 && <Section title="Channels" />}
+          {channels.map(row)}
+        </View>
+      )}
+      {matchingVideos.length > 0 && (
+        <View style={{ gap: 14 }}>
+          <Section title="Videos" />
+          {matchingVideos.map((video) => (
+            <VideoRow key={video.id} video={video} channel={channelOf(state, video)} />
+          ))}
+        </View>
+      )}
+      {!channels.length && !matchingVideos.length && (
+        <EmptyChannels
+          filter={filter}
+          searching={!!search}
+          onReset={() => {
             setQuery('');
+            setFilter('All');
           }}
         />
       )}
     </Screen>
+  );
+}
+
+function inFilter(channel: Channel, filter: Filter, joinedIds: string[]) {
+  switch (filter) {
+    case 'All':
+      return channel.visibility !== 'private';
+    case 'Joined':
+      return joinedIds.includes(channel.id);
+    case 'Plus':
+      return channel.visibility === 'premium';
+    case 'Private':
+      return channel.visibility === 'private';
+  }
+}
+
+function byCategory(channels: Channel[]): [string, Channel[]][] {
+  const groups = new Map<string, Channel[]>();
+  for (const channel of channels)
+    groups.set(channel.category, [...(groups.get(channel.category) ?? []), channel]);
+  return [...groups].sort(([a], [b]) => a.localeCompare(b));
+}
+
+/** The one thing a viewer can do with a channel from the list, if anything. */
+function ChannelAction({
+  channel,
+  onError,
+}: {
+  channel: Channel;
+  onError: (message: string | null) => void;
+}) {
+  const { state, join } = useWorkspace();
+  const [busy, setBusy] = useState(false);
+  if (state.profile && channel.ownerId === state.profile.id)
+    return (
+      <Button
+        title="Manage"
+        variant="outline"
+        compact
+        label={`Manage videos in ${channel.name}`}
+        onPress={() => router.push({ pathname: '/upload', params: { channelId: channel.id } })}
+      />
+    );
+  if (state.joinedIds.includes(channel.id)) return null;
+  if (channel.visibility === 'premium' && !state.subscribed)
+    return (
+      <Button
+        title="Subscribe"
+        variant="plus"
+        compact
+        label={`Subscribe to watch ${channel.name}`}
+        onPress={() => router.push('/premium')}
+      />
+    );
+  return (
+    <Button
+      title="Join"
+      compact
+      loading={busy}
+      label={`Join ${channel.name}`}
+      onPress={() => {
+        setBusy(true);
+        onError(null);
+        join(channel.id, true)
+          .catch((cause: unknown) =>
+            onError(cause instanceof Error ? cause.message : 'Could not join. Please retry.'),
+          )
+          .finally(() => setBusy(false));
+      }}
+    />
+  );
+}
+
+function EmptyChannels({
+  filter,
+  searching,
+  onReset,
+}: {
+  filter: Filter;
+  searching: boolean;
+  onReset: () => void;
+}) {
+  if (searching)
+    return (
+      <EmptyState
+        title="No matches"
+        body="Try another name, category or title."
+        action="Clear search"
+        onPress={onReset}
+      />
+    );
+  if (filter === 'Joined')
+    return (
+      <EmptyState
+        icon={MonitorPlay}
+        title="You have not joined any channels"
+        body="Join a channel and its new videos show up in your library."
+        action="Show all channels"
+        onPress={onReset}
+      />
+    );
+  return (
+    <EmptyState
+      icon={MonitorPlay}
+      title={filter === 'Plus' ? 'No Plus channels yet' : 'No channels yet'}
+      body="Channels appear here once an admin approves them."
+      action={filter === 'All' ? undefined : 'Show all channels'}
+      onPress={onReset}
+    />
   );
 }
