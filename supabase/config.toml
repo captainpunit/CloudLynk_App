@@ -33,6 +33,12 @@ enable_signup = true
 enable_confirmations = false
 double_confirm_changes = true
 
+# The app resets passwords with a code typed into it, so the email must show the code.
+# Production: paste templates/recovery.html into Auth → Email templates → Reset password.
+[auth.email.template.recovery]
+subject = "Your CloudLynk password reset code"
+content_path = "./supabase/templates/recovery.html"
+
 [local_smtp]
 enabled = true
 port = 54324

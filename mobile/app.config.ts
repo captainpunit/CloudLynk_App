@@ -10,7 +10,7 @@ const config: ExpoConfig = {
   name: 'CloudLynk',
   slug: 'cloudlynk',
   icon: './assets/icon.png',
-  version: '0.1.0',
+  version: '1.0.0',
   scheme,
   orientation: 'portrait',
   userInterfaceStyle: 'dark',

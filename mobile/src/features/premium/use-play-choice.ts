@@ -54,7 +54,8 @@ export function usePlayChoice(userId: string | undefined, callbacks: Callbacks) 
       .then(async (connection) => {
         if (!active) return connection.close();
         store.current = connection;
-        (await connection.unfinished()).forEach(verify);
+        // Best effort: a store that cannot list purchases now reports it when buying.
+        (await connection.unfinished().catch(() => [])).forEach(verify);
       })
       .catch((cause: Error) => {
         if (active) latest.current.onError(cause.message);

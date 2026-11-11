@@ -6,6 +6,7 @@ import { plusSummary } from '@/domain/format';
 import { periodLength, rupees } from '@/domain/payments';
 import type { Plan } from '@/domain/models';
 import { useWorkspace } from '@/state/workspace-provider';
+import { playBillingAvailable } from '@/services/billing/play-choice';
 
 /** "₹149 for 1 month", or "From ₹49 for 7 days" when there are several plans. */
 export function plusPrice(plans: Plan[] = []): string | null {
@@ -40,7 +41,7 @@ export function PlusOffer({
       </Caption>
       {price && (
         <Label style={{ color: p.plusInk, fontWeight: '700' }}>
-          {`${price}. Pay by UPI. No automatic renewal.`}
+          {`${price}. ${playBillingAvailable ? 'Pay with Google Play or UPI' : 'Pay by UPI'}. No automatic renewal.`}
         </Label>
       )}
       <View style={{ flexDirection: 'row', marginTop: 4 }}>
