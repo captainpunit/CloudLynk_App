@@ -1,5 +1,9 @@
 # Subscriptions and plans (PR3)
 
+> **11 November 2026:** the mobile app now sells Plus by UPI, not Google Play. See
+> [UPI payments](upi-payments.md). Plan prices live in `plans.price_paise`. The Play
+> functions below remain in the backend but the app no longer calls them.
+
 Implemented locally; production requires Play Console products, secrets, authenticated
 Pub/Sub, deployed functions and scheduled jobs. No production products or prices are seeded.
 
