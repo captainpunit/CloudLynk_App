@@ -1,9 +1,10 @@
 # UPI subscription payments
 
-Migration `20261111000000_upi_subscriptions.sql`. Implemented and tested on the local
+Migrations `20261111000000_upi_subscriptions.sql` and `20261112000000_flexible_plan_periods.sql`. Implemented and tested on the local
 stack; nothing is deployed and no real payee, plan or price is seeded.
 
-Plus is sold for a fixed period (`P1M`, `P3M`, `P6M`, `P1Y`) and paid by UPI intent. It
+Plus is sold for a fixed period and paid by UPI intent. A period is an ISO 8601 duration
+in days, months or one year (`P2D`, `P7D`, `P1M`, `P6M`, `P1Y`; rule: `valid_plan_period`). It
 does not renew by itself: the member pays again, and paying early adds to the time left.
 One subscription unlocks every paid channel (the existing `access_decision` rule).
 
@@ -103,10 +104,46 @@ Errors: `admin_required`, `reason_required`, `invalid_action`, `order_not_found`
   removes it.
 - Refunds are made from the bank or UPI app; there is no refund call. To end access
   early, set the subscription's `paid_until` or `status` with the service role.
-- Google Play requires Play Billing for digital subscriptions sold inside apps
-  distributed on Play, with a separate enrolment programme for alternative billing in
-  India. An app whose only payment method is UPI needs that enrolment or distribution
-  outside Play. Confirm the current policy with the Play Console before submitting.
+
+## Launch plans (from the client, 11 November 2026)
+
+| Plan ID | Name | Period | Price |
+| --- | --- | --- | --- |
+| `trial` | Trial | `P2D` | ₹69 |
+| `silver` | Silver | `P7D` | ₹129 |
+| `gold` | Gold | `P1M` | ₹259 |
+| `platinum` | Platinum | `P6M` | ₹599 |
+| `diamond` | Diamond | `P1Y` | ₹999 |
+
+Enter them, and the UPI ID, in the app under Admin → Payments after deployment (each
+change is audited). No plan includes extra storage (`quota_bytes = 0`), so members keep
+the free quota. "Trial" is an ordinary plan: nothing stops a member buying it again.
+
+## Google Play: alternative billing in India
+
+The client intends to enrol in Google's alternative billing programme for India. Per
+Google's programme page (read 11 November 2026; confirm in the Play Console):
+
+- The alternative system is offered **alongside** Google Play's billing, not instead of
+  it. Google Play renders a choice screen through the alternative billing APIs, so the
+  app must integrate the Play Billing Library and sell the same plans as Play products.
+- Every alternative-billing payment by a user in India must be **reported to Google
+  within 24 hours** through the APIs. Google still charges its service fee on those
+  payments, reduced by 4 percentage points.
+- The developer certifies **PCI DSS** compliance and gives users a way to report
+  fraudulent transactions.
+- Enrolment: Play Console → Manage account → Play apps settings → Monetization
+  settings → Alternative billing.
+
+**What this means for this codebase.** The app currently offers UPI only, which the
+programme does not permit on Google Play. Before a Play submission it needs: Play
+Billing restored as the second option (the backend functions `verify-play-receipt`,
+`play-rtdn-webhook` and `subscription-reconcile` still exist), the user-choice screen,
+and a server job that reports each confirmed UPI order to Google's external
+transactions API within 24 hours of confirmation. None of that is built. Distribution
+outside Google Play (an APK from the client's website) needs none of it.
+
+Source: <https://support.google.com/googleplay/android-developer/answer/13306652>
 
 ## Tests
 
