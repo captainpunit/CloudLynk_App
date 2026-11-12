@@ -53,7 +53,7 @@ test('order steps follow the backend rules', () => {
   assert.equal(orderStep({ ...base, status: 'created' }, now), 'pay');
   assert.equal(
     orderStep({ ...base, status: 'created', expiresAt: '2026-11-11T09:30:00Z' }, now),
-    'closed',
+    'report',
   );
   assert.equal(orderStep({ ...base, status: 'submitted', attempts: 1 }, now), 'review');
   assert.equal(orderStep({ ...base, status: 'rejected', attempts: 1 }, now), 'report');
@@ -63,7 +63,11 @@ test('order steps follow the backend rules', () => {
     'closed',
   );
   assert.equal(orderStep({ ...base, status: 'paid', attempts: 1 }, now), 'done');
-  assert.equal(orderStep({ ...base, status: 'expired' }, now), 'closed');
+  assert.equal(orderStep({ ...base, status: 'expired' }, now), 'report');
+  assert.equal(
+    orderStep({ ...base, status: 'expired', createdAt: '2026-11-01T09:00:00Z' }, now),
+    'closed',
+  );
 });
 
 test('access lasts until the latest paid period that still counts', () => {

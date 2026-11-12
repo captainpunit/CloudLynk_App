@@ -150,15 +150,7 @@ export type Database = {
           "target_id"?: string | null;
           "target_kind"?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_actor_id_fkey";
-            columns: ["actor_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
       "channel_invitations": {
         Row: {
@@ -1298,6 +1290,22 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      "used_utrs": {
+        Row: {
+          "used_at": string;
+          "utr": string;
+        };
+        ComputedFields: never;
+        Insert: {
+          "used_at"?: string;
+          "utr": string;
+        };
+        Update: {
+          "used_at"?: string;
+          "utr"?: string;
+        };
+        Relationships: [];
       };
       "watch_progress": {
         Row: {

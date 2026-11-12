@@ -84,6 +84,6 @@ select is((select status from public.play_external_reports),'sent','a delivered 
 -- Google Play one-time product grant.
 select is(public.grant_play_product(tests.uid('buyer'),'choice_week','play-token-1','GPA.1')::date,(now()+interval '7 days')::date,'a verified Play purchase grants the plan period');
 select is(public.grant_play_product(tests.uid('buyer'),'choice_week','play-token-1','GPA.1')::date,(now()+interval '7 days')::date,'repeating the same purchase grants nothing more');
-select throws_ok($$select public.grant_play_product(tests.uid('buyer'),'choice_off','play-token-2','GPA.2')$$,'P0001','plan_unavailable','retired plans cannot be granted');
+select lives_ok($$select public.grant_play_product(tests.uid('buyer'),'choice_off','play-token-2','GPA.2')$$,'a purchase Google already charged is honoured after the plan is retired');
 select * from finish();
 rollback;

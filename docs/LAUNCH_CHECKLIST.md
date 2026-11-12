@@ -8,7 +8,7 @@ Play, Cloudflare or Meta. Written 11 November 2026 for branch `feature/upi-subsc
 
 - [ ] Backend owner reviews migrations `20261111000000` (UPI orders), `20261112000000`
       (plan periods), `20261113000000` (Meta events), `20261114000000` (Google Play
-      choice) and `20261115000000` (refunds). Earlier backend notes said manual UPI approval was left out on purpose;
+      choice), `20261115000000` (refunds) and `20261116000000` (review fixes). Earlier backend notes said manual UPI approval was left out on purpose;
       the client has since asked for it.
 - [ ] Merge the branch after review.
 
@@ -82,7 +82,8 @@ The full list, with who gets each item and where each value goes, is in
 
 Build variables (EAS secrets or `.env`): `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_EAS_PROJECT_ID`, `EXPO_PUBLIC_APP_LINK_HOST`,
-`EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`, `META_APP_ID`, `META_CLIENT_TOKEN`.
+`EXPO_PUBLIC_PRIVACY_URL`, `EXPO_PUBLIC_TERMS_URL`, `META_APP_ID`, `META_CLIENT_TOKEN`,
+and the file secret `GOOGLE_SERVICES_JSON` (Firebase config; push does not work without it).
 The `production` profile in `eas.json` turns on the Meta SDK and Google Play's choice
 screen. The `direct` profile builds an APK for distribution outside Google Play, with
 UPI only; never upload that one to Play.

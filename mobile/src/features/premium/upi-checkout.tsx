@@ -213,10 +213,15 @@ export default function UpiCheckout() {
       <Surface>
         {step === 'report' ? (
           <>
-            <Label style={{ fontWeight: '700', fontSize: 17 }}>Payment not confirmed</Label>
+            <Label style={{ fontWeight: '700', fontSize: 17 }}>
+              {current.status === 'rejected'
+                ? 'Payment not confirmed'
+                : 'This payment request has ended'}
+            </Label>
             {!!current.reason && <Label>{current.reason}</Label>}
             <Label style={{ color: c.muted, fontSize: 13 }}>
-              If you did pay, check the UTR in your UPI app and send it again. You have{' '}
+              If you did pay {rupees(current.amountPaise)} for it, enter the UTR from your UPI app
+              and we will check it. Otherwise start a new payment. You have{' '}
               {maxReports - current.attempts}{' '}
               {maxReports - current.attempts === 1 ? 'try' : 'tries'} left for this payment.
             </Label>
