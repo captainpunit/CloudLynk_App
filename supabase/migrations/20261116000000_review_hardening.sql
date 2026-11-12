@@ -72,3 +72,31 @@ create trigger upi_order_utr_unused before update of utr on public.upi_orders
   execute function public.refuse_used_utr();
 
 revoke all on function public.record_used_utr(), public.refuse_used_utr() from public, anon, authenticated;
+
+-- 5. The tax rate of a payment is the rate when the member was asked to pay, not the
+-- rate when an administrator later confirms it.
+alter table public.upi_orders add column tax_percent numeric(5,2);
+update public.upi_orders set tax_percent = (select tax_percent from public.payment_settings);
+create function public.set_order_tax() returns trigger
+language plpgsql security definer set search_path='' as $$
+begin
+  select tax_percent into new.tax_percent from public.payment_settings;
+  return new;
+end; $$;
+create trigger upi_order_tax before insert on public.upi_orders
+  for each row execute function public.set_order_tax();
+revoke all on function public.set_order_tax() from public, anon, authenticated;
+
+create or replace function public.queue_play_external_report() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare
+  v_pre_tax integer;
+begin
+  v_pre_tax := round(new.amount_paise * 100 / (100 + coalesce(new.tax_percent, 0)));
+  insert into public.play_external_reports(external_transaction_id, external_transaction_token,
+      pre_tax_paise, tax_paise, tax_state, transaction_time)
+    values ('upi-' || new.id, new.external_transaction_token, v_pre_tax,
+      new.amount_paise - v_pre_tax, new.tax_state, coalesce(new.submitted_at, new.decided_at, now()))
+  on conflict (external_transaction_id, kind) do nothing;
+  return new;
+end; $$;

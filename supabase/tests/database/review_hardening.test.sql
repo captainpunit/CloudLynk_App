@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(6);
+select plan(7);
 create schema tests;
 grant usage on schema tests to authenticated;
 create table tests.ids(label text primary key,id uuid);
@@ -41,5 +41,16 @@ select is((select count(*) from public.used_utrs),0::bigint,'members cannot read
 reset role;
 select is((select count(*) from pg_constraint where conrelid='public.audit_log'::regclass and contype='f'),0::bigint,'audit rows do not depend on the actor''s profile');
 select isnt((select actor_id from public.audit_log where target_kind='upi_order' order by created_at desc limit 1),null,'the audit row names who decided the payment');
+-- The tax split uses the rate from when the member was asked to pay.
+delete from public.upi_orders where user_id=tests.uid('other');
+select tests.act('other');
+insert into tests.ids values('taxed',(public.create_upi_order('harden_week')).id);
+select public.attach_play_choice((select id from tests.ids where label='taxed'),'tok-harden','GUJARAT');
+select public.submit_upi_payment((select id from tests.ids where label='taxed'),'999999999999');
+select tests.act('admin');
+select public.set_payment_tax(0);
+select public.decide_upi_order((select id from tests.ids where label='taxed'),'approve');
+reset role;
+select is((select array[pre_tax_paise,tax_paise] from public.play_external_reports where external_transaction_id='upi-'||(select id from tests.ids where label='taxed')),array[10000,1800],'a later change of the GST rate does not alter a payment already requested');
 select * from finish();
 rollback;

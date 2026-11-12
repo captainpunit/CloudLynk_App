@@ -1,6 +1,9 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 select no_plan();
+-- Counts below assume an empty catalogue; rolled back with the rest of the test.
+delete from public.titles;
+delete from public.channels;
 create schema tests;
 grant usage on schema tests to anon,authenticated;
 create table tests.ids(label text primary key,id uuid);
