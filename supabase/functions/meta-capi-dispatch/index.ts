@@ -66,6 +66,15 @@ Deno.serve(scheduled("meta-capi-dispatch", async () => {
         ) {
           skipped++;
         } else {
+          // A refund removes the event while it waits here. Checking again just before
+          // sending keeps a refunded payment from being counted as a conversion.
+          const waiting = await db.from("meta_event_outbox").select("id")
+            .eq("id", row.id).maybeSingle();
+          dbCheck(waiting.error);
+          if (!waiting.data) {
+            skipped++;
+            return;
+          }
           const response = await sendCapiEvents([{
             eventName: row.event_name,
             eventId: row.event_id,
