@@ -74,8 +74,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
     } catch (cause) {
       if (request === generation.current)
+        // Only messages written for members are shown; anything else is the service's own text.
         setError(
-          cause instanceof Error ? cause.message : 'Could not load your workspace. Try again.',
+          cause instanceof Error && /^[A-Z][^_{}]*[.!]$/.test(cause.message)
+            ? cause.message
+            : 'CloudLynk could not load. Check your connection and try again.',
         );
     } finally {
       if (request === generation.current) setRefreshing(false);
@@ -96,8 +99,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       if (event !== 'TOKEN_REFRESHED') setTimeout(() => void refresh(), 0);
     });
+    // Coming back from the share sheet, a file picker or a permission dialog is not a
+    // reason to download everything again; a minute away is.
+    let left = 0;
     const foreground = AppState.addEventListener('change', (status) => {
-      if (status === 'active') void refresh();
+      if (status === 'background') left = Date.now();
+      else if (status === 'active' && left && Date.now() - left > 60_000) void refresh();
     });
     return () => {
       subscription.unsubscribe();

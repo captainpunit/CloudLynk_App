@@ -36,7 +36,8 @@ export function PushLifecycle() {
             .catch(() => {});
         }),
       );
-      if (await pushEnabled()) await enablePush(false);
+      // Registration can fail offline; a tapped notification must still open the inbox.
+      if (await pushEnabled()) await enablePush(false).catch(() => undefined);
       const last = await notifications.getLastNotificationResponseAsync();
       if (last && !disposed) {
         await notifications.clearLastNotificationResponseAsync();

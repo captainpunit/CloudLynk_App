@@ -49,7 +49,7 @@ export default function SettingsScreen() {
         .from('profiles')
         .update({ display_name: name.trim(), birth_date: birthDate || null })
         .eq('id', state.profile.id);
-      if (failure) throw failure;
+      if (failure) throw new Error('Your profile could not be saved. Please try again.');
       const current = await supabase.auth.getSession();
       if (current.data.session?.user.id !== state.profile.id) return;
       dispatch({
@@ -65,14 +65,16 @@ export default function SettingsScreen() {
   }
   async function signOut() {
     try {
-      await unregisterPush();
-      const { error: failure } = await supabase.auth.signOut();
+      // Best effort: a device that cannot be unregistered now stops receiving
+      // notifications when its token is next rejected.
+      await unregisterPush().catch(() => undefined);
+      const { error: failure } = await supabase.auth.signOut({ scope: 'local' });
       if (failure) throw failure;
       dispatch({ type: 'identity', profile: null, joinedIds: [] });
       router.replace('/');
       notify('You’re signed out');
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not sign out.');
+    } catch {
+      setError('Could not sign out. Check your connection and try again.');
     }
   }
   async function deleteAccount() {

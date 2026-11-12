@@ -12,9 +12,16 @@ export function initMetaSdk() {
   Settings.initializeSDK();
 }
 
+export function resumeMetaSdk() {
+  Settings.setAutoLogAppEventsEnabled(true);
+  Settings.setAdvertiserIDCollectionEnabled(true);
+}
+
 export function pauseMetaSdk() {
   Settings.setAutoLogAppEventsEnabled(false);
   Settings.setAdvertiserIDCollectionEnabled(false);
+  // Later events must not carry the ID of the member who was measured before.
+  AppEventsLogger.setUserID(null);
 }
 
 export function anonymousId() {

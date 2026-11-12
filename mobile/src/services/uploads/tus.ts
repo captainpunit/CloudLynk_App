@@ -51,7 +51,8 @@ export async function transferTus(
       failures = 0;
       progress(next / source.size);
     } catch (error) {
-      if (signal?.aborted || ++failures >= 3) throw error;
+      if (signal?.aborted) throw new Error('Upload paused. Select the same file to resume.');
+      if (++failures >= 3) throw error;
       // HEAD before every retry recovers a PATCH whose acknowledgement was lost.
     }
   }

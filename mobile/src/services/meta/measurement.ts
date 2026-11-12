@@ -30,6 +30,8 @@ export async function startMeasurement(userId: string): Promise<string | null> {
   if (!measurementAvailable) return null;
   const meta = await import('./metaEvents');
   if (!started) meta.initMetaSdk();
+  // Turning measurement off pauses the SDK; this turns it back on in the same session.
+  meta.resumeMetaSdk();
   started = true;
   meta.setMetaUser(userId);
   return meta.anonymousId();
