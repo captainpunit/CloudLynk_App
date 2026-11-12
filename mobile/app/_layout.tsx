@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { WorkspaceProvider, useWorkspace } from '@/state/workspace-provider';
 import { Button, Label, Screen } from '@/components/ui';
 import { colors as c, night } from '@/theme/tokens';
+import { ToneProvider } from '@/theme/tone';
 import { PushLifecycle } from '@/services/notifications/push-lifecycle';
 import { AdConsentPrompt } from '@/features/privacy/ad-consent-prompt';
 
@@ -67,7 +68,10 @@ function AppNavigation() {
           We could not connect.
         </Label>
         <Label style={{ color: night.ink, textAlign: 'center' }}>{error}</Label>
-        <Button title="Try again" loading={refreshing} onPress={() => void refresh()} />
+        {/* The dark tone gives the button its light fill, so it stands out here. */}
+        <ToneProvider tone="dark">
+          <Button title="Try again" loading={refreshing} onPress={() => void refresh()} />
+        </ToneProvider>
       </View>
     );
   return (

@@ -32,8 +32,13 @@ const fetchWithTimeout: typeof fetch = async (input, init) => {
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } catch (cause) {
-    if (controller.signal.aborted && !outer?.aborted)
-      throw new Error('No response from CloudLynk. Check your connection and try again.');
+    if (controller.signal.aborted && !outer?.aborted) {
+      const timeout = new Error('No response from CloudLynk. Check your connection and try again.');
+      // Named as an abort so the data client does not quietly try three more times,
+      // which would keep the member waiting almost two minutes.
+      timeout.name = 'AbortError';
+      throw timeout;
+    }
     throw cause;
   } finally {
     clearTimeout(timer);
