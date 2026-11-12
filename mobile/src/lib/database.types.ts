@@ -1211,6 +1211,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
@@ -1237,6 +1238,7 @@ export type Database = {
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
+          "tax_percent"?: number | null;
           "tax_state"?: string | null;
           "updated_at"?: string;
           "user_id": string;
@@ -1262,6 +1264,7 @@ export type Database = {
           "status"?: string;
           "submitted_at"?: string | null;
           "subscription_id"?: string | null;
+          "tax_percent"?: number | null;
           "tax_state"?: string | null;
           "updated_at"?: string;
           "user_id"?: string;
@@ -1479,6 +1482,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
@@ -1683,6 +1687,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
@@ -1721,6 +1726,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
@@ -2006,6 +2012,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;
@@ -2328,6 +2335,7 @@ export type Database = {
           "status": string;
           "submitted_at": string | null;
           "subscription_id": string | null;
+          "tax_percent": number | null;
           "tax_state": string | null;
           "updated_at": string;
           "user_id": string;

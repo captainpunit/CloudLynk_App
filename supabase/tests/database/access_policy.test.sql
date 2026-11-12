@@ -5,6 +5,9 @@ begin;
 create extension if not exists pgtap with schema extensions;
 
 select plan(53);
+-- Counts below assume an empty catalogue; rolled back with the rest of the test.
+delete from public.titles;
+delete from public.channels;
 
 -- Helpers --------------------------------------------------------------------
 -- Test users are named; their email is <name>@test.local.
