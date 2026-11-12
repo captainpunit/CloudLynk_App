@@ -24,6 +24,18 @@ export async function pickedSource(asset: DocumentPickerAsset): Promise<UploadSo
     throw new Error('Choose a nonempty file with a readable size.');
   return source;
 }
+/**
+ * The picker copies each chosen file into the app's cache so it can be read. A video
+ * can be several gigabytes, so the copy is removed as soon as it is no longer needed.
+ */
+export function discardPickedCopy(asset: DocumentPickerAsset) {
+  if (Platform.OS === 'web') return;
+  try {
+    new File(asset.uri).delete();
+  } catch {
+    // Already gone, or not ours to delete; the system clears the cache when space is short.
+  }
+}
 export async function uploadLiveFile(
   asset: DocumentPickerAsset,
   titleId: string | undefined,

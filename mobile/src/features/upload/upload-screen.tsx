@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/lib/database.types';
 import { call } from '@/data/live/backend';
 import { readPages } from '@/data/live/mapping';
-import { uploadLiveFile } from '@/services/uploads/live-upload';
+import { discardPickedCopy, uploadLiveFile } from '@/services/uploads/live-upload';
 
 type Title = Tables<'titles'>;
 type Asset = { title_id: string | null; state: string | null; error_code: string | null };
@@ -145,6 +145,8 @@ export default function UploadScreen() {
         copyToCacheDirectory: true,
       });
       if (!result.canceled) {
+        // Copies of an earlier choice are no longer needed.
+        selected.forEach(discardPickedCopy);
         setSelected(result.assets);
         setProgress(0);
       }
@@ -170,6 +172,7 @@ export default function UploadScreen() {
       // A finished file leaves the list at once, so retrying after a later failure
       // does not upload it a second time.
       setSelected((rest) => rest.filter((item) => item !== file));
+      discardPickedCopy(file);
     }
   }
   if (!state.profile)
