@@ -74,7 +74,8 @@ export function isUtr(input: string): boolean {
 
 /**
  * - `pay`: open order; pay it, then report the UTR.
- * - `report`: no longer payable, but a payment already made can still be reported or corrected.
+ * - `report`: no longer payable (rejected, or the request ran out), but a payment already made
+ *   can still be reported or corrected. The backend accepts a UTR for seven days.
  * - `review`: reported and waiting for an administrator.
  * - `done`: confirmed. `closed`: nothing more can happen with it.
  */
@@ -88,7 +89,8 @@ export function orderStep(
   const reportable =
     order.attempts < maxReports && now - Date.parse(order.createdAt) < reportWindowMs;
   if (order.status === 'created' && Date.parse(order.expiresAt) > now) return 'pay';
-  if (order.status === 'rejected' && reportable) return 'report';
+  // A member who paid just after the request ran out must still be able to send the UTR.
+  if (['rejected', 'expired', 'created'].includes(order.status) && reportable) return 'report';
   return 'closed';
 }
 

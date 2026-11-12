@@ -154,7 +154,8 @@ begin
   if not found then raise exception 'account_restricted' using errcode='42501'; end if;
   select paid_until into v_until from public.subscriptions where purchase_token = p_token;
   if found then return v_until; end if;
-  select * into v_plan from public.plans where product_id = p_product_id and active;
+  -- Google has already taken the money, so a plan retired since then is still honoured.
+  select * into v_plan from public.plans where product_id = p_product_id;
   if not found then raise exception 'plan_unavailable'; end if;
   select greatest(now(), coalesce(max(paid_until), now())) into v_until from public.subscriptions
     where user_id = p_user_id and status in ('active','in_grace','cancelled') and paid_until > now();

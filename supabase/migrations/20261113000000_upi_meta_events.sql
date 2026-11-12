@@ -15,6 +15,9 @@ begin
   -- Subscribe marks a member's first paid period; later periods are Purchase.
   select not exists(
     select 1 from public.upi_orders where user_id = new.user_id and status = 'paid' and id <> new.id
+  ) and not exists(
+    -- A Google Play purchase made earlier was already the member's first.
+    select 1 from public.subscriptions where user_id = new.user_id and provider like 'google_play%'
   ) into v_first;
   insert into public.meta_event_outbox(event_id, event_name, user_id, value, currency, payload)
   values('upi-order-' || new.id, case when v_first then 'Subscribe' else 'Purchase' end,

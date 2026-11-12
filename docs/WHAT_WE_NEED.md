@@ -83,7 +83,7 @@ hash of the Play signing key.
 
 | Value | Goes to |
 | --- | --- |
-| `google-services.json` for package `com.cloudlynk.app` | EAS file secret; do not commit |
+| `google-services.json` for package `com.cloudlynk.app` | EAS file secret named `GOOGLE_SERVICES_JSON`; do not commit |
 | FCM v1 service account key | Uploaded to EAS credentials (push) |
 | EAS project ID | EAS: `EXPO_PUBLIC_EAS_PROJECT_ID` |
 | Expo access token (optional, for push security) | Function secret `EXPO_ACCESS_TOKEN` |
