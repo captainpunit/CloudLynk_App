@@ -39,20 +39,35 @@ export function ErrorBoundary({ retry }: ErrorBoundaryProps) {
 }
 
 function AppNavigation() {
-  const { ready, toast } = useWorkspace();
+  const { ready, toast, error, state, refresh, refreshing } = useWorkspace();
+  // Same colour as the splash screen, so opening the app never flashes white.
+  const launch = {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 18,
+    padding: 28,
+    backgroundColor: night.canvas,
+  } as const;
   if (!ready)
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 18,
-          backgroundColor: c.canvas,
-        }}
-      >
-        <ActivityIndicator color={c.primary} />
-        <Label>Opening your workspace…</Label>
+      <View style={launch}>
+        <StatusBar style="light" />
+        <ActivityIndicator color={night.ink} />
+        <Label style={{ color: night.ink }}>Opening CloudLynk…</Label>
+      </View>
+    );
+  // Nothing loaded at all (usually no connection): say so and offer to try again,
+  // rather than showing empty screens that look as if there were no videos.
+  if (error && !state.profile && !state.channels.length)
+    return (
+      <View style={launch}>
+        <StatusBar style="light" />
+        <Label style={{ color: night.ink, fontSize: 18, fontWeight: '700', textAlign: 'center' }}>
+          We could not connect.
+        </Label>
+        <Label style={{ color: night.ink, textAlign: 'center' }}>{error}</Label>
+        <Button title="Try again" loading={refreshing} onPress={() => void refresh()} />
       </View>
     );
   return (

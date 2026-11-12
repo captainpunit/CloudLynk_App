@@ -77,7 +77,9 @@ export default function UpiCheckout() {
     if (id === request.current) setOrders(rows);
   }, [userId]);
   useEffect(() => {
-    void load().catch(() => setError('Your payments could not load. Pull down to refresh.'));
+    void load().catch(() =>
+      setError('Your payments could not load. Close this screen and open it again.'),
+    );
     // Returning from the UPI app (or from the background) shows the latest state.
     const foreground = AppState.addEventListener('change', (status) => {
       if (status === 'active') void load().catch(() => {});

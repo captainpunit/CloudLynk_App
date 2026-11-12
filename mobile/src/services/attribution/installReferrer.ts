@@ -17,10 +17,14 @@ import {
  * clears what it held and nothing is collected.
  */
 export async function captureInstallAttribution(consent: boolean): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Read from the device, so the choice can be changed without a connection.
+  const user = (await supabase.auth.getSession()).data.session?.user;
   if (!user) throw new Error('Sign in before changing your privacy preferences.');
+  if (!consent) {
+    // Turning measurement off takes effect on this device at once, even offline.
+    await stopMeasurement();
+    await saveMeasurementChoice(user.id, false);
+  }
   let referrer: string | null = null;
   if (consent) {
     if (Platform.OS !== 'android')
@@ -38,11 +42,9 @@ export async function captureInstallAttribution(consent: boolean): Promise<void>
       });
     });
   }
-  const {
-    data: { user: current },
-  } = await supabase.auth.getUser();
+  const current = (await supabase.auth.getSession()).data.session?.user;
   if (current?.id !== user.id) throw new Error('Your account changed. Please try again.');
-  await invokeBackend('track-install', {
+  const sent = invokeBackend('track-install', {
     platform: 'android',
     installationId: await installationId(),
     trackingConsent: consent,
@@ -54,6 +56,14 @@ export async function captureInstallAttribution(consent: boolean): Promise<void>
         }
       : {}),
   });
-  if (!consent) await stopMeasurement();
-  await saveMeasurementChoice(user.id, consent);
+  if (!consent) {
+    await sent.catch(() => {
+      throw new Error(
+        'Measurement is off on this device, but we could not reach CloudLynk to confirm it. Connect to the internet and turn it off again.',
+      );
+    });
+    return;
+  }
+  await sent;
+  await saveMeasurementChoice(user.id, true);
 }

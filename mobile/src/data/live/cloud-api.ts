@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { configured } from '@/lib/env';
 import type { AccessDecision, Channel, Profile, Workspace } from '@/domain/models';
+import { accessMessages } from '@/domain/access';
 import { mapChannel, mapFile, mapTitle, readPages } from './mapping';
 import { checked } from './backend';
 import { accessUntil } from '@/domain/payments';
@@ -46,8 +47,8 @@ export async function fetchIdentity(): Promise<{ profile: Profile | null; joined
         .range(from, to),
     ),
   ]);
-  if (profileResult.error) throw profileResult.error;
-  const row = profileResult.data;
+  const row = checked(profileResult);
+  if (!row) throw new Error('Your profile could not load. Please try again.');
   return {
     profile: {
       id: row.id,
@@ -69,14 +70,16 @@ export async function checkLiveAccess(
     p_action: action,
     p_channel_id: channelId,
   });
-  if (error) throw error;
-  return data as AccessDecision;
+  return checked({ data, error }) as AccessDecision;
 }
 export async function setLiveMembership(channelId: string, joined: boolean) {
   const { error } = await supabase.rpc(joined ? 'join_channel' : 'leave_channel', {
     p_channel_id: channelId,
   });
-  if (error) throw error;
+  // join_channel refuses with the access decision itself, for example subscription_required.
+  if (error && error.message in accessMessages)
+    throw new Error(accessMessages[error.message as AccessDecision]);
+  checked({ data: null, error });
 }
 export function emptyLiveWorkspace(): Workspace {
   return {

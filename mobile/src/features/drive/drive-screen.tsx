@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { View } from 'react-native';
 import { router } from 'expo-router';
 import {
   Button,
@@ -50,14 +51,16 @@ export default function DriveScreen() {
             onPress={() => router.push('/upload')}
           />
           <SearchField value={query} onChangeText={setQuery} placeholder="Search your files" />
-          {['All', 'Image', 'Video', 'Document'].map((value) => (
-            <Pill
-              key={value}
-              title={value}
-              selected={filter === value}
-              onPress={() => setFilter(value)}
-            />
-          ))}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {['All', 'Image', 'Video', 'Document'].map((value) => (
+              <Pill
+                key={value}
+                title={value}
+                selected={filter === value}
+                onPress={() => setFilter(value)}
+              />
+            ))}
+          </View>
           <Button
             title="Refresh files"
             variant="outline"

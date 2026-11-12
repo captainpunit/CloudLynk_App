@@ -7,7 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 
 const installationKey = 'cloudlynk.installation.v1';
-const preferenceKey = 'cloudlynk.push.enabled.v1';
+// Kept per account: one member turning notifications on does not turn them on for the next.
+const preferenceKey = (userId: string) => `cloudlynk.push.enabled.v1:${userId}`;
+const sessionUserId = async () => (await supabase.auth.getSession()).data.session?.user.id;
 let installation: Promise<string> | undefined;
 export function installationId(): Promise<string> {
   return (installation ??= (async () => {
@@ -46,15 +48,17 @@ export async function enablePush(prompt = true) {
     p_installation_id: await installationId(),
     p_token: token.data,
   });
-  await AsyncStorage.setItem(preferenceKey, 'true');
+  await AsyncStorage.setItem(preferenceKey(user.id), 'true');
 }
 export async function unregisterPush() {
   await call('unregister_push_token', { p_installation_id: await installationId() });
 }
 export async function disablePush() {
+  const userId = await sessionUserId();
   await unregisterPush();
-  await AsyncStorage.setItem(preferenceKey, 'false');
+  if (userId) await AsyncStorage.setItem(preferenceKey(userId), 'false');
 }
 export async function pushEnabled() {
-  return (await AsyncStorage.getItem(preferenceKey)) === 'true';
+  const userId = await sessionUserId();
+  return !!userId && (await AsyncStorage.getItem(preferenceKey(userId))) === 'true';
 }

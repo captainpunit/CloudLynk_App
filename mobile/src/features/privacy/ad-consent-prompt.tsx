@@ -10,6 +10,7 @@ import {
   measurementChoice,
   saveMeasurementChoice,
   startMeasurement,
+  stopMeasurement,
 } from '@/services/meta/measurement';
 
 /**
@@ -27,11 +28,18 @@ export function AdConsentPrompt() {
   useEffect(() => {
     let active = true;
     setAsking(false);
-    if (!userId || !measurementAvailable) return;
+    if (!measurementAvailable) return;
+    // Signed out, or another account: measurement agreed by one member never
+    // continues for the next one.
+    if (!userId) {
+      void stopMeasurement().catch(() => undefined);
+      return;
+    }
     void measurementChoice(userId)
       .then((choice) => {
         if (!active) return;
         if (choice === 'allowed') void startMeasurement(userId).catch(() => undefined);
+        else void stopMeasurement().catch(() => undefined);
         setAsking(choice === 'unanswered');
       })
       .catch(() => undefined);

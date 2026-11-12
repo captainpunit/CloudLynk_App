@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Pressable, RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { router, useIsFocused } from 'expo-router';
@@ -190,13 +190,16 @@ function ScreenBody({
   onRefresh?: () => void;
 }) {
   const p = usePalette();
+  // Tab screens sit above the tab bar, which already clears the navigation bar.
+  const bottomInset = useSafeAreaInsets().bottom * (back ? 1 : 0);
   const content = (
     <View
       style={{
         gap: 24,
         paddingHorizontal: gutter,
         paddingTop: 12,
-        paddingBottom: 32,
+        // The system navigation bar draws over the app (edge to edge).
+        paddingBottom: 32 + bottomInset,
         width: '100%',
         maxWidth: 720,
         alignSelf: 'center',

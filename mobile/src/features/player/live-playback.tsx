@@ -107,9 +107,8 @@ export default function LivePlayback({ titleId }: { titleId: string }) {
       if (current.data.session?.user.id === userId)
         dispatch({ type: 'progress', id: titleId, seconds, completed: saved?.completed });
     })()
-      .catch(() =>
-        setError('Your watch position could not be saved. It will retry while you watch.'),
-      )
+      // Saved again on the next tick; a missed save is not worth interrupting the video.
+      .catch(() => undefined)
       .finally(() => {
         saving.current = false;
       });

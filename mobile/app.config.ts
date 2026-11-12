@@ -19,6 +19,10 @@ const config: ExpoConfig = {
   android: {
     package: pkg,
     versionCode: 1,
+    // Firebase config for push notifications: an EAS file secret named GOOGLE_SERVICES_JSON.
+    ...(process.env.GOOGLE_SERVICES_JSON
+      ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+      : {}),
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-foreground.png',
       monochromeImage: './assets/adaptive-foreground.png',
