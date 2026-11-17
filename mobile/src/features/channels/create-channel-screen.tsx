@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { Radio } from 'lucide-react-native';
 import { Button, ErrorNote, Field, Label, Pill, Screen, Surface } from '@/components/ui';
+import { CoverImageField } from '@/components/cover-image-field';
 import { validateChannel } from '@/domain/format';
 import { useWorkspace } from '@/state/workspace-provider';
 import { call } from '@/data/live/backend';
@@ -29,10 +30,6 @@ export default function CreateChannelScreen() {
     }
     if (category.trim().length > 40) {
       setError('Keep the category under 40 characters.');
-      return;
-    }
-    if (cover && !/^https:\/\/\S+$/.test(cover.trim())) {
-      setError('The cover image must be an https:// URL.');
       return;
     }
     if (!requireIdentity() || !state.profile) return;
@@ -80,12 +77,7 @@ export default function CreateChannelScreen() {
         onChangeText={setDescription}
         maxLength={500}
       />
-      <Field
-        label="Cover image URL (https, optional)"
-        value={cover}
-        onChangeText={setCover}
-        autoCapitalize="none"
-      />
+      <CoverImageField value={cover} onChange={setCover} disabled={busy} />
       <Field
         label="Category (optional)"
         placeholder="What is it about?"

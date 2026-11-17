@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
+import { Film } from 'lucide-react-native';
+import { CoverImageField } from '@/components/cover-image-field';
 import {
   Button,
   EmptyState,
@@ -50,6 +52,8 @@ export default function UploadScreen() {
   const abort = useRef<AbortController | null>(null);
   const current = titles.find((item) => item.id === titleId);
   const asset = assets.find((item) => item.title_id === titleId);
+  // The server only accepts a movie or episode for review once its video has processed.
+  const videoReady = current?.kind === 'series' || asset?.state === 'ready';
   const canPublish =
     state.profile?.role === 'admin' ||
     (state.profile?.canPublish && channel?.ownerId === state.profile.id);
@@ -109,8 +113,8 @@ export default function UploadScreen() {
     setProgress(0);
     setError(null);
   }
-  async function save() {
-    if (!channelId) return;
+  async function save(): Promise<string> {
+    if (!channelId) throw new Error('Choose a channel to publish to.');
     if (!/^\d+$/.test(minAge) || +minAge > 21 || !name.trim())
       throw new Error('Enter a title and a minimum age from 0 to 21.');
     if (kind === 'episode' && (!seasonId || !/^[1-9]\d*$/.test(episodeNumber)))
@@ -135,7 +139,16 @@ export default function UploadScreen() {
     // The RPC returns the canonical draft. Retrying an upload reuses this title.
     if (!row || Array.isArray(row) || typeof row !== 'object' || !('id' in row))
       throw new Error('The draft could not be confirmed. Refresh before retrying.');
-    setTitleId(String(row.id));
+    const savedId = String(row.id);
+    setTitleId(savedId);
+    return savedId;
+  }
+  /** Saves the draft, then uploads the chosen video to it in one step. */
+  async function saveAndUpload() {
+    const savedId = await save();
+    if (!selected.length || kind === 'series') return;
+    await load(); // Show the saved draft even if the upload is interrupted.
+    await upload(savedId);
   }
   async function pick() {
     try {
@@ -154,9 +167,9 @@ export default function UploadScreen() {
       setError('The file picker could not open.');
     }
   }
-  async function upload() {
-    if (channelId && (!current || current.kind === 'series'))
-      throw new Error('Save and select a movie or episode draft before uploading.');
+  async function upload(targetTitleId?: string) {
+    if (channelId && (!targetTitleId || kind === 'series'))
+      throw new Error('Save a movie or episode draft before uploading its video.');
     if (!selected.length) throw new Error('Choose a file first.');
     const controller = new AbortController();
     abort.current = controller;
@@ -165,7 +178,7 @@ export default function UploadScreen() {
       const file = files[index];
       await uploadLiveFile(
         file,
-        channelId ? titleId : undefined,
+        channelId ? targetTitleId : undefined,
         (fraction) => setProgress(Math.round(((index + fraction) / files.length) * 100)),
         controller.signal,
       );
@@ -228,12 +241,7 @@ export default function UploadScreen() {
               multiline
               maxLength={10000}
             />
-            <Field
-              label="Cover image URL (https, optional)"
-              value={cover}
-              onChangeText={setCover}
-              autoCapitalize="none"
-            />
+            <CoverImageField value={cover} onChange={setCover} disabled={busy} />
             <Field
               label="Minimum age (0–21)"
               value={minAge}
@@ -268,12 +276,46 @@ export default function UploadScreen() {
                 />
               </>
             )}
+            {kind !== 'series' && (!current || ['draft', 'rejected'].includes(current.status)) && (
+              <View style={{ gap: 7 }}>
+                <Label style={{ fontSize: 13, fontWeight: '600' }}>Video file</Label>
+                <Button
+                  title={selected[0] ? 'Change video' : 'Choose video'}
+                  icon={Film}
+                  variant="outline"
+                  disabled={busy}
+                  onPress={() => void pick()}
+                />
+                {selected[0] && <Label>{selected[0].name}</Label>}
+                {busy && selected[0] ? (
+                  <Label>{progress}% uploaded</Label>
+                ) : (
+                  <Label style={{ fontSize: 12 }}>
+                    If an upload stops, choose the same file again to resume it.
+                  </Label>
+                )}
+              </View>
+            )}
             <Button
-              title="Save draft"
+              title={selected.length && kind !== 'series' ? 'Save and upload video' : 'Save draft'}
               disabled={!!current && !['draft', 'rejected'].includes(current.status)}
               loading={busy}
-              onPress={() => void action(save, 'Draft saved.')}
+              onPress={() =>
+                void action(
+                  saveAndUpload,
+                  selected.length && kind !== 'series'
+                    ? 'Draft saved and video received. Wait for processing, then submit for review.'
+                    : 'Draft saved.',
+                )
+              }
             />
+            {busy && selected.length > 0 && (
+              <Button
+                title="Pause upload"
+                variant="outline"
+                onPress={() => abort.current?.abort()}
+              />
+            )}
             {current && (
               <>
                 <Label>
@@ -284,9 +326,14 @@ export default function UploadScreen() {
                 {asset?.error_code && (
                   <Label>Processing failed. Replace the upload and try again.</Label>
                 )}
+                {!videoReady && ['draft', 'rejected'].includes(current.status) && (
+                  <Label style={{ fontSize: 12 }}>
+                    Upload the video and wait until it shows “ready” before submitting for review.
+                  </Label>
+                )}
                 <Button
                   title="Submit for review"
-                  disabled={busy || !['draft', 'rejected'].includes(current.status)}
+                  disabled={busy || !videoReady || !['draft', 'rejected'].includes(current.status)}
                   onPress={() =>
                     void action(
                       () => call('submit_title_review', { p_title_id: titleId }),
@@ -382,10 +429,7 @@ export default function UploadScreen() {
           </Surface>
         </>
       )}
-      {(!channelId ||
-        (current &&
-          current.kind !== 'series' &&
-          ['draft', 'rejected'].includes(current.status))) && (
+      {!channelId && (
         <Surface>
           <Button title="Choose files" disabled={busy} onPress={() => void pick()} />
           {selected.map((file, index) => (
@@ -397,14 +441,7 @@ export default function UploadScreen() {
             title="Upload selected files"
             loading={busy}
             disabled={!selected.length}
-            onPress={() =>
-              void action(
-                upload,
-                channelId
-                  ? 'Upload received. Wait for processing, then submit the title for review.'
-                  : 'Files uploaded to your cloud.',
-              )
-            }
+            onPress={() => void action(() => upload(), 'Files uploaded to your cloud.')}
           />
           {busy && (
             <Button title="Pause upload" variant="outline" onPress={() => abort.current?.abort()} />
