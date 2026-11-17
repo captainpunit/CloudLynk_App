@@ -46,7 +46,6 @@ export default function MainTabs() {
   const { bottom } = useSafeAreaInsets();
   return (
     <Tabs
-      initialRouteName="index"
       backBehavior="history"
       screenOptions={{
         headerShown: false,

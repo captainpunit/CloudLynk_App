@@ -16,6 +16,9 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'dark',
   // The night canvas (theme/tokens.ts), so launch and screen changes never flash white.
   backgroundColor: '#101219',
+  // Client-only web build. SDK 58 defaults to server rendering, which would run the
+  // Supabase session storage (window.localStorage) on the server.
+  web: { output: 'single' },
   android: {
     package: pkg,
     versionCode: 1,
