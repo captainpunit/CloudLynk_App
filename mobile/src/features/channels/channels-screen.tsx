@@ -104,7 +104,7 @@ export default function ChannelsScreen() {
         ))
       ) : (
         <View style={{ gap: 14 }}>
-          {search && channels.length > 0 && <Section title="Channels" />}
+          {!!search && channels.length > 0 && <Section title="Channels" />}
           {channels.map(row)}
         </View>
       )}
