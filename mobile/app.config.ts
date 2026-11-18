@@ -40,6 +40,8 @@ const config: ExpoConfig = {
   android: {
     package: pkg,
     versionCode: 1,
+    // "Draw over other apps" is only for React Native's debug overlay; keep it out of builds.
+    blockedPermissions: ['android.permission.SYSTEM_ALERT_WINDOW'],
     // Firebase config for push notifications: an EAS file secret named GOOGLE_SERVICES_JSON.
     ...(process.env.GOOGLE_SERVICES_JSON
       ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }

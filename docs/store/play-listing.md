@@ -50,7 +50,7 @@ Your account
 | --- | --- |
 | Privacy policy | URL of `privacy-policy.md` once published |
 | Ads | **No** — the app shows no advertisements (it is advertised, which is different) |
-| App access | Parts are restricted. Give reviewers a test login with Plus active: [email / password created for review only] |
+| App access | Parts are restricted. Give reviewers a test login with Plus active: [email / password created for review only]. In Admin → People, move that account to **ads users** so the reviewer sees every channel |
 | Target audience | 18 and over |
 | News app | No |
 | Financial features | None |
@@ -82,6 +82,7 @@ Data is encrypted in transit: **Yes**. Users can request deletion: **Yes**.
 | Videos | Yes | No | App functionality | Optional (creators) |
 | Files and docs | Yes | No | App functionality | Optional |
 | App interactions (watch progress, events) | Yes | Yes (Meta, with consent) | App functionality; advertising measurement | Required / optional for Meta |
+| App interactions → Other actions (whether the app was installed or opened from one of our adverts) | Yes | No | App functionality (which channels to show) | Required |
 | Device or other IDs (advertising ID, push token) | Yes | Yes (Meta, with consent) | Notifications; advertising measurement | Optional |
 | Diagnostics | No | — | — | — |
 

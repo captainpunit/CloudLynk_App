@@ -1,0 +1,119 @@
+<!doctype html>
+<!--
+  Google Play feature graphic, 1024 x 500. Render to PNG with a browser screenshot of the
+  .art element at device scale 1 (see docs/store/README.md). Swap the screenshot for one
+  with the client's real channels before launch.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CloudLynk feature graphic</title>
+    <style>
+      @font-face {
+        font-family: 'Jakarta';
+        font-weight: 800;
+        src: url('../../../mobile/node_modules/@expo-google-fonts/plus-jakarta-sans/800ExtraBold/PlusJakartaSans_800ExtraBold.ttf');
+      }
+      @font-face {
+        font-family: 'Jakarta';
+        font-weight: 600;
+        src: url('../../../mobile/node_modules/@expo-google-fonts/plus-jakarta-sans/600SemiBold/PlusJakartaSans_600SemiBold.ttf');
+      }
+      /* Colours from mobile/src/theme/tokens.ts (night and plus). */
+      :root {
+        --canvas: #101219;
+        --raised: #232735;
+        --ink: #f2f0ea;
+        --muted: #a2a7b6;
+        --line: #2b303e;
+        --plus: #f4b740;
+        --plus-ink: #1f1600;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+      .art {
+        position: relative;
+        width: 1024px;
+        height: 500px;
+        overflow: hidden;
+        background: var(--canvas);
+        font-family: 'Jakarta', sans-serif;
+        color: var(--ink);
+      }
+      .copy {
+        position: absolute;
+        left: 72px;
+        top: 0;
+        bottom: 0;
+        width: 520px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 22px;
+      }
+      .mark {
+        font-weight: 800;
+        font-size: 30px;
+        letter-spacing: -0.02em;
+        color: var(--muted);
+      }
+      h1 {
+        margin: 0;
+        font-weight: 800;
+        font-size: 58px;
+        line-height: 1.04;
+        letter-spacing: -0.035em;
+      }
+      .plus {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-weight: 600;
+        font-size: 22px;
+        color: var(--muted);
+      }
+      .badge {
+        background: var(--plus);
+        color: var(--plus-ink);
+        font-weight: 800;
+        font-size: 18px;
+        padding: 5px 12px;
+        border-radius: 7px;
+      }
+      /* The phone runs off the bottom edge, so the screen reads as the app, not a mock-up. */
+      .phone {
+        position: absolute;
+        right: 84px;
+        top: 52px;
+        width: 290px;
+        height: 580px;
+        border-radius: 42px;
+        background: var(--raised);
+        border: 1px solid var(--line);
+        padding: 10px;
+        box-sizing: border-box;
+      }
+      .phone img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
+        border-radius: 33px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="art">
+      <div class="copy">
+        <div class="mark">CloudLynk</div>
+        <h1>Channels from creators you follow</h1>
+        <div class="plus"><span class="badge">Plus</span>One plan opens every paid channel</div>
+      </div>
+      <div class="phone"><img src="../screenshots/1-watch.png" alt="" /></div>
+    </div>
+  </body>
+</html>

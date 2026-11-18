@@ -86,7 +86,8 @@ Build variables (EAS secrets or `.env`): `EXPO_PUBLIC_SUPABASE_URL`,
 and the file secret `GOOGLE_SERVICES_JSON` (Firebase config; push does not work without it).
 The `production` profile in `eas.json` turns on the Meta SDK and Google Play's choice
 screen. The `direct` profile builds an APK for distribution outside Google Play, with
-UPI only; never upload that one to Play.
+UPI only; never upload that one to Play. Both stop at the start, on the EAS server, with
+the names of any of these variables that are missing.
 
 - [ ] `eas build --platform android --profile production` (signed app bundle; EAS keeps
       the upload key).
@@ -100,6 +101,18 @@ UPI only; never upload that one to Play.
 - [ ] Push notification arrives when the payment is confirmed.
 - [ ] Meta Events Manager shows the install and, after a confirmed payment, Subscribe.
 - [ ] Account deletion completes and removes the account's data.
+- [ ] A licence tester buys the trial through Google Play's choice screen; Plus starts
+      without an admin and the purchase shows in Play Console → Order management.
+- [ ] Ads and organic: set one channel to **Ads users** in Admin. A fresh install from the
+      Play Store (organic) does not show it; opening `https://<link host>/open/ad` on that
+      phone makes it appear; moving the account back to organic in Admin hides it again.
+- [ ] Look at every tab, a channel, the player, Plus plans and Settings on a small phone
+      (360 dp wide) and a large one: nothing cut off or overlapping, and the tab labels
+      are fully visible above the system navigation bar.
+- [ ] Sign out and back in; turn on airplane mode and reopen the app: it shows a clear
+      message rather than a blank screen.
+- [ ] Create the reviewer account named in Play Console → App access, give it Plus, and
+      move it to ads users so the reviewer can reach every channel.
 
 ## Known gaps
 
