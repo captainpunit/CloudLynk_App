@@ -12,6 +12,7 @@ export function mapChannel(row: Tables<'channels'>): Channel {
     category: row.category as Channel['category'],
     cover: row.cover_url ?? '',
     ownerId: row.created_by ?? '',
+    audience: row.audience === 'organic' || row.audience === 'ads' ? row.audience : 'both',
   };
 }
 export function mapTitle(row: Tables<'titles'>): Video {

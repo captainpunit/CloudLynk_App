@@ -1,6 +1,7 @@
 /** UI-facing models. Database rows are mapped at the repository boundary. */
 /** Free text chosen by the channel owner (backend: 1-40 characters). */
 export type Category = string;
+export type ChannelAudience = 'organic' | 'ads' | 'both';
 export type ChannelVisibility = 'public' | 'premium' | 'private';
 export type ChannelStatus = 'published' | 'pending' | 'hidden';
 export interface Channel {
@@ -12,6 +13,8 @@ export interface Channel {
   ownerId: string;
   visibility: ChannelVisibility;
   status: ChannelStatus;
+  /** Who the channel is shown to; members who came from an advert see every channel. */
+  audience: ChannelAudience;
 }
 export interface Video {
   id: string;
@@ -45,6 +48,8 @@ export interface Profile {
   accountStatus: 'active' | 'restricted';
   canPublish?: boolean;
   birthDate?: string;
+  /** 'ads' when the member came from an advert. */
+  audience?: 'organic' | 'ads';
 }
 export interface Workspace {
   version: 1;

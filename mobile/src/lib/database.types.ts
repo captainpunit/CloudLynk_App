@@ -232,6 +232,7 @@ export type Database = {
       };
       "channels": {
         Row: {
+          "audience": string;
           "category": string;
           "cover_url": string | null;
           "created_at": string;
@@ -246,6 +247,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          "audience"?: string;
           "category"?: string;
           "cover_url"?: string | null;
           "created_at"?: string;
@@ -259,6 +261,7 @@ export type Database = {
           "updated_at"?: string;
         };
         Update: {
+          "audience"?: string;
           "category"?: string;
           "cover_url"?: string | null;
           "created_at"?: string;
@@ -713,6 +716,9 @@ export type Database = {
       "profiles": {
         Row: {
           "account_status": string;
+          "audience": string;
+          "audience_set_at": string | null;
+          "audience_source": string | null;
           "avatar_url": string | null;
           "birth_date": string | null;
           "can_publish": boolean;
@@ -726,6 +732,9 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           "account_status"?: string;
+          "audience"?: string;
+          "audience_set_at"?: string | null;
+          "audience_source"?: string | null;
           "avatar_url"?: string | null;
           "birth_date"?: string | null;
           "can_publish"?: boolean;
@@ -738,6 +747,9 @@ export type Database = {
         };
         Update: {
           "account_status"?: string;
+          "audience"?: string;
+          "audience_set_at"?: string | null;
+          "audience_source"?: string | null;
           "avatar_url"?: string | null;
           "birth_date"?: string | null;
           "can_publish"?: boolean;
@@ -1531,6 +1543,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      "can_upload_cover": {
+        Args: {
+          "p_name": string;
+        };
+        Returns: boolean;
+      };
       "claim_account_deletions": {
         Args: {
           "p_limit"?: number;
@@ -1914,6 +1932,12 @@ export type Database = {
         };
         Returns: undefined;
       };
+      "mark_ad_audience": {
+        Args: {
+          "p_source": string;
+        };
+        Returns: string;
+      };
       "mark_notice_read": {
         Args: {
           "p_notice_id": string;
@@ -2240,6 +2264,10 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      "sees_ads_content": {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
       "send_notice": {
         Args: {
           "p_body": string;
@@ -2249,6 +2277,39 @@ export type Database = {
           "p_user_ids": (string)[];
         };
         Returns: number;
+      };
+      "set_channel_audience": {
+        Args: {
+          "p_audience": string;
+          "p_channel_id": string;
+        };
+        Returns: {
+          "audience": string;
+          "category": string;
+          "cover_url": string | null;
+          "created_at": string;
+          "created_by": string | null;
+          "description": string | null;
+          "id": string;
+          "is_private": boolean;
+          "name": string;
+          "requires_subscription": boolean;
+          "status": string;
+          "updated_at": string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "channels";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      "set_member_audience": {
+        Args: {
+          "p_audience": string;
+          "p_user_id": string;
+        };
+        Returns: undefined;
       };
       "set_payment_tax": {
         Args: {
@@ -2285,6 +2346,7 @@ export type Database = {
           "p_name": string;
         };
         Returns: {
+          "audience": string;
           "category": string;
           "cover_url": string | null;
           "created_at": string;

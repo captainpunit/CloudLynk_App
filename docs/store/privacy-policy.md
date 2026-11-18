@@ -23,6 +23,7 @@ do about it. Contact: [support email].
 | Push notification token | You allow notifications | To send you notifications |
 | Reports you send about a video or channel | You report content | To review it |
 | Install source (Play install referrer), app version, device model and OS version | First start | To know which advertisement or link led to an install |
+| Whether the app was installed or opened from one of our adverts (read from the Play install referrer or the link that opened the app) | First start | To decide which channels to show you. Some channels are shown only to people who came from our adverts. This stays with CloudLynk and is not shared with Meta. |
 | Advertising ID and app events (app opened, plans viewed, checkout started) | Only if you tap "Allow" on the ad measurement question | To measure our Meta (Facebook, Instagram) advertisements |
 | Purchase events (plan value, time) sent to Meta from our server | Only if you allowed ad measurement | Same purpose |
 

@@ -15,6 +15,7 @@ import { colors as c, layout, motion, night, radius, space } from '@/theme/token
 import { ToneProvider } from '@/theme/tone';
 import { PushLifecycle } from '@/services/notifications/push-lifecycle';
 import { AdConsentPrompt } from '@/features/privacy/ad-consent-prompt';
+import { AdAudienceSync } from '@/services/attribution/ad-audience-sync';
 
 export default function RootLayout() {
   // Headings and buttons use Plus Jakarta Sans. If it fails to load, the system font renders.
@@ -29,6 +30,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <WorkspaceProvider>
         <PushLifecycle />
+        <AdAudienceSync />
         <StatusBar style="dark" />
         <AppNavigation fontsReady={fontsLoaded || Boolean(fontError)} />
       </WorkspaceProvider>

@@ -45,6 +45,8 @@ const errors: Record<string, string> = {
   invalid_billing_period: 'Choose a billing period.',
   invalid_price: 'Enter a price of at least ₹1.',
   invalid_quota: 'Enter the storage included with this plan.',
+  invalid_audience: 'Choose organic users, ads users or both.',
+  invalid_audience_source: 'This link could not be recognised.',
 };
 export function checked<T>(result: { data: T; error: { message: string } | null }): T {
   if (result.error)

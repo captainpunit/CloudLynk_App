@@ -77,3 +77,33 @@ Meta App ID, Client Token, Dataset ID, CAPI access token (system user) — as bu
 variables `META_APP_ID`, `META_CLIENT_TOKEN` and function secrets `META_DATASET_ID`,
 `META_CAPI_ACCESS_TOKEN`, `META_GRAPH_VERSION` —
 the Play package name, and Play Console API access for the service account.
+
+## Channels for ads users and organic users
+
+Each channel has an audience the administrator chooses in Admin → Channels → "Shown to":
+**Organic users**, **Ads users** or **Both** (channels that existed before this change are
+Both).
+
+- A member is an **ads user** when the app was installed from a Meta ad (Google Play's
+  install referrer has `utm_source=apps.facebook.com` or `apps.instagram.com`), or when
+  the app was opened from a CloudLynk ad link. Everyone else, and anyone not signed in,
+  is an **organic user**.
+- Organic users never see channels set to "Ads users", nor their videos. Ads users see
+  every channel.
+- The app reports an advert to the backend once (`mark_ad_audience`), after sign-in. It
+  only ever moves a member from organic to ads. An administrator can move a member either
+  way in Admin → People, and that choice is final.
+- This works whether or not the member allowed advertising measurement: the install
+  source is read only to choose what to show and is not sent to Meta.
+
+**Links to use in adverts** (the app link host is `EXPO_PUBLIC_APP_LINK_HOST`):
+
+- `https://<host>/open/ad`, opens the app's home screen
+- `https://<host>/open/channel/<channel id>?ad=1`, opens one channel
+- `https://<host>/open/watch/<video id>?ad=1`, opens one video
+
+Install adverts need no special link: Google Play passes Meta's install record to the app.
+
+**Limits.** The app decides on the member's phone, so someone with a modified app or who
+opens an ad link shared with them can become an ads user. This is acceptable for keeping
+ads content out of the normal catalogue, but it is not a payment or security boundary.

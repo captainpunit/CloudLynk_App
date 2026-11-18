@@ -35,7 +35,7 @@ export async function fetchIdentity(): Promise<{ profile: Profile | null; joined
   const [profileResult, memberResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id,display_name,role,account_status,can_publish,birth_date')
+      .select('id,display_name,role,account_status,can_publish,birth_date,audience')
       .eq('id', session.user.id)
       .single(),
     readPages((from, to) =>
@@ -58,6 +58,7 @@ export async function fetchIdentity(): Promise<{ profile: Profile | null; joined
       accountStatus: row.account_status === 'active' ? 'active' : 'restricted',
       canPublish: row.can_publish,
       birthDate: row.birth_date ?? undefined,
+      audience: row.audience === 'ads' ? 'ads' : 'organic',
     },
     joinedIds: memberResult.map((member) => member.channel_id),
   };

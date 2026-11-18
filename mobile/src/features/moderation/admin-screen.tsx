@@ -20,8 +20,15 @@ import AdminPayments from './admin-payments';
 
 type Person = Pick<
   Tables<'profiles'>,
-  'id' | 'display_name' | 'role' | 'account_status' | 'can_publish'
+  'id' | 'display_name' | 'role' | 'account_status' | 'can_publish' | 'audience'
 >;
+
+/** Who a channel is shown to. Members who came from an advert see every channel. */
+const audiences = [
+  { value: 'organic', label: 'Organic users' },
+  { value: 'ads', label: 'Ads users' },
+  { value: 'both', label: 'Both' },
+] as const;
 export default function AdminScreen() {
   const { state, refresh, notify } = useWorkspace();
   const [tab, setTab] = useState('Channels');
@@ -48,7 +55,7 @@ export default function AdminScreen() {
       readPages((from, to) =>
         supabase
           .from('profiles')
-          .select('id,display_name,role,account_status,can_publish')
+          .select('id,display_name,role,account_status,can_publish,audience')
           .order('id')
           .range(from, to),
       ),
@@ -136,6 +143,28 @@ export default function AdminScreen() {
               {channel.name} · {channel.status} · {channel.visibility}
             </Label>
             <Label>{channel.description}</Label>
+            <Label variant="callout">Shown to</Label>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {audiences.map(({ value, label }) => (
+                <Pill
+                  key={value}
+                  title={label}
+                  label={`Show ${channel.name} to ${label.toLowerCase()}`}
+                  selected={channel.audience === value}
+                  onPress={() =>
+                    channel.audience !== value &&
+                    void run(
+                      () =>
+                        call('set_channel_audience', {
+                          p_channel_id: channel.id,
+                          p_audience: value,
+                        }),
+                      `${channel.name} is now shown to ${label.toLowerCase()}.`,
+                    )
+                  }
+                />
+              ))}
+            </View>
             {(['public', 'premium', 'private'] as const).map((visibility) => (
               <Button
                 key={visibility}
@@ -211,6 +240,26 @@ export default function AdminScreen() {
               {person.display_name ?? 'Member'} · {person.role} · {person.account_status}
             </Label>
             <Label selectable>{person.id}</Label>
+            <Label variant="callout">
+              {person.audience === 'ads'
+                ? 'Came from an advert: sees every channel.'
+                : 'Organic: does not see channels meant for ads users.'}
+            </Label>
+            <Button
+              title={person.audience === 'ads' ? 'Move to organic users' : 'Move to ads users'}
+              variant="outline"
+              disabled={busy}
+              onPress={() =>
+                void run(
+                  () =>
+                    call('set_member_audience', {
+                      p_user_id: person.id,
+                      p_audience: person.audience === 'ads' ? 'organic' : 'ads',
+                    }),
+                  'Group changed.',
+                )
+              }
+            />
             <Button
               title={
                 person.can_publish ? 'Revoke publishing permission' : 'Grant publishing permission'
