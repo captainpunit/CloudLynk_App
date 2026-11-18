@@ -6,6 +6,24 @@ const linkHost = process.env.EXPO_PUBLIC_APP_LINK_HOST ?? 'cloudlynk.app';
 const nativeIntegrations = process.env.EXPO_PUBLIC_NATIVE_INTEGRATIONS === 'true';
 const playBilling = process.env.EXPO_PUBLIC_PLAY_BILLING === 'true';
 
+// A store build missing one of these still builds, but signs in nowhere, has no push or
+// breaks Meta. Stop the build on the EAS server with the names instead (docs/LAUNCH_CHECKLIST.md).
+if (process.env.EAS_BUILD === 'true' && nativeIntegrations) {
+  const missing = [
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_EAS_PROJECT_ID',
+    'EXPO_PUBLIC_APP_LINK_HOST',
+    'EXPO_PUBLIC_PRIVACY_URL',
+    'EXPO_PUBLIC_TERMS_URL',
+    'META_APP_ID',
+    'META_CLIENT_TOKEN',
+    'GOOGLE_SERVICES_JSON',
+  ].filter((name) => !process.env[name]);
+  if (missing.length)
+    throw new Error(`Set these EAS environment variables before building: ${missing.join(', ')}`);
+}
+
 const config: ExpoConfig = {
   name: 'CloudLynk',
   slug: 'cloudlynk',
