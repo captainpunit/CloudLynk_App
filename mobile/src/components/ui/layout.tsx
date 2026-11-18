@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
+import { RefreshControl, ScrollView, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ArrowLeft, ChevronRight, type LucideIcon } from 'lucide-react-native';
 import { router, useIsFocused } from 'expo-router';
 import { Caption, Label, Heading } from './typography';
 import { IconButton } from './actions';
-import { gutter } from '@/theme/tokens';
+import { PressableScale } from './motion';
+import { layout, radius, space } from '@/theme/tokens';
 import { ToneProvider, usePalette, type Tone } from '@/theme/tone';
 
 export function Section({
@@ -25,20 +26,27 @@ export function Section({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: 8,
+        gap: space.sm,
       }}
     >
-      <Heading style={{ fontSize: 20, lineHeight: 27, letterSpacing: -0.4 }}>{title}</Heading>
+      <Heading level="headline" style={{ flexShrink: 1 }}>
+        {title}
+      </Heading>
       {action && (
-        <Pressable
+        <PressableScale
           accessibilityRole="button"
           accessibilityLabel={action}
           onPress={onPress}
-          style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 2 }}
+          style={{
+            minHeight: layout.touchTarget,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.xxs,
+          }}
         >
           <Label style={{ fontSize: 14, fontWeight: '600', color: p.muted }}>{action}</Label>
           <ChevronRight size={16} color={p.muted} />
-        </Pressable>
+        </PressableScale>
       )}
     </View>
   );
@@ -49,12 +57,12 @@ export function Surface({ children, style }: { children: ReactNode; style?: View
   return (
     <View
       style={{
-        borderRadius: 20,
-        padding: 18,
+        borderRadius: radius.lg,
+        padding: layout.cardPadding,
         backgroundColor: p.surface,
         borderWidth: 1,
         borderColor: p.line,
-        gap: 12,
+        gap: space.md,
         ...style,
       }}
     >
@@ -64,13 +72,13 @@ export function Surface({ children, style }: { children: ReactNode; style?: View
 }
 
 /** A horizontal row that runs to the screen edges, for posters and channels. */
-export function Rail({ children, gap = 12 }: { children: ReactNode; gap?: number }) {
+export function Rail({ children, gap = space.md }: { children: ReactNode; gap?: number }) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={{ marginHorizontal: -gutter }}
-      contentContainerStyle={{ paddingHorizontal: gutter, gap }}
+      style={{ marginHorizontal: -layout.gutter }}
+      contentContainerStyle={{ paddingHorizontal: layout.gutter, gap }}
     >
       {children}
     </ScrollView>
@@ -94,11 +102,13 @@ export function ListRow({
 }) {
   const p = usePalette();
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={[title, marker ? 'new' : '', detail].filter(Boolean).join(', ')}
       onPress={onPress}
-      style={({ pressed }) => ({
+      // Rows span the screen, so they shrink less than cards do.
+      scaleTo={0.98}
+      style={{
         minHeight: 64,
         flexDirection: 'row',
         alignItems: 'center',
@@ -106,12 +116,11 @@ export function ListRow({
         paddingVertical: 10,
         borderBottomWidth: 1,
         borderBottomColor: p.line,
-        opacity: pressed ? 0.7 : 1,
-      })}
+      }}
     >
       <Icon size={22} color={p.ink} strokeWidth={1.7} />
       <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
           <Label style={{ fontWeight: '600' }}>{title}</Label>
           {marker && (
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: p.ink }} />
@@ -120,7 +129,7 @@ export function ListRow({
         {detail && <Caption numberOfLines={1}>{detail}</Caption>}
       </View>
       <ChevronRight size={18} color={p.muted} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -195,13 +204,13 @@ function ScreenBody({
   const content = (
     <View
       style={{
-        gap: 24,
-        paddingHorizontal: gutter,
-        paddingTop: 12,
+        gap: layout.blockGap,
+        paddingHorizontal: layout.gutter,
+        paddingTop: space.md,
         // The system navigation bar draws over the app (edge to edge).
-        paddingBottom: 32 + bottomInset,
+        paddingBottom: space.xxxl + bottomInset,
         width: '100%',
-        maxWidth: 720,
+        maxWidth: layout.maxWidth,
         alignSelf: 'center',
       }}
     >
@@ -211,7 +220,7 @@ function ScreenBody({
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: 12,
+            gap: space.md,
           }}
         >
           {back && (

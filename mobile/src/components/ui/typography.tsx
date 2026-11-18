@@ -1,31 +1,59 @@
-import type { ComponentProps, ReactNode } from 'react';
-import { Text, type TextStyle } from 'react-native';
-import { usePalette } from '@/theme/tone';
+import type { ComponentProps } from 'react';
+import { Text, type StyleProp, type TextStyle } from 'react-native';
+import { text, type TextVariant } from '@/theme/tokens';
+import { usePalette, type Palette } from '@/theme/tone';
 
-export function Label({ children, style, ...props }: ComponentProps<typeof Text>) {
+/** Text colours, resolved against the current tone so they work on light and dark screens. */
+const tones = {
+  default: (p: Palette) => p.ink,
+  muted: (p: Palette) => p.muted,
+  danger: (p: Palette) => p.danger,
+  success: (p: Palette) => p.success,
+  warning: (p: Palette) => p.warning,
+  plus: (p: Palette) => p.plusInk,
+};
+export type TextTone = keyof typeof tones;
+
+/** All app text. `variant` picks a preset from the type scale; `style` refines it. */
+export function Label({
+  variant = 'body',
+  tone = 'default',
+  style,
+  ...props
+}: ComponentProps<typeof Text> & { variant?: TextVariant; tone?: TextTone }) {
   const p = usePalette();
-  return (
-    <Text {...props} style={[{ color: p.ink, fontSize: 15, lineHeight: 23 }, style]}>
-      {children}
-    </Text>
-  );
+  return <Text {...props} style={[text[variant], { color: tones[tone](p) }, style]} />;
 }
 
 /** Secondary text: metadata lines, hints and descriptions. */
-export function Caption({ children, style, ...props }: ComponentProps<typeof Text>) {
-  const p = usePalette();
-  return (
-    <Label {...props} style={[{ color: p.muted, fontSize: 13, lineHeight: 19 }, style]}>
-      {children}
-    </Label>
-  );
+export function Caption(props: ComponentProps<typeof Label>) {
+  return <Label variant="caption" tone="muted" {...props} />;
 }
 
-export function Heading({ children, style }: { children: ReactNode; style?: TextStyle }) {
+/**
+ * Headings carry the header role for screen readers and use Plus Jakarta Sans.
+ * Change weight by changing `level`, never with fontWeight (see theme/tokens.ts).
+ */
+export function Heading({
+  children,
+  level = 'title',
+  tone = 'default',
+  numberOfLines,
+  style,
+}: {
+  children: ComponentProps<typeof Text>['children'];
+  level?: 'display' | 'title' | 'headline' | 'subhead';
+  tone?: TextTone;
+  numberOfLines?: number;
+  style?: StyleProp<TextStyle>;
+}) {
   return (
     <Label
       accessibilityRole="header"
-      style={{ fontSize: 26, lineHeight: 34, fontWeight: '700', letterSpacing: -0.8, ...style }}
+      variant={level}
+      tone={tone}
+      numberOfLines={numberOfLines}
+      style={style}
     >
       {children}
     </Label>

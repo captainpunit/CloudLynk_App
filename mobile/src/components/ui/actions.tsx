@@ -1,7 +1,15 @@
-import { ActivityIndicator, Pressable } from 'react-native';
+import { useEffect } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import type { LucideIcon } from 'lucide-react-native';
 import { Label } from './typography';
-import { colors as c, plus } from '@/theme/tokens';
+import { PressableScale } from './motion';
+import { colors as c, motion, plus, radius, text } from '@/theme/tokens';
 import { usePalette, type Palette } from '@/theme/tone';
 
 export function IconButton({
@@ -18,24 +26,24 @@ export function IconButton({
 }) {
   const p = usePalette();
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => ({
+      scaleTo={0.92}
+      style={{
         width: 46,
         height: 46,
-        borderRadius: 23,
+        borderRadius: radius.pill,
         backgroundColor: dark ? c.scrim : p.surface,
         borderWidth: 1,
         borderColor: dark ? c.glassLine : p.line,
         justifyContent: 'center',
         alignItems: 'center',
-        opacity: pressed ? 0.6 : 1,
-      })}
+      }}
     >
       <Icon size={20} color={dark ? c.white : p.ink} strokeWidth={1.8} />
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -54,6 +62,13 @@ function buttonColors(variant: ButtonVariant, p: Palette) {
     case 'outline':
       return { background: 'transparent', foreground: p.ink, border: p.line };
   }
+}
+
+/** Disabled buttons use their own colours, so they stay legible instead of fading out. */
+function disabledColors(variant: ButtonVariant, p: Palette) {
+  return variant === 'outline'
+    ? { background: 'transparent', foreground: p.disabledInk, border: p.line }
+    : { background: p.disabledSurface, foreground: p.disabledInk, border: p.disabledSurface };
 }
 
 export function Button({
@@ -78,19 +93,24 @@ export function Button({
   label?: string;
 }) {
   const p = usePalette();
-  const { background, foreground, border } = buttonColors(variant, p);
+  const { background, foreground, border } = disabled
+    ? disabledColors(variant, p)
+    : buttonColors(variant, p);
+  // A light tap confirms actions that commit something; soft and outline stay quiet.
+  const confirms = variant === 'primary' || variant === 'danger' || variant === 'plus';
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label ?? title}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}
-      style={({ pressed }) => ({
+      haptic={confirms ? 'tap' : undefined}
+      style={{
         minHeight: compact ? 44 : 52,
         paddingHorizontal: compact ? 16 : 20,
         paddingVertical: compact ? 8 : 13,
-        borderRadius: compact ? 22 : 26,
+        borderRadius: radius.pill,
         borderWidth: 1,
         borderColor: border,
         backgroundColor: background,
@@ -98,8 +118,7 @@ export function Button({
         justifyContent: 'center',
         flexDirection: 'row',
         gap: 8,
-        opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
-      })}
+      }}
     >
       {loading ? (
         <ActivityIndicator color={foreground} />
@@ -107,20 +126,22 @@ export function Button({
         <>
           {Icon && <Icon size={compact ? 16 : 18} color={foreground} strokeWidth={2} />}
           <Label
-            style={{ fontWeight: '700', color: foreground, fontSize: compact ? 14 : 15 }}
+            variant="button"
+            style={{ color: foreground, fontSize: compact ? 14 : 15 }}
             numberOfLines={1}
           >
             {title}
           </Label>
         </>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }
 
+/** Selectable chip. The fill fades between states; the target is 44 px tall. */
 export function Pill({
   title,
-  selected,
+  selected = false,
   onPress,
   label,
 }: {
@@ -131,26 +152,47 @@ export function Pill({
   label?: string;
 }) {
   const p = usePalette();
+  const progress = useSharedValue(selected ? 1 : 0);
+  useEffect(() => {
+    progress.value = withTiming(selected ? 1 : 0, { duration: motion.fast });
+  }, [progress, selected]);
+  // Unselected is the ink colour at zero alpha, so the fill fades in rather than
+  // passing through grey.
+  const chip = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(progress.value, [0, 1], [`${p.ink}00`, p.ink]),
+    borderColor: interpolateColor(progress.value, [0, 1], [p.line, p.ink]),
+  }));
+  const ink = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [p.ink, p.canvas]),
+  }));
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label ?? title}
-      accessibilityState={{ selected: !!selected }}
+      accessibilityState={{ selected }}
       onPress={onPress}
-      style={({ pressed }) => ({
-        minHeight: 44,
-        paddingHorizontal: 18,
-        justifyContent: 'center',
-        backgroundColor: selected ? p.ink : 'transparent',
-        borderWidth: 1,
-        borderColor: selected ? p.ink : p.line,
-        borderRadius: 22,
-        opacity: pressed ? 0.75 : 1,
-      })}
+      haptic="select"
     >
-      <Label style={{ fontSize: 14, color: selected ? p.canvas : p.ink, fontWeight: '600' }}>
-        {title}
-      </Label>
-    </Pressable>
+      <Animated.View
+        style={[
+          {
+            minHeight: 44,
+            paddingHorizontal: 18,
+            justifyContent: 'center',
+            borderWidth: 1,
+            borderRadius: radius.pill,
+          },
+          chip,
+        ]}
+      >
+        <Animated.Text style={[text.callout, { fontWeight: '600' }, ink]}>{title}</Animated.Text>
+      </Animated.View>
+    </PressableScale>
   );
+}
+
+/** Hairline divider in the current tone. */
+export function Divider() {
+  const p = usePalette();
+  return <View style={{ height: 1, backgroundColor: p.line }} />;
 }

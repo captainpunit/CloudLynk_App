@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Caption, Label, PlusBadge } from './ui';
-import { colors as c } from '@/theme/tokens';
+import { Caption, Label, PlusBadge, PressableScale } from './ui';
+import { colors as c, radius } from '@/theme/tokens';
 import { usePalette } from '@/theme/tone';
 import { videoLabel } from '@/domain/format';
 import type { Channel, Video } from '@/domain/models';
@@ -23,26 +23,35 @@ function videoName(video: Video, channel?: Channel, meta?: string) {
 
 function Poster({
   uri,
+  recyclingKey,
   premium,
   tag,
-  radius = 10,
+  rounded = radius.sm,
 }: {
   uri: string;
+  /** Keeps a recycled list cell from flashing the previous item's image. */
+  recyclingKey: string;
   premium: boolean;
   tag?: string;
-  radius?: number;
+  rounded?: number;
 }) {
   const p = usePalette();
   return (
     <View
       style={{
         aspectRatio: 16 / 9,
-        borderRadius: radius,
+        borderRadius: rounded,
         overflow: 'hidden',
         backgroundColor: p.raised,
       }}
     >
-      <Image source={uri} style={{ flex: 1 }} contentFit="cover" transition={180} />
+      <Image
+        source={uri}
+        recyclingKey={recyclingKey}
+        style={{ flex: 1 }}
+        contentFit="cover"
+        transition={180}
+      />
       {premium && (
         <View style={{ position: 'absolute', top: 8, left: 8 }}>
           <PlusBadge />
@@ -55,7 +64,7 @@ function Poster({
             bottom: 8,
             right: 8,
             backgroundColor: c.scrim,
-            borderRadius: 5,
+            borderRadius: radius.xs,
             paddingHorizontal: 6,
           }}
         >
@@ -85,19 +94,15 @@ export function VideoCard({
   width?: number;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={videoName(video, channel, meta)}
       onPress={() => openVideo(video.id)}
-      style={({ pressed }) => ({
-        ...(width ? { width } : { flex: 1 }),
-        minWidth: 0,
-        gap: 8,
-        opacity: pressed ? 0.8 : 1,
-      })}
+      style={{ ...(width ? { width } : { flex: 1 }), minWidth: 0, gap: 8 }}
     >
       <Poster
         uri={video.cover}
+        recyclingKey={video.id}
         premium={channel?.visibility === 'premium'}
         tag={videoLabel(video)}
       />
@@ -115,7 +120,7 @@ export function VideoCard({
       <Caption numberOfLines={1} style={{ marginTop: -4 }}>
         {[channel?.name, meta].filter(Boolean).join(' · ')}
       </Caption>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -130,19 +135,20 @@ export function VideoRow({
   meta?: string;
 }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={videoName(video, channel, meta)}
       onPress={() => openVideo(video.id)}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        gap: 14,
-        alignItems: 'center',
-        opacity: pressed ? 0.8 : 1,
-      })}
+      scaleTo={0.98}
+      style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}
     >
       <View style={{ width: 144 }}>
-        <Poster uri={video.cover} premium={channel?.visibility === 'premium'} radius={8} />
+        <Poster
+          uri={video.cover}
+          recyclingKey={video.id}
+          premium={channel?.visibility === 'premium'}
+          rounded={8}
+        />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Label numberOfLines={2} style={{ fontWeight: '700', fontSize: 15, lineHeight: 20 }}>
@@ -153,14 +159,14 @@ export function VideoRow({
         </Caption>
         {meta && <Caption numberOfLines={1}>{meta}</Caption>}
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 /** A channel cover with its name, for rails. */
 export function ChannelCard({ channel, width = 168 }: { channel: Channel; width?: number }) {
   return (
-    <Pressable
+    <PressableScale
       accessibilityRole="button"
       accessibilityLabel={[
         channel.name,
@@ -170,16 +176,20 @@ export function ChannelCard({ channel, width = 168 }: { channel: Channel; width?
         .filter(Boolean)
         .join(', ')}
       onPress={() => openChannel(channel.id)}
-      style={({ pressed }) => ({ width, gap: 8, opacity: pressed ? 0.8 : 1 })}
+      style={{ width, gap: 8 }}
     >
-      <Poster uri={channel.cover} premium={channel.visibility === 'premium'} />
+      <Poster
+        uri={channel.cover}
+        recyclingKey={channel.id}
+        premium={channel.visibility === 'premium'}
+      />
       <View>
         <Label numberOfLines={1} style={{ fontWeight: '700', fontSize: 15, lineHeight: 20 }}>
           {channel.name}
         </Label>
         <Caption numberOfLines={1}>{channel.category}</Caption>
       </View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -196,24 +206,25 @@ export function ChannelRow({
   const p = usePalette();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel={[channel.name, channel.visibility === 'premium' && 'Plus', detail]
           .filter(Boolean)
           .join(', ')}
         onPress={() => openChannel(channel.id)}
-        style={({ pressed }) => ({
+        scaleTo={0.98}
+        style={{
           flex: 1,
           minHeight: 64,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
-          opacity: pressed ? 0.8 : 1,
-        })}
+        }}
       >
         <Image
           source={channel.cover}
-          style={{ width: 64, height: 64, borderRadius: 14, backgroundColor: p.raised }}
+          recyclingKey={channel.id}
+          style={{ width: 64, height: 64, borderRadius: radius.md, backgroundColor: p.raised }}
           contentFit="cover"
           transition={180}
         />
@@ -229,7 +240,7 @@ export function ChannelRow({
           </View>
           <Caption numberOfLines={1}>{detail}</Caption>
         </View>
-      </Pressable>
+      </PressableScale>
       {trailing}
     </View>
   );

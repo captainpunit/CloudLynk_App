@@ -1,11 +1,10 @@
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { Tabs, router } from 'expo-router';
 import { Cloud, Play, Plus, Radio, UserRound, type LucideIcon } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { night } from '@/theme/tokens';
-
-/** The add button in the middle of the bar. */
-const addBlue = '#3D5AFE';
+import { PressableScale } from '@/components/ui';
+import { selectHaptic } from '@/lib/haptics';
+import { colors as c, fonts, night } from '@/theme/tokens';
 
 function tab(title: string, Icon: LucideIcon) {
   return {
@@ -17,26 +16,28 @@ function tab(title: string, Icon: LucideIcon) {
   };
 }
 
+/** The add button in the middle of the bar. */
 function AddButton() {
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Pressable
+      <PressableScale
         accessibilityRole="button"
         accessibilityLabel="Upload"
         hitSlop={8}
+        haptic="tap"
+        scaleTo={0.92}
         onPress={() => router.push('/upload')}
-        style={({ pressed }) => ({
+        style={{
           width: 50,
           height: 50,
           borderRadius: 25,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: addBlue,
-          opacity: pressed ? 0.8 : 1,
-        })}
+          backgroundColor: c.upload,
+        }}
       >
-        <Plus size={26} color="#FFFFFF" strokeWidth={2.4} />
-      </Pressable>
+        <Plus size={26} color={c.white} strokeWidth={2.4} />
+      </PressableScale>
     </View>
   );
 }
@@ -47,11 +48,12 @@ export default function MainTabs() {
   return (
     <Tabs
       backBehavior="history"
+      screenListeners={{ tabPress: () => selectHaptic() }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: night.ink,
         tabBarInactiveTintColor: night.muted,
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 12 },
         tabBarStyle: {
           backgroundColor: night.canvas,
           borderTopColor: night.line,

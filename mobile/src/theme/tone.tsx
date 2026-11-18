@@ -13,8 +13,16 @@ export interface Palette {
   /** Fill of the main button; Plus has its own fill. */
   action: string;
   onAction: string;
+  focusRing: string;
   danger: string;
   dangerSoft: string;
+  success: string;
+  successSoft: string;
+  warning: string;
+  warningSoft: string;
+  disabledSurface: string;
+  disabledInk: string;
+  skeleton: string;
   /** Plus text on this tone's canvas. */
   plusInk: string;
   plusSoft: string;
@@ -30,8 +38,16 @@ const palettes: Record<Tone, Palette> = {
     line: colors.line,
     action: colors.primary,
     onAction: colors.white,
+    focusRing: colors.focusRing,
     danger: colors.danger,
     dangerSoft: colors.dangerSoft,
+    success: colors.success,
+    successSoft: colors.successSoft,
+    warning: colors.warning,
+    warningSoft: colors.warningSoft,
+    disabledSurface: colors.disabledSurface,
+    disabledInk: colors.disabledInk,
+    skeleton: colors.skeleton,
     plusInk: plus.inkOnLight,
     plusSoft: plus.softOnLight,
   },
