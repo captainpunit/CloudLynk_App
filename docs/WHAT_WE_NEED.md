@@ -3,6 +3,7 @@
 The code is finished and tested on a local backend. Going live is blocked only by the
 accounts and details below. Each row says who has to get it and where the value goes.
 The order of work is in [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).
+The steps to send the client are in [CLIENT_SETUP_GUIDE.md](CLIENT_SETUP_GUIDE.md).
 
 Status on 12 November 2026: **only Cloudflare exists** (held by the team). Everything
 else is still to be created.

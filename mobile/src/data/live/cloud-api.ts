@@ -100,9 +100,9 @@ export function emptyLiveWorkspace(): Workspace {
   };
 }
 
-export async function fetchLiveWorkspace(): Promise<Workspace> {
-  const identity = await fetchIdentity();
-  const [channels, titles, seasons, plans] = await Promise.all([
+/** Everything every visitor sees: channels, published videos, seasons and plans. */
+function fetchShared() {
+  return Promise.all([
     fetchCatalogue(),
     readPages((from, to) =>
       supabase
@@ -124,28 +124,10 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
         .range(from, to),
     ),
   ]);
-  const snapshot = {
-    ...emptyLiveWorkspace(),
-    ...identity,
-    channels,
-    videos: titles.map(mapTitle),
-    seasons: seasons.map((row) => ({
-      id: row.id,
-      seriesId: row.series_id,
-      number: row.number,
-      name: row.name,
-    })),
-    plans: plans.map((row) => ({
-      productId: row.product_id,
-      name: row.name,
-      billingPeriod: row.billing_period,
-      quotaBytes: row.quota_bytes,
-      pricePaise: row.price_paise ?? 0,
-    })),
-  };
-  if (!identity.profile) return snapshot;
-  const userId = identity.profile.id;
-  const [files, saved, progress, notices, usage, subscriptions] = await Promise.all([
+}
+/** The signed-in member's own files, library, notices, storage and Plus periods. */
+function fetchPersonal(userId: string) {
+  return Promise.all([
     readPages((from, to) =>
       supabase
         .from('files')
@@ -188,6 +170,38 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
       .eq('user_id', userId)
       .is('superseded_by', null),
   ]);
+}
+
+export async function fetchLiveWorkspace(): Promise<Workspace> {
+  // The account is known from the session on the device, so the member's own data is
+  // requested together with the catalogue, in one round instead of three.
+  const userId = (await supabase.auth.getSession()).data.session?.user.id;
+  const [identity, personal, [channels, titles, seasons, plans]] = await Promise.all([
+    fetchIdentity(),
+    userId ? fetchPersonal(userId) : null,
+    fetchShared(),
+  ]);
+  const snapshot = {
+    ...emptyLiveWorkspace(),
+    ...identity,
+    channels,
+    videos: titles.map(mapTitle),
+    seasons: seasons.map((row) => ({
+      id: row.id,
+      seriesId: row.series_id,
+      number: row.number,
+      name: row.name,
+    })),
+    plans: plans.map((row) => ({
+      productId: row.product_id,
+      name: row.name,
+      billingPeriod: row.billing_period,
+      quotaBytes: row.quota_bytes,
+      pricePaise: row.price_paise ?? 0,
+    })),
+  };
+  if (!identity.profile || !personal) return snapshot;
+  const [files, saved, progress, notices, usage, subscriptions] = personal;
   const until = accessUntil(checked(subscriptions) ?? []);
   return {
     ...snapshot,
