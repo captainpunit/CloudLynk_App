@@ -103,6 +103,10 @@ Both).
 - `https://<host>/open/watch/<video id>?ad=1`, opens one video
 
 Install adverts need no special link: Google Play passes Meta's install record to the app.
+When someone without the app taps one of the links above, the website's `/open` page
+(`website/`) sends them to Google Play with a referrer that keeps the ad flag, so after
+installing they still count as coming from an advert. App links need the website live,
+with `assetlinks.json` holding the Play app signing key.
 
 **Limits.** The app decides on the member's phone, so someone with a modified app or who
 opens an ad link shared with them can become an ads user. This is acceptable for keeping

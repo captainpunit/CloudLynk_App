@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { call } from '@/data/live/backend';
-import { isMetaAdReferrer } from '@/domain/ad-referrer';
+import { isAdLinkReferrer, isMetaAdReferrer } from '@/domain/ad-referrer';
 
 /**
  * Some channels are shown only to members who came from an advert. A member counts as
  * coming from an advert when either:
  * - Google Play's install record shows the app was installed from a Meta ad, or
- * - the app was opened from a CloudLynk ad link (any /open/... link with `ad=1`).
+ * - the app was opened from a CloudLynk ad link (`/open/ad`, or an /open/... link with
+ *   `ad=1`), or installed from the Play link on that link's page when the app was missing.
  *
  * The finding is kept on this device and sent to the backend once the member is signed
  * in. The backend only ever moves a member from organic to ads, and an administrator can
@@ -49,9 +50,15 @@ export async function detectAdSource(): Promise<AdSource | null> {
   // The install record does not change, so one successful read is enough.
   if (referrer !== null || Platform.OS !== 'android')
     await AsyncStorage.setItem(referrerCheckedKey, '1');
-  if (!isMetaAdReferrer(referrer)) return null;
-  await AsyncStorage.setItem(sourceKey, 'install_referrer');
-  return 'install_referrer';
+  // The ad link page sends people without the app to Play with its own referrer.
+  const source: AdSource | null = isMetaAdReferrer(referrer)
+    ? 'install_referrer'
+    : isAdLinkReferrer(referrer)
+      ? 'ad_link'
+      : null;
+  if (!source) return null;
+  await AsyncStorage.setItem(sourceKey, source);
+  return source;
 }
 
 /**
