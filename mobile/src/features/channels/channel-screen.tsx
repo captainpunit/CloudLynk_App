@@ -38,13 +38,25 @@ export default function ChannelScreen() {
   )
     return (
       <Screen tone="dark" title="Channel" back>
-        <EmptyState
-          icon={LockKeyhole}
-          title="This channel is unavailable"
-          body="It may be private or waiting for review."
-          action="Browse channels"
-          onPress={() => router.replace('/channels')}
-        />
+        {/* Some channels (private, or only for members who came from an advert) are hidden
+            until sign-in; signing in returns here and the channel appears if it is theirs to see. */}
+        {state.profile ? (
+          <EmptyState
+            icon={LockKeyhole}
+            title="This channel is unavailable"
+            body="It may be private or waiting for review."
+            action="Browse channels"
+            onPress={() => router.replace('/channels')}
+          />
+        ) : (
+          <EmptyState
+            icon={LockKeyhole}
+            title="Sign in to open this channel"
+            body="Some channels are only shown to members. Sign in or create a free account."
+            action="Sign in"
+            onPress={() => router.push('/auth')}
+          />
+        )}
       </Screen>
     );
   const owner = channel.ownerId === state.profile?.id;

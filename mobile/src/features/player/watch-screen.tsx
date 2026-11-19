@@ -79,13 +79,24 @@ export default function WatchScreen() {
   if (!video || !channel)
     return (
       <Screen tone="dark" title="Video" back>
-        <EmptyState
-          icon={Clapperboard}
-          title="This video is unavailable"
-          body="It may have been removed or is not published yet."
-          action="Back to Home"
-          onPress={() => router.replace('/')}
-        />
+        {/* As on the channel screen: a signed-out visitor may only need to sign in. */}
+        {state.profile ? (
+          <EmptyState
+            icon={Clapperboard}
+            title="This video is unavailable"
+            body="It may have been removed or is not published yet."
+            action="Back to Home"
+            onPress={() => router.replace('/')}
+          />
+        ) : (
+          <EmptyState
+            icon={Clapperboard}
+            title="Sign in to watch this video"
+            body="Some videos are only shown to members. Sign in or create a free account."
+            action="Sign in"
+            onPress={() => router.push('/auth')}
+          />
+        )}
       </Screen>
     );
   async function unlock() {
