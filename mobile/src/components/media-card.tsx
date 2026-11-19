@@ -229,16 +229,16 @@ export function ChannelRow({
           transition={180}
         />
         <View style={{ flex: 1, gap: 2 }}>
+          {/* The name gets the full width; the Plus badge sits with the details below it. */}
+          <Label numberOfLines={1} style={{ fontWeight: '700', fontSize: 16, lineHeight: 22 }}>
+            {channel.name}
+          </Label>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Label
-              numberOfLines={1}
-              style={{ flexShrink: 1, fontWeight: '700', fontSize: 16, lineHeight: 22 }}
-            >
-              {channel.name}
-            </Label>
             {channel.visibility === 'premium' && <PlusBadge />}
+            <Caption numberOfLines={1} style={{ flexShrink: 1 }}>
+              {detail}
+            </Caption>
           </View>
-          <Caption numberOfLines={1}>{detail}</Caption>
         </View>
       </PressableScale>
       {trailing}
