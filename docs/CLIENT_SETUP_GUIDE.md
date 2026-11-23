@@ -55,14 +55,19 @@ The server needs a "service account" to check Google Play purchases. If you invi
 in 1.2 **and** add us to the Google Cloud project as in 1.5, we create it ourselves and
 you do nothing more.
 
-### 1.5 Google Cloud (only if you want us to set up the service account)
+### 1.5 Google Cloud (needed: purchase checks and purchase notifications)
 
 1. Open <https://console.cloud.google.com> with the same business Google account.
 2. Create a project named **CloudLynk** (top bar, project list, **New project**).
 3. Open **IAM and admin**, then **IAM**, click **Grant access**, enter our developer
    email and choose the role **Editor**. Save.
 
-> If you prefer to do it yourself instead: in that project open **IAM and admin**,
+With this access we also connect Google Play's purchase notifications (Pub/Sub). They
+make sure a plan bought with Google Play is granted even when the app closes during
+payment or a payment clears later; Google refunds anything not granted within three
+days. You do nothing more for this.
+
+> If you prefer to do the service account yourself instead: in that project open **IAM and admin**,
 > **Service accounts**, **Create service account**, name it `play-billing`, finish, open
 > it, **Keys**, **Add key**, **JSON**. A file downloads. Then in Play Console, **Users and
 > permissions**, invite the service account's email (it ends in
@@ -139,15 +144,13 @@ You can send these two values by message; they are built into the app anyway.
 ## What you do **not** need to send
 
 - Any password.
-- `RTDN_PUSH_AUDIENCE` or other Google Pub/Sub settings: they are only for auto-renewing
-  subscriptions, which CloudLynk does not use.
 - The Meta Graph API version or test event code: we choose these ourselves.
 
 ## Checklist to send back to us
 
 - [ ] Play Console: our developer invited (1.2)
 - [ ] Play Console: alternative billing enrolment requested (1.3)
-- [ ] Google Cloud: our developer added as Editor (1.5), or service account file shared
+- [ ] Google Cloud: our developer added as Editor (1.5)
 - [ ] Meta: our developer invited to the business with the app and dataset (2.3)
 - [ ] Meta: App ID, client token and Dataset ID sent (2.2, 2.4)
 - [ ] Business details sent (Part 3)
