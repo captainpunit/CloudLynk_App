@@ -111,3 +111,30 @@ test('a large file is read one chunk at a time, never whole', async () => {
     [0, 6, 12, 18].map((mb) => mb * 1024 * 1024),
   );
 });
+
+test('an expired sign-in is refreshed mid-upload without counting as a failure', async () => {
+  let token = 'old';
+  let offset = 0;
+  let refreshed = 0;
+  await transferTus(
+    blobSource(new Blob(['abcd'])),
+    'https://upload.test/allocated',
+    async () => ({ authorization: `Bearer ${token}` }),
+    () => {},
+    undefined,
+    async (_url, init) => {
+      if (new Headers(init?.headers).get('authorization') !== 'Bearer new')
+        return new Response(null, { status: 401 });
+      if (init!.method === 'HEAD')
+        return new Response(null, { headers: { 'Upload-Offset': String(offset) } });
+      offset = 4;
+      return new Response(null, { status: 204, headers: { 'Upload-Offset': '4' } });
+    },
+    async () => {
+      refreshed += 1;
+      token = 'new';
+    },
+  );
+  assert.equal(offset, 4);
+  assert.equal(refreshed, 1);
+});

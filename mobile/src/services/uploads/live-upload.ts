@@ -113,12 +113,21 @@ async function uploadPicked(
     }
     await AsyncStorage.setItem(key, JSON.stringify(intent));
   }
-  const headers: Record<string, string> = titleId
-    ? {}
-    : {
-        authorization: `Bearer ${session.access_token}`,
-        apikey: env.supabaseAnonKey,
-        'x-upsert': 'true',
+  // Read the sign-in token for every request: a large upload outlives the one it started with.
+  const headers = async (): Promise<Record<string, string>> => {
+    if (titleId) return {};
+    const fresh = (await supabase.auth.getSession()).data.session;
+    return {
+      authorization: `Bearer ${fresh?.access_token ?? session.access_token}`,
+      apikey: env.supabaseAnonKey,
+      'x-upsert': 'true',
+    };
+  };
+  const reauth = titleId
+    ? undefined
+    : async () => {
+        const { error } = await supabase.auth.refreshSession();
+        if (error) throw new Error('Your session ended. Sign in again, then retry the upload.');
       };
   if (!titleId && intent.fileId) {
     const row = checked(
@@ -129,8 +138,9 @@ async function uploadPicked(
         .maybeSingle(),
     );
     if (!row || !['pending', 'ready'].includes(row.status)) {
+      // The earlier upload of this file was cancelled: forget it and start a new one.
       await AsyncStorage.removeItem(key);
-      throw new Error('This upload was canceled. Try again to start a new upload.');
+      return uploadPicked(asset, source, titleId, progress, signal);
     }
     if (row.status === 'ready') {
       await AsyncStorage.removeItem(key);
@@ -147,7 +157,7 @@ async function uploadPicked(
     const response = await expoFetch(endpoint, {
       method: 'POST',
       headers: {
-        ...headers,
+        ...(await headers()),
         'Tus-Resumable': '1.0.0',
         'Upload-Length': String(source.size),
         'Upload-Metadata': `bucketName ${btoa(intent.bucket!)},objectName ${btoa(intent.path!)},contentType ${btoa(asset.mimeType ?? 'application/octet-stream')}`,
@@ -177,7 +187,15 @@ async function uploadPicked(
   ) {
     throw new Error('The file upload destination was rejected.');
   }
-  await transferTus(source, intent.url, headers, progress, signal, expoFetch as typeof fetch);
+  await transferTus(
+    source,
+    intent.url,
+    headers,
+    progress,
+    signal,
+    expoFetch as typeof fetch,
+    reauth,
+  );
   if (intent.fileId)
     checked(await supabase.rpc('finalize_drive_upload', { p_file_id: intent.fileId }));
   await AsyncStorage.removeItem(key);
