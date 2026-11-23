@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { File } from 'expo-file-system';
+import { File, FileMode, type FileHandle } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { fetch as expoFetch } from 'expo/fetch';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { supabase } from '@/lib/supabase';
 import { env } from '@/lib/env';
 import { allocateVideo, checked } from '@/data/live/backend';
-import { transferTus, type UploadSource } from './tus';
+import { blobSource, transferTus, type UploadSource } from './tus';
 
 interface Intent {
   fileId?: string;
@@ -18,11 +18,31 @@ interface Intent {
 export async function pickedSource(asset: DocumentPickerAsset): Promise<UploadSource> {
   const source =
     Platform.OS === 'web'
-      ? (asset.file ?? (await (await fetch(asset.uri)).blob()))
-      : new File(asset.uri);
+      ? blobSource(asset.file ?? (await (await fetch(asset.uri)).blob()))
+      : nativeSource(new File(asset.uri));
   if (!Number.isSafeInteger(source.size) || source.size <= 0)
     throw new Error('Choose a nonempty file with a readable size.');
   return source;
+}
+
+/** Reads each chunk straight from the file on the phone, never the whole file. */
+function nativeSource(file: File): UploadSource {
+  let handle: FileHandle | null = null;
+  return {
+    size: file.size,
+    async read(start, end) {
+      handle ??= file.open(FileMode.ReadOnly);
+      handle.offset = start;
+      const bytes = await handle.readBytes(end - start);
+      if (bytes.length !== end - start)
+        throw new Error('The file could not be read. Choose it again.');
+      return bytes;
+    },
+    close() {
+      handle?.close();
+      handle = null;
+    },
+  };
 }
 /**
  * The picker copies each chosen file into the app's cache so it can be read. A video
@@ -43,6 +63,20 @@ export async function uploadLiveFile(
   signal: AbortSignal,
 ) {
   const source = await pickedSource(asset);
+  try {
+    await uploadPicked(asset, source, titleId, progress, signal);
+  } finally {
+    source.close?.();
+  }
+}
+
+async function uploadPicked(
+  asset: DocumentPickerAsset,
+  source: UploadSource,
+  titleId: string | undefined,
+  progress: (fraction: number) => void,
+  signal: AbortSignal,
+) {
   const {
     data: { session },
   } = await supabase.auth.getSession();

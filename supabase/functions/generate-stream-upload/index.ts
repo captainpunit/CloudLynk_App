@@ -33,6 +33,7 @@ Deno.serve(endpoint(async (req) => {
   const reserved = await db.rpc("reserve_stream_upload", {
     p_user_id: user.id,
     p_title_id: titleId,
+    p_size_bytes: input.sizeBytes,
   });
   rpcError(reserved.error);
   const asset = reserved.data;
@@ -44,7 +45,9 @@ Deno.serve(endpoint(async (req) => {
       protocol: "tus",
     });
   }
-  const expiresAt = new Date(Date.now() + 3600_000).toISOString();
+  // Cloudflare's longest upload window: large videos on slow connections need hours,
+  // and a resumed upload must still be inside it.
+  const expiresAt = new Date(Date.now() + 6 * 3600_000).toISOString();
   const client = streamClient();
   const intent = await db.from("stream_allocation_intents").upsert({
     id: asset.lease_id,
@@ -64,6 +67,7 @@ Deno.serve(endpoint(async (req) => {
     p_uid: allocated.uid,
     p_upload_url: allocated.uploadURL,
     p_expires_at: expiresAt,
+    p_length: input.sizeBytes,
   });
   if (bound.error) {
     // A lost acknowledgement may still have committed. Never delete a possibly

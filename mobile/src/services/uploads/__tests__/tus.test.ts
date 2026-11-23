@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { transferTus } from '../tus';
+import { blobSource, transferTus } from '../tus';
 
 test('TUS resumes at the acknowledged server offset and never recreates an allocated upload', async () => {
-  const source = new Blob(['abcdefgh']);
+  const source = blobSource(new Blob(['abcdefgh']));
   const requests: string[] = [];
   let offset = 3;
   await transferTus(
@@ -25,7 +25,7 @@ test('TUS resumes at the acknowledged server offset and never recreates an alloc
   assert.deepEqual(requests, ['HEAD', 'PATCH', 'HEAD']);
 });
 test('a lost PATCH response is recovered with HEAD without sending bytes twice', async () => {
-  const source = new Blob(['test']);
+  const source = blobSource(new Blob(['test']));
   let offset = 0,
     patches = 0;
   await transferTus(
@@ -48,7 +48,7 @@ test('invalid server offsets fail without sending file data', async () => {
   let patches = 0;
   await assert.rejects(
     transferTus(
-      new Blob(['test']),
+      blobSource(new Blob(['test'])),
       'https://upload.test/allocated',
       {},
       () => {},
@@ -67,7 +67,7 @@ test('pausing aborts before a network request and leaves the allocation resumabl
   controller.abort();
   await assert.rejects(
     transferTus(
-      new Blob(['test']),
+      blobSource(new Blob(['test'])),
       'https://upload.test/allocated',
       {},
       () => {},
@@ -77,5 +77,37 @@ test('pausing aborts before a network request and leaves the allocation resumabl
       },
     ),
     /Upload paused/,
+  );
+});
+
+test('a large file is read one chunk at a time, never whole', async () => {
+  const size = 20 * 1024 * 1024;
+  const reads: [number, number][] = [];
+  let offset = 0;
+  await transferTus(
+    {
+      size,
+      async read(start, end) {
+        // A source that would only pass if it is never asked for more than a chunk.
+        assert.ok(end - start <= 6 * 1024 * 1024, `read of ${end - start} bytes`);
+        reads.push([start, end]);
+        return new Uint8Array(end - start);
+      },
+    },
+    'https://upload.test/allocated',
+    {},
+    () => {},
+    undefined,
+    async (_url, init) => {
+      if (init!.method === 'HEAD')
+        return new Response(null, { headers: { 'Upload-Offset': String(offset) } });
+      offset += (init!.body as Uint8Array).length;
+      return new Response(null, { status: 204, headers: { 'Upload-Offset': String(offset) } });
+    },
+  );
+  assert.equal(offset, size);
+  assert.deepEqual(
+    reads.map(([start]) => start),
+    [0, 6, 12, 18].map((mb) => mb * 1024 * 1024),
   );
 });

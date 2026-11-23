@@ -2,6 +2,13 @@ import { supabase } from '@/lib/supabase';
 
 const messages: Record<string, string> = {
   publisher_required: 'Publishing permission is required. Ask an administrator for access.',
+  title_not_editable: 'This video is in review or published, so it cannot be changed now.',
+  invalid_size: 'This video is too large to upload.',
+  upload_busy: 'An upload for this video is starting. Wait a moment, then try again.',
+  upload_already_allocated:
+    'The earlier upload for this video has ended. Tap Replace / reset video, then upload again.',
+  different_file:
+    'You started uploading a different file for this video. Choose that file to continue, or tap Replace / reset video to start over.',
   title_unavailable: 'This title is unavailable or is not published.',
   age_restricted:
     'Set your date of birth in Settings. You must meet the age rating to watch this title.',

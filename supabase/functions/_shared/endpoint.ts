@@ -103,6 +103,7 @@ export function rpcError(error: { message: string; code?: string } | null) {
     "title_not_editable",
     "upload_busy",
     "upload_already_allocated",
+    "different_file",
     "sign_in_required",
     "account_restricted",
     "channel_unavailable",

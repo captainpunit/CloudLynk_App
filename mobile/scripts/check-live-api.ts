@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '../src/lib/database.types';
 import { mapChannel, mapFile, mapTitle } from '../src/data/live/mapping';
-import { transferTus } from '../src/services/uploads/tus';
+import { blobSource, transferTus } from '../src/services/uploads/tus';
 
 // This harness accepts ONLY the local CLI stack, never environment production
 // credentials. It creates disposable accounts and removes its own fixtures.
@@ -353,7 +353,7 @@ async function main() {
       'Storage TUS destination matches the configured API origin',
     );
     const transferUrl = location.href;
-    await transferTus(bytes, transferUrl, headers, () => {});
+    await transferTus(blobSource(bytes), transferUrl, headers, () => {});
     const file = ok(
       await viewer.client.rpc('finalize_drive_upload', { p_file_id: reserve.file_id }),
     );

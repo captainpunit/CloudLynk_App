@@ -1,6 +1,17 @@
+/**
+ * A file being uploaded. `read` returns only the bytes asked for: a video can be several
+ * gigabytes, and reading the whole file for every chunk froze or crashed the app.
+ */
 export interface UploadSource {
   size: number;
-  slice(start: number, end: number): Blob;
+  read(start: number, end: number): Promise<Blob | Uint8Array<ArrayBuffer>>;
+  /** Releases the open file, if any. */
+  close?(): void;
+}
+
+/** A browser file, or any Blob. Slicing a Blob reads nothing until it is sent. */
+export function blobSource(blob: Blob): UploadSource {
+  return { size: blob.size, read: async (start, end) => blob.slice(start, end) };
 }
 export async function transferTus(
   source: UploadSource,
@@ -42,7 +53,7 @@ export async function transferTus(
           'Upload-Offset': String(offset),
           'Content-Type': 'application/offset+octet-stream',
         },
-        body: source.slice(offset, end),
+        body: await source.read(offset, end),
         signal,
       });
       if (!response.ok) throw new Error('Upload interrupted. Select the same file to retry.');

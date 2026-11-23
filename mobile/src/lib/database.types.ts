@@ -590,6 +590,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      "payment_ledger": {
+        Row: {
+          "amount_paise": number | null;
+          "erased_at": string;
+          "id": string;
+          "paid_at": string | null;
+          "plan_name": string | null;
+          "product_id": string;
+          "reference": string;
+          "refunded_at": string | null;
+          "source": string;
+          "status": string;
+          "tax_percent": number | null;
+          "tax_state": string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          "amount_paise"?: number | null;
+          "erased_at"?: string;
+          "id"?: string;
+          "paid_at"?: string | null;
+          "plan_name"?: string | null;
+          "product_id": string;
+          "reference": string;
+          "refunded_at"?: string | null;
+          "source": string;
+          "status": string;
+          "tax_percent"?: number | null;
+          "tax_state"?: string | null;
+        };
+        Update: {
+          "amount_paise"?: number | null;
+          "erased_at"?: string;
+          "id"?: string;
+          "paid_at"?: string | null;
+          "plan_name"?: string | null;
+          "product_id"?: string;
+          "reference"?: string;
+          "refunded_at"?: string | null;
+          "source"?: string;
+          "status"?: string;
+          "tax_percent"?: number | null;
+          "tax_state"?: string | null;
+        };
+        Relationships: [];
+      };
       "payment_settings": {
         Row: {
           "id": boolean;
@@ -964,6 +1010,7 @@ export type Database = {
           "title_id": string;
           "updated_at": string;
           "upload_expires_at": string | null;
+          "upload_length": number | null;
           "upload_url": string | null;
         };
         ComputedFields: never;
@@ -982,6 +1029,7 @@ export type Database = {
           "title_id": string;
           "updated_at"?: string;
           "upload_expires_at"?: string | null;
+          "upload_length"?: number | null;
           "upload_url"?: string | null;
         };
         Update: {
@@ -999,6 +1047,7 @@ export type Database = {
           "title_id"?: string;
           "updated_at"?: string;
           "upload_expires_at"?: string | null;
+          "upload_length"?: number | null;
           "upload_url"?: string | null;
         };
         Relationships: [
@@ -1520,6 +1569,7 @@ export type Database = {
           "p_asset_id": string;
           "p_expires_at": string;
           "p_lease": string;
+          "p_length"?: number;
           "p_uid": string;
           "p_upload_url": string;
         };
@@ -2099,6 +2149,7 @@ export type Database = {
       };
       "reserve_stream_upload": {
         Args: {
+          "p_size_bytes"?: number;
           "p_title_id": string;
           "p_user_id": string;
         };
@@ -2117,6 +2168,7 @@ export type Database = {
           "title_id": string;
           "updated_at": string;
           "upload_expires_at": string | null;
+          "upload_length": number | null;
           "upload_url": string | null;
         };
         SetofOptions: {
