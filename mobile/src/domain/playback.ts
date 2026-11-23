@@ -46,3 +46,30 @@ export function shouldSaveProgress(position: number, resumeAt: number, resumed: 
   if (resumed) return true;
   return resumeAt <= 0 || position >= resumeAt - 2;
 }
+
+/** Playback speeds offered in the player, slowest first. */
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
+/** 1 → "Normal", 1.5 → "1.5×", 0.75 → "0.75×". */
+export function speedLabel(rate: number): string {
+  return rate === 1 ? 'Normal' : `${rate}×`;
+}
+
+/** How a subtitle or audio track is named in the player: its label, else its language. */
+export function trackName(track: { label?: string; name?: string; language?: string }): string {
+  const named = track.label?.trim() || track.name?.trim() || track.language?.trim();
+  return named || 'Unnamed';
+}
+
+/**
+ * The skip shown on screen. Taps on the same side while the last skip is still showing add
+ * up (+10, +20, +30), the way streaming apps count them; the other side starts again.
+ */
+export function nextSkip(
+  previous: { side: 'back' | 'forward'; amount: number } | null,
+  side: 'back' | 'forward',
+): { side: 'back' | 'forward'; amount: number } {
+  return previous && previous.side === side
+    ? { side, amount: previous.amount + SKIP_SECONDS }
+    : { side, amount: SKIP_SECONDS };
+}

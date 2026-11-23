@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { clampSeek, formatTime, isFinished, shouldSaveProgress, startPosition } from '../playback';
+import {
+  clampSeek,
+  formatTime,
+  isFinished,
+  nextSkip,
+  shouldSaveProgress,
+  speedLabel,
+  startPosition,
+  trackName,
+} from '../playback';
 
 test('times read like a video player', () => {
   assert.equal(formatTime(0), '0:00');
@@ -44,4 +53,26 @@ test('the loading position never overwrites the resume point', () => {
   assert.equal(shouldSaveProgress(0, 312, true), true);
   // Nothing to resume: save from the start.
   assert.equal(shouldSaveProgress(4, 0, false), true);
+});
+
+test('speeds read as Normal or a multiple', () => {
+  assert.equal(speedLabel(1), 'Normal');
+  assert.equal(speedLabel(1.5), '1.5×');
+  assert.equal(speedLabel(0.75), '0.75×');
+});
+
+test('tracks are named by label, then name, then language', () => {
+  assert.equal(trackName({ label: 'English', language: 'en' }), 'English');
+  assert.equal(trackName({ label: ' ', name: 'Director', language: 'en' }), 'Director');
+  assert.equal(trackName({ label: '', language: 'hi' }), 'hi');
+  assert.equal(trackName({}), 'Unnamed');
+});
+
+test('repeated skips on one side add up; the other side starts again', () => {
+  const first = nextSkip(null, 'forward');
+  assert.deepEqual(first, { side: 'forward', amount: 10 });
+  const second = nextSkip(first, 'forward');
+  assert.deepEqual(second, { side: 'forward', amount: 20 });
+  assert.deepEqual(nextSkip(second, 'forward'), { side: 'forward', amount: 30 });
+  assert.deepEqual(nextSkip(second, 'back'), { side: 'back', amount: 10 });
 });

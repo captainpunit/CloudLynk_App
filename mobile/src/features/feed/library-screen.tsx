@@ -62,13 +62,6 @@ export default function LibraryScreen() {
           ))}
         </Shelf>
       )}
-      {saved.length > 0 && (
-        <Shelf title="Saved">
-          {saved.map((video) => (
-            <VideoRow key={video.id} video={video} channel={channelOf(state, video)} />
-          ))}
-        </Shelf>
-      )}
       {joinedChannels.length > 0 && (
         <Shelf title="Your channels">
           <Rail>
@@ -76,6 +69,10 @@ export default function LibraryScreen() {
               <ChannelCard key={channel.id} channel={channel} width={148} />
             ))}
           </Rail>
+        </Shelf>
+      )}
+      {joinedChannels.length > 0 && (
+        <Shelf title="New from your channels">
           {fromJoined.length ? (
             fromJoined.map((video) => (
               <VideoRow key={video.id} video={video} channel={channelOf(state, video)} />
@@ -85,7 +82,17 @@ export default function LibraryScreen() {
           )}
         </Shelf>
       )}
-      {!empty && !saved.length && <Caption>Tap the bookmark on any video to keep it here.</Caption>}
+      {(saved.length > 0 || !empty) && (
+        <Shelf title="Saved">
+          {saved.length ? (
+            saved.map((video) => (
+              <VideoRow key={video.id} video={video} channel={channelOf(state, video)} />
+            ))
+          ) : (
+            <Caption>Tap the bookmark on any video to keep it here.</Caption>
+          )}
+        </Shelf>
+      )}
       <ListRow
         icon={Cloud}
         title="My cloud"

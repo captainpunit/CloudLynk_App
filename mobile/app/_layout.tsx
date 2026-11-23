@@ -15,7 +15,7 @@ import { PlayPurchaseSync } from '@/features/premium/play-purchase-sync';
 
 // A channel or video opened from a shared or ad link sits on top of Home, so Back goes
 // Home instead of closing the app.
-export const unstable_settings = { initialRouteName: '(tabs)' };
+export const unstable_settings = { anchor: '(tabs)' };
 import { Button, Heading, Label, Screen, easeOut } from '@/components/ui';
 import { colors as c, layout, motion, night, radius, space } from '@/theme/tokens';
 import { ToneProvider } from '@/theme/tone';

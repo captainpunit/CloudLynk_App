@@ -6,6 +6,7 @@ import { Film } from 'lucide-react-native';
 import { CoverImageField } from '@/components/cover-image-field';
 import {
   Button,
+  Caption,
   EmptyState,
   ErrorNote,
   Field,
@@ -20,6 +21,8 @@ import { supabase } from '@/lib/supabase';
 import type { Tables } from '@/lib/database.types';
 import { call } from '@/data/live/backend';
 import { readPages } from '@/data/live/mapping';
+import { fileSize } from '@/domain/format';
+import { usePalette } from '@/theme/tone';
 import { discardPickedCopy, uploadLiveFile } from '@/services/uploads/live-upload';
 
 type Title = Tables<'titles'>;
@@ -45,6 +48,7 @@ export default function UploadScreen() {
   const [seasonName, setSeasonName] = useState('');
   const [seasonNumber, setSeasonNumber] = useState('1');
   const [selected, setSelected] = useState<DocumentPicker.DocumentPickerAsset[]>([]);
+  const p = usePalette();
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -473,22 +477,64 @@ export default function UploadScreen() {
         </>
       )}
       {!channelId && (
-        <Surface>
-          <Button title="Choose files" disabled={busy} onPress={() => void pick()} />
-          {selected.map((file, index) => (
-            <Label key={index}>{file.name}</Label>
-          ))}
-          <Label>Reselect the same file after an interruption to resume its upload.</Label>
-          <Label>{progress}% uploaded</Label>
-          <Button
-            title="Upload selected files"
-            loading={busy}
-            disabled={!selected.length}
-            onPress={() => void action(() => upload(), 'Files uploaded to your cloud.')}
-          />
-          {busy && (
-            <Button title="Pause upload" variant="outline" onPress={() => abort.current?.abort()} />
+        <Surface style={{ gap: 12 }}>
+          {selected.length === 0 ? (
+            <Caption>
+              Choose photos, videos or documents from your phone. Only you can see them.
+            </Caption>
+          ) : (
+            <View style={{ gap: 4 }}>
+              {selected.map((file, index) => (
+                <View key={index} style={{ flexDirection: 'row', gap: 8 }}>
+                  <Label numberOfLines={1} style={{ flex: 1 }}>
+                    {file.name}
+                  </Label>
+                  {typeof file.size === 'number' && <Caption>{fileSize(file.size)}</Caption>}
+                </View>
+              ))}
+            </View>
           )}
+          {busy && (
+            <View
+              accessibilityRole="progressbar"
+              accessibilityLabel="Upload progress"
+              accessibilityValue={{ min: 0, max: 100, now: progress }}
+              style={{ gap: 6 }}
+            >
+              <View
+                style={{
+                  height: 6,
+                  borderRadius: 999,
+                  backgroundColor: p.raised,
+                  overflow: 'hidden',
+                }}
+              >
+                <View
+                  style={{ width: `${progress}%`, height: '100%', backgroundColor: p.action }}
+                />
+              </View>
+              <Caption>{progress}% uploaded</Caption>
+            </View>
+          )}
+          {selected.length > 0 && (
+            <Button
+              title={selected.length === 1 ? 'Upload file' : `Upload ${selected.length} files`}
+              loading={busy}
+              onPress={() => void action(() => upload(), 'Files uploaded to your cloud.')}
+            />
+          )}
+          {busy ? (
+            <Button title="Pause upload" variant="outline" onPress={() => abort.current?.abort()} />
+          ) : (
+            <Button
+              title={selected.length ? 'Choose different files' : 'Choose files'}
+              variant={selected.length ? 'outline' : 'primary'}
+              onPress={() => void pick()}
+            />
+          )}
+          <Caption>
+            If an upload stops, choose the same file again and it carries on where it left off.
+          </Caption>
         </Surface>
       )}
       {channelId && (

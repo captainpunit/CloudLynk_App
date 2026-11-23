@@ -16,14 +16,19 @@ export function videoLabel(video: Pick<Video, 'kind' | 'episodeNumber'>): string
 /** What Plus offers today, from active plans and the published catalogue. Null without plans. */
 export function plusSummary({ plans = [], channels }: Pick<Workspace, 'plans' | 'channels'>) {
   if (!plans.length) return null;
-  const count = channels.filter(
-    (channel) => channel.status === 'published' && channel.visibility === 'premium',
-  ).length;
+  // Named, so people see what they get: "Cricket Corner and Tech Tak", "A, B and 3 more".
+  const names = channels
+    .filter((channel) => channel.status === 'published' && channel.visibility === 'premium')
+    .map((channel) => channel.name);
   const quota = Math.max(...plans.map((plan) => plan.quotaBytes));
-  const watch = count
-    ? `Watch ${count === 1 ? 'the Plus channel' : `all ${count} Plus channels`}`
-    : 'Watch every Plus channel';
-  return quota > 0 ? `${watch}, with up to ${fileSize(quota)} of storage.` : `${watch}.`;
+  const watch = !names.length
+    ? 'Watch every Plus channel'
+    : names.length === 1
+      ? `Watch ${names[0]}`
+      : names.length === 2
+        ? `Watch ${names[0]} and ${names[1]}`
+        : `Watch ${names[0]}, ${names[1]} and ${names.length - 2} more`;
+  return quota > 0 ? `${watch}, plus ${fileSize(quota)} of cloud storage.` : `${watch}.`;
 }
 /** A date such as "10 Dec 2026". */
 export function shortDate(iso: string): string {

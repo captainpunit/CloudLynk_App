@@ -5,7 +5,7 @@ import { plusSummary, videoLabel } from '../format';
 import type { Channel } from '../models';
 
 test('Plus is only offered with active plans and states real values', () => {
-  const channel = { status: 'published', visibility: 'premium' } as Channel;
+  const channel = { status: 'published', visibility: 'premium', name: 'Cricket Corner' } as Channel;
   const plans = [
     {
       productId: 'm',
@@ -25,15 +25,26 @@ test('Plus is only offered with active plans and states real values', () => {
   assert.equal(plusSummary({ plans: [], channels: [channel] }), null);
   assert.equal(
     plusSummary({ plans, channels: [] }),
-    'Watch every Plus channel, with up to 2.0 GB of storage.',
+    'Watch every Plus channel, plus 2.0 GB of cloud storage.',
   );
   assert.equal(
     plusSummary({ plans: plans.map((plan) => ({ ...plan, quotaBytes: 0 })), channels: [channel] }),
-    'Watch the Plus channel.',
+    'Watch Cricket Corner.',
   );
   assert.equal(
     plusSummary({ plans, channels: [channel] }),
-    'Watch the Plus channel, with up to 2.0 GB of storage.',
+    'Watch Cricket Corner, plus 2.0 GB of cloud storage.',
+  );
+  const more = ['Tech Tak', 'Kitchen Stories', 'Daily News'].map(
+    (name) => ({ ...channel, name }) as Channel,
+  );
+  assert.equal(
+    plusSummary({ plans, channels: [channel, more[0]] }),
+    'Watch Cricket Corner and Tech Tak, plus 2.0 GB of cloud storage.',
+  );
+  assert.equal(
+    plusSummary({ plans, channels: [channel, ...more] }),
+    'Watch Cricket Corner, Tech Tak and 2 more, plus 2.0 GB of cloud storage.',
   );
 });
 

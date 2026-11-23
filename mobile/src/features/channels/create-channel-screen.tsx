@@ -1,7 +1,6 @@
 import { goBackOrExplore } from '@/lib/navigation';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { Radio } from 'lucide-react-native';
 import { Button, ErrorNote, Field, Label, Pill, Screen, Surface } from '@/components/ui';
 import { CoverImageField } from '@/components/cover-image-field';
 import { validateChannel } from '@/domain/format';
@@ -53,25 +52,17 @@ export default function CreateChannelScreen() {
     }
   }
   return (
-    <Screen
-      title="Make a little space."
-      subtitle="Bring people together around what you love."
-      back
-    >
-      <Surface style={{ backgroundColor: c.primarySoft, borderColor: c.primarySoft }}>
-        <Radio size={28} color={c.primary} />
-        <Label style={{ color: c.primary }}>Every great community starts with a first story.</Label>
-      </Surface>
+    <Screen title="New channel" subtitle="An admin reviews it before it goes live." back>
       <Field
         label="Channel name"
-        placeholder="A name that feels like you"
+        placeholder="For example, Kitchen Stories"
         value={name}
         onChangeText={setName}
         maxLength={60}
       />
       <Field
         label="About your channel"
-        placeholder="What will people discover here?"
+        placeholder="What people will watch, and how often you post"
         multiline
         numberOfLines={4}
         value={description}
@@ -86,7 +77,7 @@ export default function CreateChannelScreen() {
       />
       <Field
         label="Category (optional)"
-        placeholder="What is it about?"
+        placeholder="Pick one below or type your own"
         value={category}
         onChangeText={setCategory}
         maxLength={40}

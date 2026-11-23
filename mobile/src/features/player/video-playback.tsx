@@ -2,11 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState, BackHandler, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useEvent } from 'expo';
-import { useVideoPlayer, VideoView, type VideoSource } from 'expo-video';
+import {
+  useVideoPlayer,
+  VideoView,
+  type AudioTrack,
+  type SubtitleTrack,
+  type VideoSource,
+} from 'expo-video';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import * as NavigationBar from 'expo-navigation-bar';
 import { Button, Label } from '@/components/ui';
-import { clampSeek, shouldSaveProgress } from '@/domain/playback';
+import { clampSeek, isFinished, shouldSaveProgress } from '@/domain/playback';
 import { colors as c } from '@/theme/tokens';
 import { PlayerControls } from './player-controls';
 import { useFullscreenLayer } from './fullscreen-host';
@@ -78,6 +84,19 @@ export function VideoPlayback({
   const [duration, setDuration] = useState(0);
   const [ended, setEnded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [fill, setFill] = useState(false);
+  const rate = useRef(1);
+  const [shownRate, setShownRate] = useState(1);
+  const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
+    availableSubtitleTracks: player.availableSubtitleTracks,
+  });
+  const { subtitleTrack } = useEvent(player, 'subtitleTrackChange', {
+    subtitleTrack: player.subtitleTrack,
+  });
+  const { availableAudioTracks } = useEvent(player, 'availableAudioTracksChange', {
+    availableAudioTracks: player.availableAudioTracks,
+  });
+  const { audioTrack } = useEvent(player, 'audioTrackChange', { audioTrack: player.audioTrack });
 
   // Load the stream, or swap a renewed address in place at the same moment.
   useEffect(() => {
@@ -89,6 +108,8 @@ export function VideoPlayback({
     void player
       .replaceAsync(toSource(uri))
       .then(() => {
+        // A new source starts at normal speed; keep the viewer's choice.
+        player.playbackRate = rate.current;
         if (!first) {
           player.currentTime = at;
           if (wasPlaying) player.play();
@@ -119,6 +140,9 @@ export function VideoPlayback({
         report.current(event.currentTime, player.duration);
     });
     const end = player.addListener('playToEnd', () => {
+      // Android can report "ended" while a stream is still loading or seeking to the resume
+      // point; only a player that got going and is really at the end has finished.
+      if (!resumed.current || !isFinished(player.currentTime, player.duration)) return;
       setEnded(true);
       if (player.duration > 0) {
         report.current(player.duration, player.duration, true);
@@ -184,9 +208,12 @@ export function VideoPlayback({
     ended,
   };
   const seek = (seconds: number) => {
-    player.currentTime = clampSeek(seconds, duration);
+    const target = clampSeek(seconds, duration);
+    player.currentTime = target;
     resumed.current = true;
-    setPosition(player.currentTime);
+    // The target, not player.currentTime: the native seek may not have landed yet, and quick
+    // repeated skips count from here.
+    setPosition(target);
     if (ended && seconds < duration - 1) setEnded(false);
   };
   const controls = (
@@ -206,6 +233,25 @@ export function VideoPlayback({
         player.play();
       }}
       onToggleFullscreen={() => toggleFullscreen(!fullscreen)}
+      settings={{
+        rate: shownRate,
+        subtitles: availableSubtitleTracks,
+        subtitle: subtitleTrack,
+        audios: availableAudioTracks,
+        audio: audioTrack,
+        fill,
+      }}
+      actions={{
+        onRate: (next) => {
+          rate.current = next;
+          player.playbackRate = next;
+          setShownRate(next);
+        },
+        // The panel only hands back tracks taken from the player's own lists.
+        onSubtitle: (track) => (player.subtitleTrack = track as SubtitleTrack | null),
+        onAudio: (track) => (player.audioTrack = track as AudioTrack),
+        onToggleFill: () => setFill((value) => !value),
+      }}
     />
   );
   const failure = status === 'error' && (
@@ -245,8 +291,8 @@ export function VideoPlayback({
       player={player}
       style={{ flex: 1, backgroundColor: c.player }}
       nativeControls={false}
-      contentFit="contain"
-      allowsPictureInPicture={!privateStream}
+      contentFit={fullscreen && fill ? 'cover' : 'contain'}
+      allowsPictureInPicture={false}
     />
   );
   // In full screen the picture lives in the app-wide layer (fullscreen-host.tsx);
@@ -268,15 +314,18 @@ export function VideoPlayback({
     if (!inLayer) layer?.(null);
   }, [inLayer, layer]);
   useEffect(() => () => layer?.(null), [layer]);
-  // Android Back leaves full screen instead of the page.
+  // Android Back leaves full screen instead of the page. Registered once per change, so the
+  // settings panel (registered when it opens, later) gets Back first.
+  const leaveFullscreen = useRef(() => toggleFullscreen(false));
+  leaveFullscreen.current = () => toggleFullscreen(false);
   useEffect(() => {
     if (!fullscreen) return;
     const back = BackHandler.addEventListener('hardwareBackPress', () => {
-      toggleFullscreen(false);
+      leaveFullscreen.current();
       return true;
     });
     return () => back.remove();
-  });
+  }, [fullscreen]);
   return (
     <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: c.player }}>
       {!inLayer && picture}

@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Share, View } from 'react-native';
 import { router } from 'expo-router';
 import { LogOut, ShieldCheck } from 'lucide-react-native';
-import { Button, ErrorNote, Field, Label, Screen, Surface } from '@/components/ui';
+import {
+  Button,
+  Caption,
+  ErrorNote,
+  Field,
+  Heading,
+  Label,
+  Screen,
+  Surface,
+} from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { colors as c } from '@/theme/tokens';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +19,7 @@ import { env } from '@/lib/env';
 import { shortDate } from '@/domain/format';
 import { LegalLinks } from '@/components/legal-links';
 import { invokeBackend } from '@/data/live/invoke-backend';
+import { measurementChoice, type MeasurementChoice } from '@/services/meta/measurement';
 import { requestVerifiedDeletion } from '@/services/account/deletion-flow';
 import { unregisterPush } from '@/services/notifications/push';
 import { captureInstallAttribution } from '@/services/attribution/installReferrer';
@@ -18,6 +28,7 @@ export default function SettingsScreen() {
   const { state, dispatch, notify } = useWorkspace();
   const [name, setName] = useState(state.profile?.name ?? '');
   const [birthDate, setBirthDate] = useState(state.profile?.birthDate ?? '');
+  const [adChoice, setAdChoice] = useState<MeasurementChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -113,25 +124,36 @@ export default function SettingsScreen() {
       setDeleting(false);
     }
   }
+  const profileId = state.profile?.id;
+  useEffect(() => {
+    if (!profileId) return;
+    let live = true;
+    void measurementChoice(profileId).then((choice) => live && setAdChoice(choice));
+    return () => {
+      live = false;
+    };
+  }, [profileId]);
   return (
-    <Screen title="Make it your own." subtitle="Your account, your preferences." back>
+    <Screen title="Settings" back>
       {state.profile && (
         <Surface>
-          <Label>Share your invitation ID with a channel owner for a private invitation.</Label>
-          <Label selectable>{state.profile.id}</Label>
+          <Heading level="subhead">Profile</Heading>
           <Field label="Display name" value={name} onChangeText={setName} maxLength={60} />
           <Field
-            label="Date of birth (YYYY-MM-DD, for age-rated content)"
+            label="Date of birth"
+            helper="Needed for age-rated videos. Write it as YYYY-MM-DD."
             value={birthDate}
             onChangeText={setBirthDate}
             maxLength={10}
             placeholder="YYYY-MM-DD"
+            keyboardType="numbers-and-punctuation"
+            autoComplete="birthdate-full"
           />
           <Button title="Save profile" onPress={() => void saveName()} loading={busy} />
         </Surface>
       )}
       <Surface>
-        <Label style={{ fontWeight: '700' }}>Your membership</Label>
+        <Heading level="subhead">Plus</Heading>
         <Label style={{ color: c.muted }}>
           {state.subscribedUntil
             ? `Plus is active until ${shortDate(state.subscribedUntil)}. It does not renew by itself.`
@@ -145,7 +167,7 @@ export default function SettingsScreen() {
       </Surface>
       <Surface>
         <ShieldCheck color={c.primary} size={24} />
-        <Label style={{ fontWeight: '700' }}>Privacy comes first.</Label>
+        <Heading level="subhead">Advertising measurement</Heading>
         <Label style={{ color: c.muted, fontSize: 13 }}>
           Advertising measurement is optional. If you allow it, CloudLynk shares with Meta your
           device&apos;s advertising ID, basic device details, when you open the app, view plans or
@@ -154,28 +176,30 @@ export default function SettingsScreen() {
         </Label>
         {state.profile && (
           <>
+            <Caption>
+              {adChoice === 'allowed'
+                ? 'On for this phone.'
+                : adChoice === 'declined'
+                  ? 'Off for this phone.'
+                  : adChoice === 'unanswered'
+                    ? 'You have not chosen yet, so it is off.'
+                    : 'Checking…'}
+            </Caption>
             <Button
-              title="Allow advertising measurement"
+              title={adChoice === 'allowed' ? 'Turn off' : 'Allow'}
               variant="outline"
-              disabled={busy || deleting}
+              disabled={busy || deleting || adChoice === null}
               onPress={() => {
+                const allow = adChoice !== 'allowed';
                 setBusy(true);
                 setError(null);
-                void captureInstallAttribution(true)
-                  .then(() => notify('Advertising measurement enabled for this installation.'))
-                  .catch((cause: Error) => setError(cause.message))
-                  .finally(() => setBusy(false));
-              }}
-            />
-            <Button
-              title="Turn off advertising measurement"
-              variant="outline"
-              disabled={busy || deleting}
-              onPress={() => {
-                setBusy(true);
-                setError(null);
-                void captureInstallAttribution(false)
-                  .then(() => notify('Advertising measurement disabled.'))
+                void captureInstallAttribution(allow)
+                  .then(() => {
+                    setAdChoice(allow ? 'allowed' : 'declined');
+                    notify(
+                      allow ? 'Advertising measurement is on.' : 'Advertising measurement is off.',
+                    );
+                  })
                   .catch((cause: Error) => setError(cause.message))
                   .finally(() => setBusy(false));
               }}
@@ -183,6 +207,25 @@ export default function SettingsScreen() {
           </>
         )}
       </Surface>
+      {state.profile && (
+        <Surface>
+          <Heading level="subhead">Private channel invitations</Heading>
+          <Caption>
+            To join a private channel, send this ID to its owner. They use it to invite you.
+          </Caption>
+          <Label selectable variant="callout">
+            {state.profile.id}
+          </Label>
+          <Button
+            title="Share ID"
+            variant="soft"
+            compact
+            onPress={() =>
+              void Share.share({ message: `My CloudLynk invitation ID: ${state.profile!.id}` })
+            }
+          />
+        </Surface>
+      )}
       <ErrorNote message={error} />
       {state.profile && (
         <Button
