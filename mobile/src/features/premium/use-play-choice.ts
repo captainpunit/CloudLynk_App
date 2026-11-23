@@ -22,7 +22,46 @@ type Callbacks = {
  * switch) cannot end the connection of the checkout that replaced it.
  */
 let lastClosed: Promise<void> = Promise.resolve();
+/** Plus screens currently holding the connection; they check unfinished purchases themselves. */
+let openCheckouts = 0;
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Sends Google Play purchases the backend has not granted yet: the app closed during
+ * checkout, or a pending payment cleared later. Run when the app starts or comes back,
+ * so this does not depend on the member reopening the Plus screen. Returns how many
+ * purchases were granted.
+ */
+export async function syncUnfinishedPlayPurchases(): Promise<number> {
+  if (!playBillingAvailable || openCheckouts > 0) return 0;
+  let release = () => {};
+  const done = new Promise<void>((resolve) => (release = resolve));
+  const previous = lastClosed;
+  lastClosed = done;
+  try {
+    await previous;
+    const ignore = () => undefined;
+    const connection = await connectPlayChoice({
+      onPurchase: ignore,
+      onUpiChosen: ignore,
+      onError: ignore,
+    });
+    try {
+      let granted = 0;
+      for (const purchase of await connection.unfinished()) {
+        // A purchase that is still pending or refused is tried again next time.
+        await verifyPlayProduct(purchase.productId, purchase.purchaseToken)
+          .then(() => (granted += 1))
+          .catch(() => undefined);
+      }
+      return granted;
+    } finally {
+      await connection.close().catch(() => undefined);
+    }
+  } finally {
+    release();
+  }
+}
 
 /**
  * Connects the Plus checkout to Google Play's choice screen on Google Play builds.
@@ -37,6 +76,7 @@ export function usePlayChoice(userId: string | undefined, callbacks: Callbacks) 
   useEffect(() => {
     if (!playBillingAvailable || !userId) return;
     let active = true;
+    openCheckouts += 1;
     const verifying = new Set<string>();
     const verify = (purchase: PlayPurchase) => {
       if (verifying.has(purchase.purchaseToken)) return;
@@ -81,6 +121,7 @@ export function usePlayChoice(userId: string | undefined, callbacks: Callbacks) 
       });
     return () => {
       active = false;
+      openCheckouts -= 1;
       store.current = null;
       lastClosed = opened.then(
         (connection) => connection.close(),

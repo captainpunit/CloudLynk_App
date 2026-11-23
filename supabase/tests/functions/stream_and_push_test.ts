@@ -154,13 +154,14 @@ Deno.test("Stream signatures authenticate the exact raw bytes and timestamp", as
     "invalid_stream_signature",
   );
 });
-Deno.test("signed playback expires at the earlier of subscription or ten minutes", async () => {
+Deno.test("signed playback lasts as long as the grant, never more than six hours", async () => {
   const { privateKey, publicKey } = await generateKeyPair("RS256", {
     extractable: true,
   });
   const jwk = await exportJWK(privateKey);
   const now = Date.now();
-  for (const seconds of [45, 1800]) {
+  // 45 s: Plus ends soon; 30 min: a normal viewing; 9 h: capped at the 6 h backstop.
+  for (const seconds of [45, 1800, 9 * 3600]) {
     const result = await signPlayback(
       uid,
       new Date(now + seconds * 1000).toISOString(),
@@ -178,8 +179,10 @@ Deno.test("signed playback expires at the earlier of subscription or ten minutes
     assert(protectedHeader.kid === "key");
     assert(payload.kid === "key");
     assert(
-      payload.exp === Math.floor((now + Math.min(seconds, 600) * 1000) / 1000),
+      payload.exp ===
+        Math.floor((now + Math.min(seconds, 6 * 3600) * 1000) / 1000),
     );
+    assert(result.expiresIn === Math.min(seconds, 6 * 3600));
     assert(JSON.stringify(payload.accessRules).includes('"country":["IN"]'));
     assert(!payload.downloadable);
   }

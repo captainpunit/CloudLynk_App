@@ -81,7 +81,8 @@ select is((public.set_channel_audience(tests.channel('Everyone'),'ads')).audienc
 select public.set_member_audience(tests.uid('linked'),'organic');
 reset role;
 select is((select audience from public.profiles where id=tests.uid('linked')),'organic','the admin can move a member back to organic');
-select is((select count(*) from public.audit_log where action='set_audience'),2::bigint,'both changes are audited');
+select is((select count(*) from public.audit_log where action='set_audience'
+  and target_id in (tests.channel('Everyone'),tests.uid('linked'))),2::bigint,'both changes are audited');
 select tests.act('linked');
 select is(public.mark_ad_audience('install_referrer'),'organic','the app cannot undo the admin''s choice');
 select tests.act('organic');

@@ -29,7 +29,7 @@ import { useWorkspace } from '@/state/workspace-provider';
 import type { AccessDecision, Channel, Video } from '@/domain/models';
 import { accessMessages } from '@/domain/access';
 import { shortDate, videoLabel } from '@/domain/format';
-import { colors as c } from '@/theme/tokens';
+import { colors as c, gutter } from '@/theme/tokens';
 import { usePalette } from '@/theme/tone';
 import LivePlayback from './live-playback';
 import { shareUrl } from '@/lib/env';
@@ -175,7 +175,10 @@ export default function WatchScreen() {
   return (
     <Screen tone="dark" back>
       {decision === 'allowed' ? (
-        <LivePlayback titleId={id} />
+        // Edge to edge, like a streaming app; the screen's side margins do not apply.
+        <View style={{ marginHorizontal: -gutter }}>
+          <LivePlayback titleId={id} title={video.title} cover={video.cover} />
+        </View>
       ) : (
         <Gate
           video={video}
@@ -217,13 +220,23 @@ export default function WatchScreen() {
   );
 }
 
-function Poster({ uri, children }: { uri: string; children?: ReactNode }) {
+function Poster({
+  uri,
+  children,
+  bleed = false,
+}: {
+  uri: string;
+  children?: ReactNode;
+  /** Edge to edge, where the player will appear. */
+  bleed?: boolean;
+}) {
   const p = usePalette();
   return (
     <View
       style={{
         aspectRatio: 16 / 9,
-        borderRadius: 14,
+        borderRadius: bleed ? 0 : 14,
+        marginHorizontal: bleed ? -gutter : 0,
         overflow: 'hidden',
         backgroundColor: p.surface,
       }}
@@ -271,7 +284,7 @@ function Gate({
   const checking = !decision && !failed;
   return (
     <View style={{ gap: 16 }}>
-      <Poster uri={video.cover}>
+      <Poster uri={video.cover} bleed>
         <View
           style={{
             position: 'absolute',

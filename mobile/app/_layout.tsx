@@ -10,6 +10,8 @@ import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-san
 import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
 import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { WorkspaceProvider, useWorkspace } from '@/state/workspace-provider';
+import { FullscreenHost } from '@/features/player/fullscreen-host';
+import { PlayPurchaseSync } from '@/features/premium/play-purchase-sync';
 import { Button, Heading, Label, Screen, easeOut } from '@/components/ui';
 import { colors as c, layout, motion, night, radius, space } from '@/theme/tokens';
 import { ToneProvider } from '@/theme/tone';
@@ -31,8 +33,12 @@ export default function RootLayout() {
       <WorkspaceProvider>
         <PushLifecycle />
         <AdAudienceSync />
+        <PlayPurchaseSync />
         <StatusBar style="dark" />
-        <AppNavigation fontsReady={fontsLoaded || Boolean(fontError)} />
+        {/* The full-screen video player draws above everything, in this window. */}
+        <FullscreenHost>
+          <AppNavigation fontsReady={fontsLoaded || Boolean(fontError)} />
+        </FullscreenHost>
       </WorkspaceProvider>
     </SafeAreaProvider>
   );

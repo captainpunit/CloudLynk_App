@@ -1,134 +1,125 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
-import { AppState } from 'react-native';
-import { Button, ErrorNote, Label, Surface } from '@/components/ui';
-import { call, playbackToken } from '@/data/live/backend';
+import { useCallback, useRef, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
+import { Button, Label } from '@/components/ui';
+import { call } from '@/data/live/backend';
 import { useWorkspace } from '@/state/workspace-provider';
-import { VideoPlayback } from './video-playback';
 import { supabase } from '@/lib/supabase';
+import { isFinished, startPosition } from '@/domain/playback';
+import { colors as c } from '@/theme/tokens';
+import { VideoPlayback } from './video-playback';
+import { usePlaybackGrant } from './use-playback-grant';
 
-export default function LivePlayback({ titleId }: { titleId: string }) {
+/** Progress is saved at most this often while playing; pauses and exits save at once. */
+const SAVE_EVERY_MS = 15000;
+
+export default function LivePlayback({
+  titleId,
+  title,
+  cover,
+}: {
+  titleId: string;
+  title: string;
+  cover?: string;
+}) {
   const { state, dispatch } = useWorkspace();
-  const [grant, setGrant] = useState<Awaited<ReturnType<typeof playbackToken>> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
   const [focused, setFocused] = useState(false);
-  const position = useRef(state.progress[titleId] ?? 0);
-  const savedAt = useRef(0);
-  const saving = useRef(false);
   useFocusEffect(
     useCallback(() => {
       setFocused(true);
       return () => setFocused(false);
     }, []),
   );
-  useEffect(() => {
-    position.current = state.progress[titleId] ?? 0;
-    savedAt.current = 0;
-  }, [titleId]);
-  useEffect(() => {
-    if (!focused) {
-      setGrant(null);
-      return;
-    }
-    let disposed = false,
-      sequence = 0;
-    let renewal: ReturnType<typeof setTimeout> | undefined;
-    let expiry: ReturnType<typeof setTimeout> | undefined;
-    let lastExpiry = '';
-    const clear = () => {
-      clearTimeout(renewal);
-      clearTimeout(expiry);
-    };
-    const load = async () => {
-      const current = ++sequence;
-      clearTimeout(renewal);
-      try {
-        const next = await playbackToken(titleId);
-        if (disposed || current !== sequence) return;
-        const remaining = Date.parse(next.expiresAt) - Date.now();
-        if (!Number.isFinite(remaining) || remaining <= 0 || !next.hlsUrl.startsWith('https://'))
-          throw new Error('Playback authorization expired.');
-        clearTimeout(expiry);
-        setGrant(next);
-        setError(null);
-        expiry = setTimeout(() => {
-          setGrant(null);
-          setError('Playback authorization expired. Retry to check your access.');
-        }, remaining);
-        // A subscription-bounded grant cannot be extended by repeatedly issuing
-        // the same expiry. Always stop at the server's expiration.
-        if (remaining > 40000 && next.expiresAt !== lastExpiry) {
-          renewal = setTimeout(() => void load(), remaining - 20000);
-        }
-        lastExpiry = next.expiresAt;
-      } catch (cause) {
-        if (!disposed && current === sequence) {
-          setGrant(null);
-          setError((cause as Error).message);
-        }
-      }
-    };
-    setGrant(null);
-    setError(null);
-    void load();
-    const foreground = AppState.addEventListener('change', (status) => {
-      if (status === 'active') void load();
-      else {
-        ++sequence;
-        clear();
-        setGrant(null);
-      }
-    });
-    return () => {
-      disposed = true;
-      ++sequence;
-      clear();
-      foreground.remove();
-    };
-  }, [titleId, attempt, focused, state.profile?.id, state.profile?.accountStatus]);
+  const { uri, problem, retry } = usePlaybackGrant(
+    titleId,
+    focused,
+    `${state.profile?.id}:${state.profile?.accountStatus}`,
+  );
+  // Where to start, decided once per visit so later saves do not move the start.
+  const resumeAt = useRef<number | null>(null);
+  if (resumeAt.current === null)
+    resumeAt.current = startPosition(
+      state.progress[titleId] ?? 0,
+      0,
+      (state.completedIds ?? []).includes(titleId),
+    );
+  const savedAt = useRef(0);
+  const lastSaved = useRef(-1);
 
-  function saveProgress(seconds: number) {
-    position.current = seconds;
-    if (saving.current || Date.now() - savedAt.current < 15000) return;
-    saving.current = true;
+  function save(seconds: number, duration: number, final = false) {
+    if (!final && Date.now() - savedAt.current < SAVE_EVERY_MS) return;
+    if (Math.abs(seconds - lastSaved.current) < 1) return;
     savedAt.current = Date.now();
+    lastSaved.current = seconds;
     const userId = state.profile?.id;
+    if (!userId) return;
     void (async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!userId || session?.user.id !== userId) return;
       const saved = await call('save_watch_progress', {
         p_title_id: titleId,
         p_position_seconds: seconds,
       });
       const current = await supabase.auth.getSession();
       if (current.data.session?.user.id === userId)
-        dispatch({ type: 'progress', id: titleId, seconds, completed: saved?.completed });
+        dispatch({
+          type: 'progress',
+          id: titleId,
+          seconds,
+          completed: saved?.completed ?? (duration > 0 && isFinished(seconds, duration)),
+        });
     })()
-      // Saved again on the next tick; a missed save is not worth interrupting the video.
-      .catch(() => undefined)
-      .finally(() => {
-        saving.current = false;
-      });
+      // A missed save is retried on the next one; never interrupt the video for it.
+      .catch(() => undefined);
   }
+
+  if (uri)
+    return (
+      <VideoPlayback
+        uri={uri}
+        title={title}
+        resumeAt={resumeAt.current}
+        onProgress={save}
+        privateStream
+        onRetry={retry}
+      />
+    );
+  const plusEnded = problem?.code === 'subscription_required';
   return (
-    <Surface>
-      {grant ? (
-        <VideoPlayback
-          key={grant.hlsUrl}
-          uri={grant.hlsUrl}
-          resumeAt={position.current}
-          onProgress={saveProgress}
-          privateStream
-          onRetry={() => setAttempt((value) => value + 1)}
-        />
-      ) : (
-        <Label>{error ? 'Playback is unavailable.' : 'Preparing secure playback…'}</Label>
+    <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: c.player }}>
+      {!!cover && (
+        <Image source={cover} style={{ position: 'absolute', inset: 0 }} contentFit="cover" />
       )}
-      <ErrorNote message={error} />
-      {error && <Button title="Retry playback" onPress={() => setAttempt((value) => value + 1)} />}
-    </Surface>
+      <View
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundColor: problem ? c.scrim : c.scrimSoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 20,
+          gap: 12,
+        }}
+      >
+        {problem ? (
+          <>
+            <Label accessibilityRole="alert" style={{ color: c.white, textAlign: 'center' }}>
+              {plusEnded ? 'Your Plus has ended. Renew it to keep watching.' : problem.message}
+            </Label>
+            {plusEnded ? (
+              <Button
+                compact
+                variant="plus"
+                title="Renew Plus"
+                onPress={() => router.push('/premium')}
+              />
+            ) : (
+              <Button compact title="Try again" onPress={retry} />
+            )}
+          </>
+        ) : (
+          <ActivityIndicator size="large" color={c.white} accessibilityLabel="Loading video" />
+        )}
+      </View>
+    </View>
   );
 }

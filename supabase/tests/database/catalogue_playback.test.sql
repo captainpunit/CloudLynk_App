@@ -135,6 +135,13 @@ select is((select status from public.titles where id=(select id from tests.ids w
 
 reset role;
 select ok((select expires_at<=now()+interval '45 seconds' from public.playback_grant(tests.uid('paid'),(select id from tests.ids where label='paid_movie'))),'token expiry cannot exceed subscription expiry');
+-- With Plus for hours, one grant covers the whole viewing: 2 minutes of video + 30 for pauses.
+update public.subscriptions set paid_until=now()+interval '9 hours' where user_id=tests.uid('paid');
+select ok((select expires_at between now()+interval '31 minutes' and now()+interval '33 minutes' from public.playback_grant(tests.uid('paid'),(select id from tests.ids where label='paid_movie'))),'a grant covers the video plus time for pauses');
+update public.stream_assets set duration_seconds=10*3600 where title_id=(select id from tests.ids where label='paid_movie');
+select ok((select expires_at<=now()+interval '6 hours' from public.playback_grant(tests.uid('paid'),(select id from tests.ids where label='paid_movie'))),'a grant never lasts more than 6 hours');
+update public.subscriptions set paid_until=now()+interval '1 hour' where user_id=tests.uid('paid');
+select ok((select expires_at<=now()+interval '1 hour' from public.playback_grant(tests.uid('paid'),(select id from tests.ids where label='paid_movie'))),'a long video still stops when Plus ends');
 update public.stream_assets set signed_only=false where title_id=(select id from tests.ids where label='paid_movie');
 select throws_ok($$select * from public.playback_grant(tests.uid('paid'),(select id from tests.ids where label='paid_movie'))$$,'42501','video_processing','unsigned provider assets never grant playback');
 select * from finish();

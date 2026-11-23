@@ -22,6 +22,16 @@ const messages: Record<string, string> = {
   temporarily_unavailable: 'The service is temporarily unavailable. Please try again.',
 };
 
+/** An error from an edge function: a message for members, plus the service's code if any. */
+export class BackendError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
+}
+
 export async function invokeBackend<T>(name: string, body: Record<string, unknown>): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);
@@ -40,8 +50,9 @@ export async function invokeBackend<T>(name: string, body: Record<string, unknow
     } catch {
       /* Never expose raw provider responses or tokens. */
     }
-    throw new Error(
+    throw new BackendError(
       (code && messages[code]) || 'The request could not be completed. Please try again.',
+      code,
     );
   }
   if (!data || typeof data !== 'object')

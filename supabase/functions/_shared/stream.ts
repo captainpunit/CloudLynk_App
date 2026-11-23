@@ -191,8 +191,9 @@ export async function signPlayback(
   if (!/^customer-[a-z0-9-]+\.cloudflarestream\.com$/.test(host)) {
     throw new Error("invalid_stream_playback_host");
   }
+  // playback_grant sets the length (the viewing, capped by Plus); 6 hours is a backstop.
   const expiry = Math.floor(
-    Math.min(Date.parse(expiresAt), now + 600_000) / 1000,
+    Math.min(Date.parse(expiresAt), now + 6 * 3600_000) / 1000,
   );
   if (!Number.isFinite(expiry) || expiry <= Math.floor(now / 1000)) {
     throw new HttpError(403, "subscription_required");
@@ -218,5 +219,7 @@ export async function signPlayback(
     hlsUrl: `https://${host}/${token}/manifest/video.m3u8`,
     dashUrl: `https://${host}/${token}/manifest/video.mpd`,
     expiresAt: new Date(expiry * 1000).toISOString(),
+    // Seconds left by the server's clock, so a phone with a wrong clock still renews on time.
+    expiresIn: expiry - Math.floor(now / 1000),
   };
 }

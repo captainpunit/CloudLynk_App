@@ -60,7 +60,8 @@ export async function call<N extends keyof Functions>(name: N, args: Functions[N
   return checked(await supabase.rpc(name, args));
 }
 export function playbackToken(titleId: string) {
-  return invokeBackend<{ hlsUrl: string; dashUrl: string; expiresAt: string }>(
+  // expiresIn (seconds, by the server's clock) is absent from functions deployed before it.
+  return invokeBackend<{ hlsUrl: string; dashUrl: string; expiresAt: string; expiresIn?: number }>(
     'stream-playback-token',
     { titleId },
   );
