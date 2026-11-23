@@ -46,6 +46,10 @@ const errors: Record<string, string> = {
   invalid_price: 'Enter a price of at least ₹1.',
   invalid_quota: 'Enter the storage included with this plan.',
   invalid_audience: 'Choose organic users, ads users or both.',
+  invalid_title_state: 'Only videos waiting for review can be approved.',
+  deletion_pending: 'This account is being deleted and cannot be restored.',
+  target_unavailable: 'This item no longer exists. Refresh the records.',
+  cannot_restrict_self: 'You cannot restrict your own account.',
   too_many_devices:
     'Notifications are on for 10 devices already. Turn them off on a phone you no longer use.',
   invalid_push_token: 'Notifications could not be set up on this phone. Try again.',

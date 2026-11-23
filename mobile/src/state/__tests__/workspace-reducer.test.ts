@@ -49,3 +49,9 @@ test('watch progress cannot be negative', () =>
     workspaceReducer(empty, { type: 'progress', id: 'video', seconds: -10 }).progress.video,
     0,
   ));
+
+test('watching a title records when, for ordering Continue watching', () => {
+  const before = Date.now();
+  const next = workspaceReducer(empty, { type: 'progress', id: 't1', seconds: 40 });
+  assert.ok(Date.parse(next.lastWatched!.t1) >= before - 1000);
+});

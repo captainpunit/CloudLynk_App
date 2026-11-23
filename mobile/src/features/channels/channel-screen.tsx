@@ -208,9 +208,11 @@ function OwnerTools({
   owner: boolean;
   onError: (message: string | null) => void;
 }) {
-  const { refresh } = useWorkspace();
+  const { refresh, notify } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [inviteUser, setInviteUser] = useState('');
+  const inviteId = inviteUser.trim();
+  const validId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inviteId);
   return (
     <View style={{ gap: 12 }}>
       {!owner && (
@@ -220,18 +222,29 @@ function OwnerTools({
           onPress={() => router.push({ pathname: '/upload', params: { channelId: channel.id } })}
         />
       )}
-      {channel.visibility === 'private' && (
+      {channel.visibility === 'private' && channel.status !== 'published' && (
+        <Label variant="callout">
+          You can invite people once an administrator publishes this channel.
+        </Label>
+      )}
+      {channel.visibility === 'private' && channel.status === 'published' && (
         <>
           <Field
             label="Invite someone to this private channel (user ID)"
             value={inviteUser}
             onChangeText={setInviteUser}
             autoCapitalize="none"
+            error={
+              inviteId && !validId
+                ? 'A user ID looks like 1b2c3d4e-…, as shown in their profile.'
+                : undefined
+            }
           />
           <Button
             title="Send invitation"
             variant="soft"
             loading={busy}
+            disabled={!validId}
             onPress={() => {
               setBusy(true);
               onError(null);
@@ -241,6 +254,7 @@ function OwnerTools({
               })
                 .then(async () => {
                   setInviteUser('');
+                  notify('Invitation sent. They can now join the channel.');
                   await refresh();
                 })
                 .catch((cause: Error) => onError(cause.message))

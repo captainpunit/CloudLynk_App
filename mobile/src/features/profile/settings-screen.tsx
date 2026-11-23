@@ -68,8 +68,9 @@ export default function SettingsScreen() {
       // Best effort: a device that cannot be unregistered now stops receiving
       // notifications when its token is next rejected.
       await unregisterPush().catch(() => undefined);
-      const { error: failure } = await supabase.auth.signOut({ scope: 'local' });
-      if (failure) throw failure;
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+      // Offline, the server is not told but this phone is still signed out; that is success.
+      if ((await supabase.auth.getSession()).data.session) throw new Error('still signed in');
       dispatch({ type: 'identity', profile: null, joinedIds: [] });
       router.replace('/');
       notify('You’re signed out');

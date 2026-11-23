@@ -16,6 +16,7 @@ export default function CreateChannelScreen() {
   const [category, setCategory] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
   const [cover, setCover] = useState('');
   // Suggest categories already used in the catalogue; owners may also type a new one.
   const categories = [
@@ -77,7 +78,12 @@ export default function CreateChannelScreen() {
         onChangeText={setDescription}
         maxLength={500}
       />
-      <CoverImageField value={cover} onChange={setCover} disabled={busy} />
+      <CoverImageField
+        value={cover}
+        onChange={setCover}
+        disabled={busy}
+        onBusyChange={setCoverBusy}
+      />
       <Field
         label="Category (optional)"
         placeholder="What is it about?"
@@ -105,7 +111,12 @@ export default function CreateChannelScreen() {
         </Label>
       </Surface>
       <ErrorNote message={error} />
-      <Button title="Submit for review" loading={busy} onPress={() => void submit()} />
+      <Button
+        title={coverBusy ? 'Adding the cover image…' : 'Submit for review'}
+        loading={busy}
+        disabled={coverBusy}
+        onPress={() => void submit()}
+      />
     </Screen>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -15,12 +15,20 @@ export function CoverImageField({
   value,
   onChange,
   disabled = false,
+  onBusyChange,
 }: {
   value: string;
   onChange: (url: string) => void;
   disabled?: boolean;
+  /** True while the chosen image is uploading; saving before then would drop it. */
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const busyChanged = useRef(onBusyChange);
+  busyChanged.current = onBusyChange;
+  useEffect(() => {
+    busyChanged.current?.(uploading);
+  }, [uploading]);
   const [error, setError] = useState<string | null>(null);
 
   async function choose() {

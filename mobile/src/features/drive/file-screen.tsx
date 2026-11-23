@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Linking } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import { Button, EmptyState, ErrorNote, Label, Screen, Surface } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { call, checked } from '@/data/live/backend';
 import { supabase } from '@/lib/supabase';
+import { downloadName } from '@/domain/files';
 import { fileSize } from '@/domain/format';
 
 export default function FileScreen() {
@@ -30,15 +31,18 @@ export default function FileScreen() {
       if (!signed) throw new Error('The file is unavailable.');
       if (Platform.OS === 'web') await Linking.openURL(signed.signedUrl);
       else {
-        const target = new File(
-          Paths.cache,
-          `${file.id}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`,
-        );
-        const local = await File.downloadFileAsync(signed.signedUrl, target, { idempotent: true });
+        // Each download gets its own folder, so the file keeps its own name (in any
+        // language); only characters a file name cannot contain are replaced.
+        const folder = new Directory(Paths.cache, `download-${file.id}`);
+        folder.create({ idempotent: true, intermediates: true });
+        const name = downloadName(file.name);
+        const local = await File.downloadFileAsync(signed.signedUrl, new File(folder, name), {
+          idempotent: true,
+        });
         try {
           await Sharing.shareAsync(local.uri, { mimeType: file.mimeType });
         } finally {
-          if (local.exists) local.delete();
+          if (folder.exists) folder.delete();
         }
       }
     } catch {

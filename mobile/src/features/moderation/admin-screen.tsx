@@ -50,9 +50,16 @@ export default function AdminScreen() {
   const load = useCallback(async () => {
     if (state.profile?.role !== 'admin') return;
     const [titleRows, reportRows, users, auditRows, requestRows] = await Promise.all([
-      readPages((from, to) => supabase.from('titles').select('*').order('id').range(from, to)),
       readPages((from, to) =>
-        supabase.from('content_reports').select('*').order('id').range(from, to),
+        supabase.from('titles').select('*').order('created_at').order('id').range(from, to),
+      ),
+      readPages((from, to) =>
+        supabase
+          .from('content_reports')
+          .select('*')
+          .order('created_at')
+          .order('id')
+          .range(from, to),
       ),
       readPages((from, to) =>
         supabase
@@ -82,7 +89,10 @@ export default function AdminScreen() {
   useEffect(() => {
     void load().catch(() => setError('Admin records could not load. Please refresh.'));
   }, [load]);
-  async function run(work: () => Promise<unknown>, message = 'Administrative action saved.') {
+  async function run(
+    work: () => Promise<unknown>,
+    message: string | (() => string) = 'Administrative action saved.',
+  ) {
     if (busy) return;
     setBusy(true);
     setError(null);
@@ -92,7 +102,7 @@ export default function AdminScreen() {
       setReason('');
       await refresh();
       await load();
-      notify(message);
+      notify(typeof message === 'function' ? message() : message);
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -401,31 +411,40 @@ export default function AdminScreen() {
           <Button
             title={campaignLocked ? 'Retry sending this notice' : 'Send notice to selected users'}
             disabled={busy || !noticeTitle.trim() || !noticeBody.trim() || !recipientIds.trim()}
-            onPress={() =>
-              void run(async () => {
-                const ids = [
-                  ...new Set(
-                    recipientIds
-                      .split(',')
-                      .map((id) => id.trim())
-                      .filter(Boolean),
-                  ),
-                ];
-                if (
-                  !ids.length ||
-                  ids.length > 500 ||
-                  ids.some((id) => !/^[0-9a-f-]{36}$/i.test(id))
-                )
-                  throw new Error('Enter valid user IDs, up to 500 recipients.');
-                setCampaignLocked(true);
-                await call('send_notice', {
-                  p_campaign_id: campaignId,
-                  p_user_ids: ids,
-                  p_title: noticeTitle.trim(),
-                  p_body: noticeBody.trim(),
-                });
-              }, 'Notice queued. Retrying this notice will not duplicate inbox entries.')
-            }
+            onPress={() => {
+              let sent = 'Notice queued.';
+              void run(
+                async () => {
+                  const ids = [
+                    ...new Set(
+                      recipientIds
+                        .split(',')
+                        .map((id) => id.trim())
+                        .filter(Boolean),
+                    ),
+                  ];
+                  if (
+                    !ids.length ||
+                    ids.length > 500 ||
+                    ids.some((id) => !/^[0-9a-f-]{36}$/i.test(id))
+                  )
+                    throw new Error('Enter valid user IDs, up to 500 recipients.');
+                  setCampaignLocked(true);
+                  const queued = await call('send_notice', {
+                    p_campaign_id: campaignId,
+                    p_user_ids: ids,
+                    p_title: noticeTitle.trim(),
+                    p_body: noticeBody.trim(),
+                  });
+                  if (!queued)
+                    throw new Error(
+                      'Nobody received this notice: check the user IDs, or it was already sent to them.',
+                    );
+                  sent = `Notice queued for ${queued} of ${ids.length} members.`;
+                },
+                () => sent,
+              );
+            }}
           />
           <Button
             title="Compose a new notice"

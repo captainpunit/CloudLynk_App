@@ -52,7 +52,7 @@ export default function DriveScreen() {
           />
           <SearchField value={query} onChangeText={setQuery} placeholder="Search your files" />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {['All', 'Image', 'Video', 'Document'].map((value) => (
+            {['All', 'Image', 'Video', 'Audio', 'Document'].map((value) => (
               <Pill
                 key={value}
                 title={value}

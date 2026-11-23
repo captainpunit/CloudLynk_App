@@ -32,7 +32,7 @@ export interface Video {
 export interface DriveFile {
   id: string;
   name: string;
-  kind: 'image' | 'video' | 'document' | 'folder';
+  kind: 'image' | 'video' | 'audio' | 'document' | 'other' | 'folder';
   bytes: number;
   createdAt: string;
   uri?: string;
@@ -62,6 +62,8 @@ export interface Workspace {
   savedIds: string[];
   files: DriveFile[];
   progress: Record<string, number>;
+  /** When each title was last watched (ISO time), for ordering "Continue watching". */
+  lastWatched?: Record<string, string>;
   noticesRead: boolean;
   seasons?: { id: string; seriesId: string; number: number; name: string }[];
   driveUsage?: {

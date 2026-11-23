@@ -33,20 +33,24 @@ export function browsableVideos(state: Catalogue, channelIds?: Set<string>): Vid
 
 /** Started and not finished, most recent first. */
 export function continueWatching(
-  state: Catalogue & Pick<Workspace, 'progress' | 'completedIds'>,
+  state: Catalogue & Pick<Workspace, 'progress' | 'completedIds' | 'lastWatched'>,
 ): Video[] {
+  const watched = (video: Video) => state.lastWatched?.[video.id] ?? '';
   const completed = new Set(state.completedIds ?? []);
   const published = new Set(
     state.channels.filter((channel) => channel.status === 'published').map((item) => item.id),
   );
-  return state.videos
-    .filter(
-      (video) =>
-        published.has(video.channelId) &&
-        (state.progress[video.id] ?? 0) > 0 &&
-        !completed.has(video.id),
-    )
-    .sort(newestFirst);
+  return (
+    state.videos
+      .filter(
+        (video) =>
+          published.has(video.channelId) &&
+          (state.progress[video.id] ?? 0) > 0 &&
+          !completed.has(video.id),
+      )
+      // Most recently watched first, as members expect; publish date breaks ties.
+      .sort((a, b) => watched(b).localeCompare(watched(a)) || newestFirst(a, b))
+  );
 }
 
 /** "Resume at 4:05" or "Resume at 1:02:09". */

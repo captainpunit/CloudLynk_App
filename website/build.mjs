@@ -22,7 +22,13 @@ const site = JSON.parse(fs.readFileSync(path.join(here, configFile), "utf8"));
 const problems = [];
 if (configFile !== "site.json")
   problems.push("website/site.json is missing; using site.example.json");
-if (!/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(site.appSigningSha256 ?? ""))
+// One fingerprint, or a list: the Play app signing key and, for the direct APK, the
+// key EAS signs it with.
+const fingerprints = [site.appSigningSha256].flat().filter(Boolean);
+if (
+  !fingerprints.length ||
+  !fingerprints.every((value) => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(value))
+)
   problems.push(
     "appSigningSha256 is not set (Play Console → Test and release → App integrity)",
   );
@@ -210,7 +216,7 @@ write(
         target: {
           namespace: "android_app",
           package_name: site.androidPackage,
-          sha256_cert_fingerprints: [site.appSigningSha256],
+          sha256_cert_fingerprints: fingerprints,
         },
       },
     ],

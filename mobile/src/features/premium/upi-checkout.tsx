@@ -90,6 +90,13 @@ export default function UpiCheckout() {
     };
   }, [load]);
 
+  // A confirmation or refund notice that arrives while this screen is open reloads the
+  // orders, so "We are checking your payment" does not linger after it was decided.
+  const newestNotice = state.notices?.[0]?.id;
+  useEffect(() => {
+    void load().catch(() => {});
+  }, [load, newestNotice, state.subscribedUntil]);
+
   const latest = orders[0];
   // On the Play build an order made without Google's choice screen goes back through it.
   const step = latest ? orderStep(latest, Date.now(), play.available) : 'closed';

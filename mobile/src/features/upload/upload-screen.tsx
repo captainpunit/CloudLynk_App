@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Alert, Platform, View } from 'react-native';
+import { useLocalSearchParams, useNavigation, usePreventRemove } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { Film } from 'lucide-react-native';
 import { CoverImageField } from '@/components/cover-image-field';
@@ -50,6 +50,29 @@ export default function UploadScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const abort = useRef<AbortController | null>(null);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  // Leaving this screen stops the upload, so ask first; it can be resumed later by
+  // choosing the same file.
+  const navigation = useNavigation();
+  const allowLeaving = usePreventRemove(transferring, ({ data }) => {
+    const leave = () => {
+      abort.current?.abort();
+      allowLeaving();
+      navigation.dispatch(data.action);
+    };
+    if (Platform.OS === 'web') {
+      if (
+        globalThis.confirm?.('Stop the upload? You can resume it later by choosing the same file.')
+      )
+        leave();
+      return;
+    }
+    Alert.alert('Stop the upload?', 'You can resume it later by choosing the same file.', [
+      { text: 'Keep uploading', style: 'cancel' },
+      { text: 'Stop and leave', style: 'destructive', onPress: leave },
+    ]);
+  });
   const current = titles.find((item) => item.id === titleId);
   const asset = assets.find((item) => item.title_id === titleId);
   // The server only accepts a movie or episode for review once its video has processed.
@@ -174,6 +197,18 @@ export default function UploadScreen() {
     const controller = new AbortController();
     abort.current = controller;
     const files = [...selected];
+    setTransferring(true);
+    try {
+      await uploadFiles(files, controller, targetTitleId);
+    } finally {
+      setTransferring(false);
+    }
+  }
+  async function uploadFiles(
+    files: DocumentPicker.DocumentPickerAsset[],
+    controller: AbortController,
+    targetTitleId?: string,
+  ) {
     for (let index = 0; index < files.length; index++) {
       const file = files[index];
       await uploadLiveFile(
@@ -244,7 +279,12 @@ export default function UploadScreen() {
               multiline
               maxLength={10000}
             />
-            <CoverImageField value={cover} onChange={setCover} disabled={busy} />
+            <CoverImageField
+              value={cover}
+              onChange={setCover}
+              disabled={busy}
+              onBusyChange={setCoverBusy}
+            />
             <Field
               label="Minimum age (0–21)"
               value={minAge}
@@ -301,7 +341,7 @@ export default function UploadScreen() {
             )}
             <Button
               title={selected.length && kind !== 'series' ? 'Save and upload video' : 'Save draft'}
-              disabled={!!current && !['draft', 'rejected'].includes(current.status)}
+              disabled={coverBusy || (!!current && !['draft', 'rejected'].includes(current.status))}
               loading={busy}
               onPress={() =>
                 void action(

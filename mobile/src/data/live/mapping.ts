@@ -35,7 +35,10 @@ export function mapFile(row: Tables<'files'>): DriveFile {
     name: row.name,
     bytes: row.size_bytes,
     createdAt: row.created_at,
-    kind: row.category === 'image' ? 'image' : row.category === 'video' ? 'video' : 'document',
+    // The backend's own categories, so audio is not filed under documents.
+    kind:
+      (['image', 'video', 'audio', 'document'] as const).find((kind) => kind === row.category) ??
+      'other',
     storagePath: row.storage_path,
     mimeType: row.mime_type,
     status: row.status as DriveFile['status'],

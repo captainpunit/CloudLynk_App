@@ -123,6 +123,7 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
       supabase
         .from('plans')
         .select('product_id,name,billing_period,quota_bytes,price_paise')
+        .eq('active', true)
         .not('price_paise', 'is', null)
         .order('price_paise')
         .order('product_id')
@@ -200,6 +201,7 @@ export async function fetchLiveWorkspace(): Promise<Workspace> {
     savedIds: saved.map((row) => row.title_id),
     progress: Object.fromEntries(progress.map((row) => [row.title_id, row.position_seconds])),
     completedIds: progress.filter((row) => row.completed).map((row) => row.title_id),
+    lastWatched: Object.fromEntries(progress.map((row) => [row.title_id, row.updated_at])),
     notices: notices.map((row) => ({
       id: row.id,
       title: row.title,

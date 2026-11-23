@@ -32,6 +32,7 @@ export function workspaceReducer(state: Workspace, action: WorkspaceAction): Wor
       return {
         ...state,
         progress: { ...state.progress, [action.id]: Math.max(0, action.seconds) },
+        lastWatched: { ...state.lastWatched, [action.id]: new Date().toISOString() },
         ...(action.completed === undefined
           ? {}
           : {

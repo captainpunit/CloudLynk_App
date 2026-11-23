@@ -17,7 +17,8 @@ The public pages the launch needs, built from `docs/store/*.md`:
    - `supportEmail`: the client's support address.
    - `appSigningSha256`: Play Console → Test and release → App integrity → App signing
      key certificate → SHA-256. Use the **app signing** key, not the upload key, or
-     links open in the browser.
+     links open in the browser. If the direct APK is distributed too, make this a list
+     and add the SHA-256 of the key EAS signs it with (`eas credentials`).
 2. Fill every `[bracket]` in `docs/store/privacy-policy.md`, `terms.md` and
    `account-deletion.md`, and have them checked by a lawyer.
 3. `node website/build.mjs --strict` must finish without listing anything still to do.
