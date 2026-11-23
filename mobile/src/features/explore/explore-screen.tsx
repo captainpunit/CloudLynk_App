@@ -199,7 +199,10 @@ function UnreadDot() {
 function Hero({ video, channel }: { video: Video; channel?: Channel }) {
   const { state, bookmark, notify } = useWorkspace();
   const p = usePalette();
-  const locked = channel?.visibility === 'premium' && !state.subscribed;
+  // The server lets a channel's owner and administrators play any title; so does this.
+  const previewer =
+    !!state.profile && (state.profile.role === 'admin' || state.profile.id === channel?.ownerId);
+  const locked = channel?.visibility === 'premium' && !state.subscribed && !previewer;
   const saved = state.savedIds.includes(video.id);
   const open = () => router.push({ pathname: '/watch/[id]', params: { id: video.id } });
   return (

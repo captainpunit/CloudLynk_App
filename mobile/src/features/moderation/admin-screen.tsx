@@ -9,6 +9,7 @@ import {
   Field,
   Label,
   Pill,
+  Rail,
   Screen,
   Surface,
 } from '@/components/ui';
@@ -41,6 +42,7 @@ export default function AdminScreen() {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reloading, setReloading] = useState(false);
   const [auditPage, setAuditPage] = useState(0);
   const [recipientIds, setRecipientIds] = useState('');
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -133,15 +135,20 @@ export default function AdminScreen() {
       </Screen>
     );
   return (
-    <Screen title="Admin workspace" back>
-      <Label>Changes affect live accounts and content. All actions are audited.</Label>
-      <Button
-        title="Refresh records"
-        variant="outline"
-        loading={busy}
-        onPress={() => void run(load, 'Admin records refreshed.')}
-      />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+    <Screen
+      title="Admin"
+      subtitle="Changes affect live accounts and content. Every action is recorded."
+      back
+      refreshing={reloading}
+      onRefresh={() => {
+        setReloading(true);
+        // Not through run(): reloading must keep a reason the admin is still writing.
+        void Promise.all([refresh(), load()])
+          .catch((cause: Error) => setError(cause.message))
+          .finally(() => setReloading(false));
+      }}
+    >
+      <Rail gap={8}>
         {[
           'Channels',
           'Titles',
@@ -159,7 +166,7 @@ export default function AdminScreen() {
             onPress={() => setTab(value.replace(/ \(\d+\)$/, ''))}
           />
         ))}
-      </View>
+      </Rail>
       <ErrorNote message={error} />
       {['Channels', 'Titles', 'Reports', 'Creators', 'People'].includes(tab) && (
         <Field

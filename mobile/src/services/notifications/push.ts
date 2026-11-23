@@ -37,8 +37,13 @@ export async function enablePush(prompt = true) {
   if (!permission.granted)
     throw new Error('Notifications are disabled. Enable permission in your Android settings.');
   const projectId = Constants.easConfig?.projectId ?? Constants.expoConfig?.extra?.eas?.projectId;
-  if (!projectId) throw new Error('Push notifications need an EAS project ID in this build.');
-  const token = await notifications.getExpoPushTokenAsync({ projectId });
+  // Both only fail when the build itself is set up wrongly (no project ID, no Firebase),
+  // or the phone cannot reach Google; neither is something the member can fix beyond retrying.
+  const unavailable = 'Notifications could not be turned on. Check your connection and try again.';
+  if (!projectId) throw new Error(unavailable);
+  const token = await notifications.getExpoPushTokenAsync({ projectId }).catch(() => {
+    throw new Error(unavailable);
+  });
   const {
     data: { user: currentUser },
   } = await supabase.auth.getUser();
