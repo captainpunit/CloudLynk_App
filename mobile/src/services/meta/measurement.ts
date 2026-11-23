@@ -37,11 +37,18 @@ export async function startMeasurement(userId: string): Promise<string | null> {
   return meta.anonymousId();
 }
 
-/** Stops app events for the rest of this session; nothing starts on the next launch. */
+/**
+ * Stops app events. The SDK keeps its switches between launches, so they are turned off
+ * even when it was not started in this session (a member who allowed earlier, then declined).
+ */
 export async function stopMeasurement() {
-  if (!started) return;
+  if (!measurementAvailable) return;
   started = false;
-  (await import('./metaEvents')).pauseMetaSdk();
+  try {
+    (await import('./metaEvents')).pauseMetaSdk();
+  } catch {
+    // Not initialised in this session: it sends nothing, and the switches stay off.
+  }
 }
 
 export function logPlansViewed() {

@@ -55,8 +55,13 @@ export function AdConsentPrompt() {
     try {
       await captureInstallAttribution(allowed);
     } catch {
-      // The choice is still remembered on this device; Settings can send it again.
-      await saveMeasurementChoice(userId!, allowed).catch(() => undefined);
+      if (allowed) {
+        // CloudLynk never received the consent, so nothing is measured; ask again next time.
+        await stopMeasurement().catch(() => undefined);
+      } else {
+        // Declining already took effect on this device; Settings can send it again.
+        await saveMeasurementChoice(userId!, false).catch(() => undefined);
+      }
     }
     setBusy(false);
     setAsking(false);
@@ -82,9 +87,10 @@ export function AdConsentPrompt() {
     >
       <Heading>Can we measure our adverts?</Heading>
       <Label>
-        If you allow it, CloudLynk shares with Meta that this app was installed and when a
-        subscription is paid, so we can tell which adverts work. We never share what you watch. You
-        can change this in Settings at any time.
+        If you allow it, CloudLynk shares with Meta (Facebook and Instagram) your device&apos;s
+        advertising ID, basic device details, when you open the app, view plans or start a checkout,
+        and when a Plus payment is confirmed, so we can tell which adverts work. We never share what
+        you watch. You can change this in Settings at any time.
       </Label>
       <Button title="Allow" loading={busy} onPress={() => void answer(true)} />
       <Button

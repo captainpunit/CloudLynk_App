@@ -94,10 +94,11 @@ const config: ExpoConfig = {
               clientToken: process.env.META_CLIENT_TOKEN,
               displayName: process.env.META_DISPLAY_NAME ?? 'CloudLynk',
               scheme: `fb${process.env.META_APP_ID}`,
-              // We call initializeSDK() ourselves after consent, so keep auto-init off.
+              // Nothing runs before consent: we call initializeSDK() and switch automatic
+              // events and the advertising ID on (resumeMetaSdk) only after the member allows.
               isAutoInitEnabled: false,
-              autoLogAppEventsEnabled: true,
-              advertiserIDCollectionEnabled: true,
+              autoLogAppEventsEnabled: false,
+              advertiserIDCollectionEnabled: false,
             },
           ],
         ] as ExpoConfig['plugins'] & unknown[])
