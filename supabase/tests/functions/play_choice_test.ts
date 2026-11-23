@@ -2,7 +2,10 @@ import {
   externalRefundBody,
   externalTransactionBody,
 } from "../../functions/_shared/externalTransaction.ts";
-import { productPurchaseProblem } from "../../functions/_shared/playProduct.ts";
+import {
+  productPurchaseProblem,
+  purchasedProduct,
+} from "../../functions/_shared/playProduct.ts";
 
 function equal(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -73,4 +76,41 @@ Deno.test("a refund report is a full refund at the refund time", () => {
     }),
     { refundTime: "2026-11-12T00:00:00.000Z", fullRefund: {} },
   );
+});
+
+Deno.test("a one-time purchase notification names the plan and token", () => {
+  equal(
+    purchasedProduct({
+      oneTimeProductNotification: {
+        notificationType: 1,
+        purchaseToken: "tok",
+        sku: "gold",
+      },
+    }),
+    { productId: "gold", token: "tok" },
+  );
+});
+
+Deno.test("cancelled pending purchases and other notifications grant nothing", () => {
+  equal(
+    purchasedProduct({
+      oneTimeProductNotification: {
+        notificationType: 2,
+        purchaseToken: "tok",
+        sku: "gold",
+      },
+    }),
+    null,
+  );
+  equal(
+    purchasedProduct({ subscriptionNotification: { purchaseToken: "tok" } }),
+    null,
+  );
+  equal(
+    purchasedProduct({
+      oneTimeProductNotification: { notificationType: 1, sku: "gold" },
+    }),
+    null,
+  );
+  equal(purchasedProduct(null), null);
 });

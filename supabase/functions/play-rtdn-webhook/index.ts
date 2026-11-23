@@ -10,6 +10,8 @@ import { env } from "../_shared/env.ts";
 import { supabaseAdmin as db } from "../_shared/supabaseAdmin.ts";
 import { verifyPubsub } from "../_shared/pubsub.ts";
 import { syncSubscription } from "../_shared/subscriptions.ts";
+import { grantPlayProduct } from "../_shared/grantPlayProduct.ts";
+import { purchasedProduct } from "../_shared/playProduct.ts";
 
 Deno.serve(endpoint(async (req) => {
   await verifyPubsub(req);
@@ -34,21 +36,24 @@ Deno.serve(endpoint(async (req) => {
   ) throw new HttpError(400, "package_mismatch");
   const sub = notification.subscriptionNotification;
   const voided = notification.voidedPurchaseNotification;
-  const token = sub?.purchaseToken ?? voided?.purchaseToken;
-  if (sub || voided) requiredString(token, 4096);
+  // A Plus plan bought with Google Play, including a pending payment that cleared later.
+  const bought = purchasedProduct(notification);
+  const token = sub?.purchaseToken ?? voided?.purchaseToken ?? bought?.token;
+  if (sub || voided || bought) requiredString(token, 4096);
   if (token) {
     const erased = await db.rpc("is_erased_purchase_token", { p_token: token });
     dbCheck(erased.error);
     if (erased.data) return json({ ignored: true });
   }
-  if (!sub && !voided && !notification.testNotification) {
+  if (!sub && !voided && !bought && !notification.testNotification) {
     return json({ ignored: true });
   }
   const saved = await db.from("payment_events").upsert({
     provider: "google_play",
     provider_event_id: id,
     purchase_token: token ?? null,
-    notification_type: sub?.notificationType ?? null,
+    notification_type: sub?.notificationType ??
+      notification.oneTimeProductNotification?.notificationType ?? null,
     payload: notification,
   }, { onConflict: "provider,provider_event_id", ignoreDuplicates: true });
   dbCheck(saved.error);
@@ -59,7 +64,21 @@ Deno.serve(endpoint(async (req) => {
   dbCheck(prior.error);
   if (prior.data?.processed_at) return json({ duplicate: true });
   let outcome: string | null = null;
-  if (token && voided?.productType === 2) {
+  if (bought) {
+    try {
+      // A failed consume is raised, so Pub/Sub delivers the message again.
+      await grantPlayProduct(bought.productId, bought.token, {
+        retryConsume: "throw",
+      });
+    } catch (error) {
+      // Not ours to grant (no matching account, still pending, refused by Google).
+      if (
+        !(error instanceof HttpError) ||
+        ![400, 403, 409, 410].includes(error.status)
+      ) throw error;
+      outcome = error.message;
+    }
+  } else if (token && voided?.productType === 2) {
     // A refunded one-time product. Google's subscription API does not know these tokens.
     const ended = await db.rpc("void_play_purchase", { p_token: token });
     dbCheck(ended.error);

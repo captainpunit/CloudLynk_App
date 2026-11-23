@@ -26,3 +26,25 @@ export function productPurchaseProblem(
   ) return { status: 403, code: "purchase_owner_mismatch" };
   return null;
 }
+
+/** The purchase in a one-time product notification, or null for anything else. */
+export function purchasedProduct(
+  notification: unknown,
+): { productId: string; token: string } | null {
+  const product = (notification as {
+    oneTimeProductNotification?: {
+      notificationType?: unknown;
+      purchaseToken?: unknown;
+      sku?: unknown;
+    };
+  })?.oneTimeProductNotification;
+  // 1 = ONE_TIME_PRODUCT_PURCHASED (also sent when a pending payment completes);
+  // 2 = ONE_TIME_PRODUCT_CANCELED, a pending purchase that never got paid.
+  if (
+    !product || product.notificationType !== 1 ||
+    typeof product.purchaseToken !== "string" ||
+    typeof product.sku !== "string" || !product.purchaseToken ||
+    !product.sku
+  ) return null;
+  return { productId: product.sku, token: product.purchaseToken };
+}

@@ -46,8 +46,16 @@ The full list, with who gets each item and where each value goes, is in
    (the app resets passwords with the code in that email), and configure SMTP.
 3. Set every function secret named in `supabase/.env.example` (Cloudflare including
    the two `STREAM_MAX_*` limits, Google Play, Meta, push, `CRON_SECRET`,
-   `ANDROID_PACKAGE_NAME`). The two `RTDN_*` values are only for auto-renewing Play
-   subscriptions, which the launch plans do not use.
+   `ANDROID_PACKAGE_NAME`, and the two `RTDN_*` values below).
+   **Real-time notifications are required.** Google Play tells the backend about every
+   plan bought with Google Play, so a purchase is granted even when the app closed during
+   checkout or a pending payment cleared later (Google refunds anything not granted
+   within three days). In Google Cloud, create a Pub/Sub topic, give
+   `google-play-developer-notifications@system.gserviceaccount.com` the Publisher role on
+   it, and add a push subscription to `https://<project>.supabase.co/functions/v1/play-rtdn-webhook`
+   with authentication on; set `RTDN_PUSH_AUDIENCE` to that subscription's audience. Then
+   in Play Console → Monetisation setup → Real-time developer notifications, enter the
+   topic and press **Send test notification**.
 4. Deploy all functions in `supabase/functions`, including the new
    `verify-play-product`, `play-external-report` and `play-voided-sync`.
 5. Add `cron_secret` and `supabase_project_url` to Vault, then run
