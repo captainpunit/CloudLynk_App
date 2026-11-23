@@ -46,6 +46,9 @@ const errors: Record<string, string> = {
   invalid_price: 'Enter a price of at least ₹1.',
   invalid_quota: 'Enter the storage included with this plan.',
   invalid_audience: 'Choose organic users, ads users or both.',
+  too_many_devices:
+    'Notifications are on for 10 devices already. Turn them off on a phone you no longer use.',
+  invalid_push_token: 'Notifications could not be set up on this phone. Try again.',
   already_creator: 'You can already publish. Create a channel from the + button.',
   invalid_message: 'Write at least a sentence (10 characters) about what you will publish.',
   invalid_audience_source: 'This link could not be recognised.',

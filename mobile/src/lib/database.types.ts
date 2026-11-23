@@ -1677,6 +1677,12 @@ export type Database = {
           isSetofReturn: true;
         };
       };
+      "claim_installation": {
+        Args: {
+          "p_installation_id": string;
+        };
+        Returns: undefined;
+      };
       "claim_media_deletions": {
         Args: {
           "p_limit"?: number;
@@ -2158,6 +2164,13 @@ export type Database = {
         Args: {
           "p_installation_id": string;
           "p_token": string;
+        };
+        Returns: undefined;
+      };
+      "release_installation_for": {
+        Args: {
+          "p_installation_id": string;
+          "p_user_id": string;
         };
         Returns: undefined;
       };

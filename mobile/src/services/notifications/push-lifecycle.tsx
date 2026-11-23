@@ -2,7 +2,8 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useWorkspace } from '@/state/workspace-provider';
-import { enablePush, pushEnabled } from './push';
+import { call } from '@/data/live/backend';
+import { enablePush, installationId, pushEnabled } from './push';
 
 export function PushLifecycle() {
   const { state, refresh } = useWorkspace();
@@ -10,12 +11,19 @@ export function PushLifecycle() {
     if (!state.profile || Platform.OS !== 'android') return;
     let disposed = false;
     const subscriptions: { remove(): void }[] = [];
+    // This phone now belongs to this account: no other account keeps receiving its
+    // notifications here, even if unregistering at sign-out failed.
+    void installationId()
+      .then((id) => call('claim_installation', { p_installation_id: id }))
+      .catch(() => undefined);
     void (async () => {
       // Import the native module only in a live Android session. Permission is
       // requested from the inbox, never automatically on launch.
       const notifications = await import('expo-notifications');
       if (disposed) return;
       const openInbox = () => {
+        // A tap is handled once; it must not reopen the inbox after another sign-in.
+        void notifications.clearLastNotificationResponseAsync().catch(() => undefined);
         if (!disposed) {
           void refresh();
           router.push('/notifications');
@@ -36,13 +44,10 @@ export function PushLifecycle() {
             .catch(() => {});
         }),
       );
-      // Registration can fail offline; a tapped notification must still open the inbox.
-      if (await pushEnabled()) await enablePush(false).catch(() => undefined);
+      // The tap that opened the app is read first; registering can be slow or offline.
       const last = await notifications.getLastNotificationResponseAsync();
-      if (last && !disposed) {
-        await notifications.clearLastNotificationResponseAsync();
-        openInbox();
-      }
+      if (last && !disposed) openInbox();
+      if (await pushEnabled()) void enablePush(false).catch(() => undefined);
     })().catch(() => {
       /* Permission/configuration errors remain retryable in the inbox. */
     });
