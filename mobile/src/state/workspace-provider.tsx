@@ -22,6 +22,7 @@ import { supabase } from '@/lib/supabase';
 import { call } from '@/data/live/backend';
 import { AppState } from 'react-native';
 import { workspaceReducer, type WorkspaceAction } from './workspace-reducer';
+import { planAuthEvent } from './auth-events';
 
 interface WorkspaceContextValue {
   state: Workspace;
@@ -81,23 +82,26 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             : 'CloudLynk could not load. Check your connection and try again.',
         );
     } finally {
-      if (request === generation.current) setRefreshing(false);
+      // Only the newest load ends the spinner and the launch screen; a load replaced by a
+      // sign-in or token refresh is always followed by another one (see auth-events.ts).
+      if (request === generation.current) {
+        setRefreshing(false);
+        setReady(true);
+      }
     }
   }, []);
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // The launch refresh below already loads the restored session. Resetting here
-      // would discard that request and mark the app ready before any data arrived.
-      if (event === 'INITIAL_SESSION') return;
       const userId = session?.user.id ?? null;
-      if (userId !== identityId.current || event === 'SIGNED_OUT') {
+      const plan = planAuthEvent(event, userId, identityId.current);
+      if (plan.reset) {
         ++generation.current;
         identityId.current = userId;
         dispatch({ type: 'hydrate', value: emptyLiveWorkspace() });
       }
-      if (event !== 'TOKEN_REFRESHED') setTimeout(() => void refresh(), 0);
+      if (plan.reload) setTimeout(() => void refresh(), 0);
     });
     // Coming back from the share sheet, a file picker or a permission dialog is not a
     // reason to download everything again; a minute away is.
@@ -112,18 +116,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ++generation.current;
     };
   }, [refresh]);
+  // The launch load. `ready` turns true when the newest load finishes (see refresh).
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        await refresh();
-      } finally {
-        if (active) setReady(true);
-      }
-    })();
-    return () => {
-      active = false;
-    };
+    void refresh();
   }, [refresh]);
   useEffect(() => {
     if (!toast) return;

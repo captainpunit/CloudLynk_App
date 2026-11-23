@@ -30,7 +30,11 @@ export async function fetchCatalogue(): Promise<Channel[]> {
 export async function fetchIdentity(): Promise<{ profile: Profile | null; joinedIds: string[] }> {
   const {
     data: { session },
+    error,
   } = await supabase.auth.getSession();
+  // A refresh that failed for lack of connection is not a sign-out; say so instead.
+  if (!session && error)
+    throw new Error('We could not connect to CloudLynk. Check your connection and try again.');
   if (!session) return { profile: null, joinedIds: [] };
   const [profileResult, memberResult] = await Promise.all([
     supabase
