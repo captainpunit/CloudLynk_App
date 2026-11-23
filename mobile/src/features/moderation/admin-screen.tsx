@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { randomUUID } from 'expo-crypto';
+import { router } from 'expo-router';
 import {
   Button,
   EmptyState,
@@ -193,6 +194,18 @@ export default function AdminScreen() {
               Minimum age: {title.min_age} · Countries:{' '}
               {title.allowed_countries.join(', ') || 'Worldwide'}
             </Label>
+            {title.kind !== 'series' && (
+              <Button
+                title="Preview video"
+                variant="soft"
+                onPress={() =>
+                  router.push({
+                    pathname: '/preview/[id]',
+                    params: { id: title.id, name: title.name },
+                  })
+                }
+              />
+            )}
             <Button
               title="Approve and publish"
               disabled={busy || title.status !== 'pending_review'}

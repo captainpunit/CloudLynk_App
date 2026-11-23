@@ -8,5 +8,5 @@ export const accessMessages: Record<AccessDecision, string> = {
   channel_unavailable: 'This channel is not available right now.',
   subscription_required: 'Unlock this channel with Plus.',
   membership_required: 'Join this channel to start watching.',
-  private_channel: 'This channel is private. Only its owner can open it.',
+  private_channel: 'This channel is invite-only. Ask its owner for an invitation.',
 };
