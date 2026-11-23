@@ -242,6 +242,7 @@ export type Database = {
           "is_private": boolean;
           "name": string;
           "requires_subscription": boolean;
+          "review_note": string | null;
           "status": string;
           "updated_at": string;
         };
@@ -257,6 +258,7 @@ export type Database = {
           "is_private"?: boolean;
           "name": string;
           "requires_subscription"?: boolean;
+          "review_note"?: string | null;
           "status"?: string;
           "updated_at"?: string;
         };
@@ -271,6 +273,7 @@ export type Database = {
           "is_private"?: boolean;
           "name"?: string;
           "requires_subscription"?: boolean;
+          "review_note"?: string | null;
           "status"?: string;
           "updated_at"?: string;
         };
@@ -329,6 +332,55 @@ export type Database = {
             columns: ["title_id"];
             isOneToOne: false;
             referencedRelation: "titles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      "creator_applications": {
+        Row: {
+          "created_at": string;
+          "decided_at": string | null;
+          "decided_by": string | null;
+          "decision_reason": string | null;
+          "id": string;
+          "message": string;
+          "status": string;
+          "user_id": string;
+        };
+        ComputedFields: never;
+        Insert: {
+          "created_at"?: string;
+          "decided_at"?: string | null;
+          "decided_by"?: string | null;
+          "decision_reason"?: string | null;
+          "id"?: string;
+          "message": string;
+          "status"?: string;
+          "user_id": string;
+        };
+        Update: {
+          "created_at"?: string;
+          "decided_at"?: string | null;
+          "decided_by"?: string | null;
+          "decision_reason"?: string | null;
+          "id"?: string;
+          "message"?: string;
+          "status"?: string;
+          "user_id"?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "creator_applications_decided_by_fkey";
+            columns: ["decided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "creator_applications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -1188,6 +1240,7 @@ export type Database = {
           "name": string;
           "owner_id": string;
           "published_at": string | null;
+          "review_note": string | null;
           "season_id": string | null;
           "status": string;
           "updated_at": string;
@@ -1206,6 +1259,7 @@ export type Database = {
           "name": string;
           "owner_id": string;
           "published_at"?: string | null;
+          "review_note"?: string | null;
           "season_id"?: string | null;
           "status"?: string;
           "updated_at"?: string;
@@ -1223,6 +1277,7 @@ export type Database = {
           "name"?: string;
           "owner_id"?: string;
           "published_at"?: string | null;
+          "review_note"?: string | null;
           "season_id"?: string | null;
           "status"?: string;
           "updated_at"?: string;
@@ -2134,6 +2189,27 @@ export type Database = {
         };
         Returns: string;
       };
+      "request_creator_access": {
+        Args: {
+          "p_message": string;
+        };
+        Returns: {
+          "created_at": string;
+          "decided_at": string | null;
+          "decided_by": string | null;
+          "decision_reason": string | null;
+          "id": string;
+          "message": string;
+          "status": string;
+          "user_id": string;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "creator_applications";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       "reserve_drive_upload": {
         Args: {
           "p_mime_type": string;
@@ -2286,6 +2362,7 @@ export type Database = {
           "name": string;
           "owner_id": string;
           "published_at": string | null;
+          "review_note": string | null;
           "season_id": string | null;
           "status": string;
           "updated_at": string;
@@ -2346,6 +2423,7 @@ export type Database = {
           "is_private": boolean;
           "name": string;
           "requires_subscription": boolean;
+          "review_note": string | null;
           "status": string;
           "updated_at": string;
         };
@@ -2408,6 +2486,7 @@ export type Database = {
           "is_private": boolean;
           "name": string;
           "requires_subscription": boolean;
+          "review_note": string | null;
           "status": string;
           "updated_at": string;
         };

@@ -13,6 +13,7 @@ export function mapChannel(row: Tables<'channels'>): Channel {
     cover: row.cover_url ?? '',
     ownerId: row.created_by ?? '',
     audience: row.audience === 'organic' || row.audience === 'ads' ? row.audience : 'both',
+    reviewNote: row.review_note ?? undefined,
   };
 }
 export function mapTitle(row: Tables<'titles'>): Video {

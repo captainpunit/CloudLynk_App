@@ -221,6 +221,9 @@ export default function UploadScreen() {
           ))}
           <Surface>
             <Label>{current ? `Editing ${current.status}` : 'New draft'}</Label>
+            {!!current?.review_note && ['rejected', 'archived'].includes(current.status) && (
+              <ErrorNote message={`Reviewer's note: ${current.review_note}`} />
+            )}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {(['movie', 'series', 'episode'] as const).map((value) => (
                 <Pill

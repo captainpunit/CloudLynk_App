@@ -78,6 +78,9 @@ export default function ChannelScreen() {
       }
     >
       <Masthead channel={channel} videoCount={videos.length} />
+      {owner && channel.status !== 'published' && !!channel.reviewNote && (
+        <ErrorNote message={`Hidden by an administrator: ${channel.reviewNote}`} />
+      )}
       <ErrorNote message={error} />
       {owner ? (
         <Button

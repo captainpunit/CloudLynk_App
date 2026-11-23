@@ -15,6 +15,8 @@ export interface Channel {
   status: ChannelStatus;
   /** Who the channel is shown to; members who came from an advert see every channel. */
   audience: ChannelAudience;
+  /** Why an administrator hid the channel; shown to its owner. */
+  reviewNote?: string;
 }
 export interface Video {
   id: string;

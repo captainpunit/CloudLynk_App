@@ -36,6 +36,7 @@ export default function AdminScreen() {
   const [titles, setTitles] = useState<Tables<'titles'>[]>([]);
   const [reports, setReports] = useState<Tables<'content_reports'>[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [requests, setRequests] = useState<Tables<'creator_applications'>[]>([]);
   const [audit, setAudit] = useState<Tables<'audit_log'>[]>([]);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export default function AdminScreen() {
   const [campaignLocked, setCampaignLocked] = useState(false);
   const load = useCallback(async () => {
     if (state.profile?.role !== 'admin') return;
-    const [titleRows, reportRows, users, auditRows] = await Promise.all([
+    const [titleRows, reportRows, users, auditRows, requestRows] = await Promise.all([
       readPages((from, to) => supabase.from('titles').select('*').order('id').range(from, to)),
       readPages((from, to) =>
         supabase.from('content_reports').select('*').order('id').range(from, to),
@@ -65,11 +66,18 @@ export default function AdminScreen() {
         .select('*')
         .order('id', { ascending: false })
         .range(auditPage * 100, auditPage * 100 + 99),
+      supabase
+        .from('creator_applications')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at')
+        .limit(200),
     ]);
     setTitles(titleRows);
     setReports(reportRows);
     setPeople(users);
     setAudit(checked(auditRows) ?? []);
+    setRequests(checked(requestRows) ?? []);
   }, [state.profile?.id, state.profile?.role, auditPage]);
   useEffect(() => {
     void load().catch(() => setError('Admin records could not load. Please refresh.'));
@@ -80,6 +88,8 @@ export default function AdminScreen() {
     setError(null);
     try {
       await work();
+      // A reason belongs to one decision; it must not ride along with the next one.
+      setReason('');
       await refresh();
       await load();
       notify(message);
@@ -88,6 +98,12 @@ export default function AdminScreen() {
     } finally {
       setBusy(false);
     }
+  }
+  /** Which channel and account a title belongs to, so a moderator can act on the owner. */
+  function ownerLine(channelId: string, ownerId: string) {
+    const channel = state.channels.find((item) => item.id === channelId)?.name ?? 'Unknown channel';
+    const owner = people.find((person) => person.id === ownerId);
+    return `${channel} · by ${owner?.display_name ?? 'a member'} (${ownerId})`;
   }
   function moderate(kind: string, id: string, action: string, visibility?: string) {
     void run(() =>
@@ -116,19 +132,26 @@ export default function AdminScreen() {
         onPress={() => void run(load, 'Admin records refreshed.')}
       />
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {['Channels', 'Titles', 'Reports', 'People', 'Payments', 'Messages', 'Audit'].map(
-          (value) => (
-            <Pill
-              key={value}
-              title={value}
-              selected={tab === value}
-              onPress={() => setTab(value)}
-            />
-          ),
-        )}
+        {[
+          'Channels',
+          'Titles',
+          'Reports',
+          requests.length ? `Creators (${requests.length})` : 'Creators',
+          'People',
+          'Payments',
+          'Messages',
+          'Audit',
+        ].map((value) => (
+          <Pill
+            key={value}
+            title={value}
+            selected={tab === value.replace(/ \(\d+\)$/, '')}
+            onPress={() => setTab(value.replace(/ \(\d+\)$/, ''))}
+          />
+        ))}
       </View>
       <ErrorNote message={error} />
-      {['Titles', 'Reports', 'People'].includes(tab) && (
+      {['Channels', 'Titles', 'Reports', 'Creators', 'People'].includes(tab) && (
         <Field
           label="Reason (required for rejection, restrictions and report decisions)"
           value={reason}
@@ -189,6 +212,7 @@ export default function AdminScreen() {
             <Label>
               {title.name} · {title.kind} · {title.status}
             </Label>
+            <Label variant="callout">{ownerLine(title.channel_id, title.owner_id)}</Label>
             <Label>{title.description}</Label>
             <Label>
               Minimum age: {title.min_age} · Countries:{' '}
@@ -235,6 +259,29 @@ export default function AdminScreen() {
             <Label>
               {titles.find((title) => title.id === report.title_id)?.name ?? 'Unavailable title'}
             </Label>
+            {(() => {
+              const reported = titles.find((title) => title.id === report.title_id);
+              if (!reported) return null;
+              return (
+                <>
+                  <Label variant="callout">
+                    {ownerLine(reported.channel_id, reported.owner_id)}
+                  </Label>
+                  <Button
+                    title="Hide video"
+                    variant="outline"
+                    disabled={busy || !reason.trim() || reported.status === 'archived'}
+                    onPress={() => moderate('title', reported.id, 'hide')}
+                  />
+                  <Button
+                    title="Suspend owner"
+                    variant="danger"
+                    disabled={busy || !reason.trim() || reported.owner_id === state.profile?.id}
+                    onPress={() => moderate('account', reported.owner_id, 'suspend')}
+                  />
+                </>
+              );
+            })()}
             {['resolve', 'dismiss'].map((action) => (
               <Button
                 key={action}
@@ -245,6 +292,33 @@ export default function AdminScreen() {
               />
             ))}
           </Surface>
+        ))}
+      {tab === 'Creators' &&
+        (requests.length ? (
+          requests.map((request) => (
+            <Surface key={request.id}>
+              <Label style={{ fontWeight: '700' }}>
+                {people.find((person) => person.id === request.user_id)?.display_name ?? 'Member'}
+              </Label>
+              <Label>{request.message}</Label>
+              <Label variant="callout" selectable>
+                {request.user_id}
+              </Label>
+              <Button
+                title="Approve creator"
+                disabled={busy}
+                onPress={() => moderate('publisher', request.user_id, 'grant')}
+              />
+              <Button
+                title="Decline request"
+                variant="outline"
+                disabled={busy || !reason.trim()}
+                onPress={() => moderate('publisher', request.user_id, 'revoke')}
+              />
+            </Surface>
+          ))
+        ) : (
+          <EmptyState title="No creator requests" body="Requests from members appear here." />
         ))}
       {tab === 'People' &&
         people.map((person) => (

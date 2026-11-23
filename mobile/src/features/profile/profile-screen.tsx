@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { ChannelRow } from '@/components/media-card';
 import { PlusOffer } from '@/components/plus-offer';
+import { CreatorRequest } from './creator-request';
 import { useWorkspace } from '@/state/workspace-provider';
 import { usePalette } from '@/theme/tone';
 import { fileSize, plusSummary, shortDate } from '@/domain/format';
@@ -67,6 +68,7 @@ export default function ProfileScreen() {
           />
         )}
       </View>
+      {profile && !creator && profile.accountStatus === 'active' && <CreatorRequest />}
       {(creator || ownChannels.length > 0) && (
         <View style={{ gap: 16 }}>
           <Section
