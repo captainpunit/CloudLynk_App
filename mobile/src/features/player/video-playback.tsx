@@ -50,7 +50,6 @@ export function VideoPlayback({
   resumeAt,
   onProgress,
   onFinished,
-  privateStream = false,
   onRetry,
 }: {
   uri: string;
@@ -59,7 +58,6 @@ export function VideoPlayback({
   /** Reports the position; `final` asks for an immediate save (pause, leaving, background). */
   onProgress: (seconds: number, duration: number, final?: boolean) => void;
   onFinished?: (duration: number) => void;
-  privateStream?: boolean;
   onRetry?: () => void;
 }) {
   const start = useRef(resumeAt);
@@ -77,7 +75,7 @@ export function VideoPlayback({
     // Browsers only start sound after a tap.
     instance.muted = Platform.OS === 'web';
   });
-  const { status, error } = useEvent(player, 'statusChange', { status: player.status });
+  const { status } = useEvent(player, 'statusChange', { status: player.status });
   const { isPlaying } = useEvent(player, 'playingChange', { isPlaying: player.playing });
   const [position, setPosition] = useState(resumeAt);
   const [buffered, setBuffered] = useState(0);
@@ -85,6 +83,7 @@ export function VideoPlayback({
   const [ended, setEnded] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [fill, setFill] = useState(false);
+  const [controlsShown, setControlsShown] = useState(true);
   const rate = useRef(1);
   const [shownRate, setShownRate] = useState(1);
   const { availableSubtitleTracks } = useEvent(player, 'availableSubtitleTracksChange', {
@@ -164,15 +163,34 @@ export function VideoPlayback({
     if (resumed.current) report.current(player.currentTime, player.duration, true);
   };
 
-  // Going to the background pauses; leaving the screen saves the place.
+  // Picture-in-picture: the video keeps playing in a small window over other apps.
+  const inPip = useRef(false);
+  // Set when this code paused the video for going to the background, so a small window that
+  // opens a little later can take it up again.
+  const pausedForBackground = useRef(false);
+  const [pip, setPip] = useState(false);
+
+  // Going to the background pauses, unless the video moved into its small window;
+  // leaving the screen saves the place.
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') return;
-      // Android may have paused the player already; the place is saved either way.
-      if (player.playing) player.pause();
+      clearTimeout(timer);
+      if (state === 'active') {
+        pausedForBackground.current = false;
+        return;
+      }
       saveNow();
+      // Android reports "background" around the moment it opens the small window, in
+      // either order, so the decision waits a moment.
+      timer = setTimeout(() => {
+        if (inPip.current || !player.playing) return;
+        player.pause();
+        pausedForBackground.current = true;
+      }, 600);
     });
     return () => {
+      clearTimeout(timer);
       subscription.remove();
       saveNow();
     };
@@ -218,6 +236,7 @@ export function VideoPlayback({
   };
   const controls = (
     <PlayerControls
+      onVisibleChange={setControlsShown}
       view={view}
       title={title}
       fullscreen={fullscreen}
@@ -267,9 +286,8 @@ export function VideoPlayback({
       }}
     >
       <Label accessibilityRole="alert" style={{ color: c.white, textAlign: 'center' }}>
-        {privateStream
-          ? 'The video stopped loading. Check your connection and try again.'
-          : (error?.message ?? 'The video could not be loaded. Check your connection.')}
+        {/* Never the player's own error text: it is written for developers. */}
+        The video stopped loading. Check your connection and try again.
       </Label>
       <Button
         compact
@@ -285,6 +303,13 @@ export function VideoPlayback({
       />
     </View>
   );
+  // Android draws subtitles a fixed distance above the bottom of the picture, where the
+  // seek bar and time sit; while the controls show, the subtitles move up above them by the
+  // height of that row (76 inline, 96 in full screen).
+  const subtitleInset = controlsShown && !pip ? (fullscreen ? 96 : 76) : 0;
+  // A CloudLynk addition to expo-video on Android (patches/expo-video+58.0.14.patch).
+  const subtitleProps =
+    Platform.OS === 'android' ? ({ subtitleBottomInset: subtitleInset } as object) : {};
   // One VideoView at a time: inline, or in the full-screen layer.
   const picture = (
     <VideoView
@@ -292,7 +317,27 @@ export function VideoPlayback({
       style={{ flex: 1, backgroundColor: c.player }}
       nativeControls={false}
       contentFit={fullscreen && fill ? 'cover' : 'contain'}
-      allowsPictureInPicture={false}
+      allowsPictureInPicture
+      // Pressing Home moves the video into a small window (Android 12+). Kept steady while a
+      // video is loaded: flipping it with every pause or buffer makes expo-video lose track
+      // of which view goes into the window, and Android then shrinks the whole app instead.
+      startsPictureInPictureAutomatically={duration > 0 && !ended}
+      onPictureInPictureStart={() => {
+        inPip.current = true;
+        setPip(true);
+        if (pausedForBackground.current) {
+          pausedForBackground.current = false;
+          player.play();
+        }
+      }}
+      onPictureInPictureStop={() => {
+        inPip.current = false;
+        setPip(false);
+        // Closing the small window stops the video in native code (the expo-video patch), since
+        // only Android knows then whether the window closed or opened back into the app.
+        saveNow();
+      }}
+      {...subtitleProps}
     />
   );
   // In full screen the picture lives in the app-wide layer (fullscreen-host.tsx);
@@ -305,7 +350,7 @@ export function VideoPlayback({
         <>
           <StatusBar hidden />
           {picture}
-          {controls}
+          {!pip && controls}
           {failure}
         </>,
       );
@@ -329,7 +374,7 @@ export function VideoPlayback({
   return (
     <View style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: c.player }}>
       {!inLayer && picture}
-      {!inLayer && controls}
+      {!inLayer && !pip && controls}
       {!inLayer && failure}
     </View>
   );

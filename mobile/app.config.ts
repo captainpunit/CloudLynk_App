@@ -80,7 +80,7 @@ const config: ExpoConfig = {
         microphonePermission: false,
       },
     ],
-    'expo-video',
+    ['expo-video', { supportsPictureInPicture: true }],
     'expo-image',
     'expo-sharing',
     'expo-font',

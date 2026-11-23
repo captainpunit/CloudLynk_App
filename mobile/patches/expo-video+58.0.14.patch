@@ -1,0 +1,68 @@
+diff --git a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
+index c271134..ab588e6 100644
+--- a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
++++ b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
+@@ -397,6 +397,25 @@ class VideoModule : Module() {
+   }
+ }
+ 
++// CloudLynk: how far each player's subtitles are lifted (dp), re-applied when the view is
++// resized, for example on entering or leaving picture-in-picture.
++private val cloudlynkSubtitleInsets = java.util.WeakHashMap<androidx.media3.ui.PlayerView, Float>()
++
++private fun cloudlynkApplySubtitleInset(playerView: androidx.media3.ui.PlayerView) {
++  val subtitles = playerView.subtitleView ?: return
++  val density = playerView.resources.displayMetrics.density
++  // A small window (picture-in-picture) shows none of the app's controls, so its subtitles
++  // stay at the bottom.
++  val inset = if (playerView.height < 180 * density) 0f else cloudlynkSubtitleInsets[playerView] ?: 0f
++  val px = (inset * density).toInt()
++  if (subtitles.paddingBottom != px) {
++    // Posted: padding changes inside a layout pass would be dropped.
++    subtitles.post {
++      subtitles.setPadding(subtitles.paddingLeft, subtitles.paddingTop, subtitles.paddingRight, px)
++    }
++  }
++}
++
+ @androidx.annotation.OptIn(UnstableApi::class)
+ private inline fun <reified T : VideoView> ViewDefinitionBuilder<T>.VideoViewComponent() {
+   Events(
+@@ -415,6 +434,19 @@ private inline fun <reified T : VideoView> ViewDefinitionBuilder<T>.VideoViewCom
+   Prop("contentFit") { view: T, contentFit: ContentFit ->
+     view.contentFit = contentFit
+   }
++  // CloudLynk: lifts subtitles above the app's own controls while they show. View padding,
++  // not the bottom padding fraction: WebVTT cues sit on the last line and ignore the fraction.
++  Prop("subtitleBottomInset") { view: T, inset: Float? ->
++    val playerView = view.playerView
++    val firstTime = !cloudlynkSubtitleInsets.containsKey(playerView)
++    cloudlynkSubtitleInsets[playerView] = inset ?: 0f
++    if (firstTime) {
++      playerView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
++        cloudlynkApplySubtitleInset(playerView)
++      }
++    }
++    cloudlynkApplySubtitleInset(playerView)
++  }
+   Prop("startsPictureInPictureAutomatically") { view: T, autoEnterPiP: Boolean? ->
+     view.autoEnterPiP = autoEnterPiP ?: false
+   }
+diff --git a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoView.kt b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoView.kt
+index bc00806..38a50df 100644
+--- a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoView.kt
++++ b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoView.kt
+@@ -280,6 +280,13 @@ open class VideoView(context: Context, appContext: AppContext, useTextureView: B
+    */
+   fun onStopPictureInPicture(pipCandidate: VideoView?) {
+     pipParams = pipParams.copy(willEnter = false)
++    // CloudLynk: closing the small window leaves the activity stopped (CREATED), while opening
++    // it back into the app does not. Stop the video on close, so no sound plays with nothing
++    // on screen. This is Android's documented way to tell the two apart.
++    val lifecycle = (currentActivity as? androidx.lifecycle.LifecycleOwner)?.lifecycle
++    if (this == pipCandidate && lifecycle?.currentState == androidx.lifecycle.Lifecycle.State.CREATED) {
++      videoPlayer?.player?.pause()
++    }
+     onPictureInPictureStop(Unit)
+   }
+ 

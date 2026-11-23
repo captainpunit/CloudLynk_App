@@ -5,12 +5,15 @@ import { router } from 'expo-router';
 import {
   Button,
   EmptyState,
+  Caption,
   ErrorNote,
   Field,
+  Heading,
   Label,
   Pill,
   Rail,
   Screen,
+  StatusBadge,
   Surface,
 } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
@@ -25,6 +28,17 @@ type Person = Pick<
   'id' | 'display_name' | 'role' | 'account_status' | 'can_publish' | 'audience'
 >;
 
+/** Who can watch a published channel: anyone, Plus members, or people invited to it. */
+const visibilities = [
+  { value: 'public', label: 'Everyone' },
+  { value: 'premium', label: 'Plus members' },
+  { value: 'private', label: 'Invited people' },
+] as const;
+const channelStatus = {
+  published: { label: 'Live', tone: 'success' },
+  pending: { label: 'Waiting for review', tone: 'warning' },
+  hidden: { label: 'Hidden', tone: 'danger' },
+} as const;
 /** Who a channel is shown to. Members who came from an advert see every channel. */
 const audiences = [
   { value: 'organic', label: 'Organic users' },
@@ -180,10 +194,32 @@ export default function AdminScreen() {
       {tab === 'Channels' &&
         state.channels.map((channel) => (
           <Surface key={channel.id}>
-            <Label>
-              {channel.name} · {channel.status} · {channel.visibility}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Heading level="subhead" style={{ flex: 1 }}>
+                {channel.name}
+              </Heading>
+              <StatusBadge {...channelStatus[channel.status]} />
+            </View>
+            <Caption>{channel.description}</Caption>
+            <Label variant="callout">
+              {channel.status === 'published' ? 'Who can watch' : 'Publish for'}
             </Label>
-            <Label>{channel.description}</Label>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {visibilities.map(({ value, label }) => (
+                <Pill
+                  key={value}
+                  title={label}
+                  label={`Publish ${channel.name} for ${label.toLowerCase()}`}
+                  // Only a live channel has a current choice; a waiting or hidden one has none.
+                  selected={channel.status === 'published' && channel.visibility === value}
+                  onPress={() =>
+                    !busy &&
+                    !(channel.status === 'published' && channel.visibility === value) &&
+                    moderate('channel', channel.id, 'publish', value)
+                  }
+                />
+              ))}
+            </View>
             <Label variant="callout">Shown to</Label>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {audiences.map(({ value, label }) => (
@@ -206,21 +242,14 @@ export default function AdminScreen() {
                 />
               ))}
             </View>
-            {(['public', 'premium', 'private'] as const).map((visibility) => (
+            {channel.status !== 'hidden' && (
               <Button
-                key={visibility}
-                title={`Publish as ${visibility}`}
-                variant="soft"
+                title="Hide channel"
+                variant="outline"
                 disabled={busy}
-                onPress={() => moderate('channel', channel.id, 'publish', visibility)}
+                onPress={() => moderate('channel', channel.id, 'hide')}
               />
-            ))}
-            <Button
-              title="Hide channel"
-              variant="outline"
-              disabled={busy}
-              onPress={() => moderate('channel', channel.id, 'hide')}
-            />
+            )}
           </Surface>
         ))}
       {tab === 'Titles' &&

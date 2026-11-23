@@ -209,6 +209,11 @@ component with a new variant before creating a lookalike.
   `CoverImageField`). Render them with `expo-image` (`contentFit="cover"`, `transition`,
   `recyclingKey`) on a `p.raised` placeholder background.
 - Video is Cloudflare Stream HLS with signed URLs, played by `expo-video`.
+- `expo-video` is patched (`patches/expo-video+58.0.14.patch`, applied by `patch-package` on
+  install) and built from source on Android (`expo.autolinking.android.buildFromSource` in
+  `package.json`). The patch adds `subtitleBottomInset` (subtitles clear the app's controls)
+  and pauses the video when the picture-in-picture window is closed. When upgrading
+  `expo-video`, check that the patch still applies, or drop it if the library covers both.
 - Import fonts **per weight** (`@expo-google-fonts/plus-jakarta-sans/700Bold`). The package root
   bundles all 16 files.
 

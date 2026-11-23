@@ -79,7 +79,6 @@ export default function LivePlayback({
         title={title}
         resumeAt={resumeAt.current}
         onProgress={save}
-        privateStream
         onRetry={retry}
       />
     );

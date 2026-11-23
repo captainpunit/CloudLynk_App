@@ -81,6 +81,7 @@ export function PlayerControls({
   onToggleFullscreen,
   settings,
   actions,
+  onVisibleChange,
 }: {
   view: PlayerView;
   title?: string;
@@ -91,9 +92,14 @@ export function PlayerControls({
   onToggleFullscreen: () => void;
   settings: PlayerSettings;
   actions: PlayerSettingsActions;
+  /** Whether the bottom controls are on screen, so subtitles can make room for them. */
+  onVisibleChange?: (shown: boolean) => void;
 }) {
   const [visible, setVisible] = useState(true);
   const [menu, setMenu] = useState(false);
+  const reportVisible = useRef(onVisibleChange);
+  reportVisible.current = onVisibleChange;
+  useEffect(() => reportVisible.current?.(visible && !menu), [visible, menu]);
   const [scrubbing, setScrubbing] = useState<number | null>(null);
   const [flash, setFlash] = useState<{
     side: 'back' | 'forward';
