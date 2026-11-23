@@ -17,6 +17,9 @@ export const env = {
 export const configured =
   !!env.supabaseUrl && !!env.supabaseAnonKey && !env.supabaseUrl.includes('YOUR-PROJECT');
 
+/** The website page an email confirmation link returns to (website/build.mjs). */
+export const emailConfirmedUrl = linkHost ? `https://${linkHost}/email-confirmed/` : undefined;
+
 /** Public App Link for a route such as `/open/watch/<id>`; falls back to the app scheme. */
 export function shareUrl(path: string) {
   return linkHost ? `https://${linkHost}${path}` : (Constants.linkingUri ?? '') + path.slice(1);

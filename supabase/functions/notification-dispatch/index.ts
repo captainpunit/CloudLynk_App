@@ -14,11 +14,24 @@ type Delivery = {
   ticket_id: string | null;
   submitted_at: string | null;
 };
+// Runs every minute. It keeps claiming batches for most of that minute, so a broadcast
+// (up to 500 people) is sent in about a minute and payment notices queued behind it are
+// not held up; one batch of 20 per run took tens of minutes.
+const RUN_FOR_MS = 45_000;
+
 Deno.serve(scheduled("notification-dispatch", async () => {
-  const claimed = await db.rpc("claim_push_deliveries", { p_limit: 20 });
-  dbCheck(claimed.error);
+  const started = Date.now();
   let submitted = 0, delivered = 0, failed = 0, waiting = 0;
-  await pool((claimed.data ?? []) as Delivery[], 5, async (row) => {
+  while (Date.now() - started < RUN_FOR_MS) {
+    const claimed = await db.rpc("claim_push_deliveries", { p_limit: 100 });
+    dbCheck(claimed.error);
+    const batch = (claimed.data ?? []) as Delivery[];
+    if (!batch.length) break;
+    await pool(batch, 10, deliver);
+  }
+  return json({ submitted, delivered, waiting, failed }, failed ? 503 : 200);
+
+  async function deliver(row: Delivery) {
     let state = row.state === "waiting" ? "waiting" : "queued",
       ticket: string | null = null,
       error: string | null = null,
@@ -91,6 +104,5 @@ Deno.serve(scheduled("notification-dispatch", async () => {
       p_disable: disable,
     });
     dbCheck(saved.error);
-  });
-  return json({ submitted, delivered, waiting, failed }, failed ? 503 : 200);
+  }
 }));

@@ -19,6 +19,8 @@ export interface UpiOrder {
   expiresAt: string;
   createdAt: string;
   submittedAt: string | null;
+  /** Google's token from its choice screen (Play build); a UPI payment is reported with it. */
+  hasGoogleToken: boolean;
 }
 
 /** Mirrors the backend limits in `submit_upi_payment`. */
@@ -79,15 +81,26 @@ export function isUtr(input: string): boolean {
  * - `review`: reported and waiting for an administrator.
  * - `done`: confirmed. `closed`: nothing more can happen with it.
  */
-export type OrderStep = 'pay' | 'report' | 'review' | 'done' | 'closed';
+/** `choose`: the Play build must send the member through Google's choice screen first. */
+export type OrderStep = 'choose' | 'pay' | 'report' | 'review' | 'done' | 'closed';
 export function orderStep(
-  order: Pick<UpiOrder, 'status' | 'attempts' | 'expiresAt' | 'createdAt'>,
+  order: Pick<UpiOrder, 'status' | 'attempts' | 'expiresAt' | 'createdAt' | 'hasGoogleToken'>,
   now = Date.now(),
+  googleChoiceRequired = false,
 ): OrderStep {
   if (order.status === 'paid') return 'done';
   if (order.status === 'submitted') return 'review';
   const reportable =
     order.attempts < maxReports && now - Date.parse(order.createdAt) < reportWindowMs;
+  // Google Play requires UPI to be chosen on its screen, so the payment can be reported
+  // to Google. An open order without that choice is not payable yet.
+  if (
+    order.status === 'created' &&
+    Date.parse(order.expiresAt) > now &&
+    googleChoiceRequired &&
+    !order.hasGoogleToken
+  )
+    return 'choose';
   if (order.status === 'created' && Date.parse(order.expiresAt) > now) return 'pay';
   // A member who paid just after the request ran out must still be able to send the UTR.
   if (['rejected', 'expired', 'created'].includes(order.status) && reportable) return 'report';

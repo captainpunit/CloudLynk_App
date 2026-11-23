@@ -23,6 +23,7 @@ export function mapOrder(row: Tables<'upi_orders'> | null): UpiOrder {
     expiresAt: row.expires_at,
     createdAt: row.created_at,
     submittedAt: row.submitted_at,
+    hasGoogleToken: row.external_transaction_token !== null,
   };
 }
 

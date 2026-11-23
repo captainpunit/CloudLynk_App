@@ -49,8 +49,14 @@ test('order steps follow the backend rules', () => {
     attempts: 0,
     createdAt: '2026-11-11T09:00:00Z',
     expiresAt: '2026-11-12T09:00:00Z',
+    hasGoogleToken: false,
   };
   assert.equal(orderStep({ ...base, status: 'created' }, now), 'pay');
+  // Play build: UPI must be chosen on Google's screen before it can be paid.
+  assert.equal(orderStep({ ...base, status: 'created' }, now, true), 'choose');
+  assert.equal(orderStep({ ...base, status: 'created', hasGoogleToken: true }, now, true), 'pay');
+  // Money already sent can always be reported.
+  assert.equal(orderStep({ ...base, status: 'rejected', attempts: 1 }, now, true), 'report');
   assert.equal(
     orderStep({ ...base, status: 'created', expiresAt: '2026-11-11T09:30:00Z' }, now),
     'report',

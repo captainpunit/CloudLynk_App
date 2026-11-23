@@ -42,6 +42,9 @@ The full list, with who gets each item and where each value goes, is in
 1. Create the production Supabase project. Enable `pg_cron` and `pg_net`.
 2. `supabase db push` to apply every migration, then run
    `supabase/scripts/seed-plans.sql` once to create the five plans below.
+   In Auth → URL Configuration, set **Site URL** to `https://<link host>/email-confirmed/`
+   and add the same address to **Redirect URLs**, so confirmation links end on the
+   website's "Your email is confirmed" page (`website/`) instead of a broken page.
    In Auth → Email templates → Reset password, paste `supabase/templates/recovery.html`
    (the app resets passwords with the code in that email), and configure SMTP.
 3. Set every function secret named in `supabase/.env.example` (Cloudflare including
@@ -65,7 +68,10 @@ The full list, with who gets each item and where each value goes, is in
 7. In the app, Admin → Payments: enter the UPI ID, payee name and GST rate, check
    the five plans below, and switch payments on.
 8. Call `backend-health` with the header `x-cron-secret: <CRON_SECRET>` and confirm it
-   returns 200.
+   returns 200. Then add it to an uptime monitor (for example UptimeRobot or Better Stack,
+   every 5 minutes, same header) that emails the team when it is not 200: it reports
+   failed payment reports to Google, stuck account deletions, failed video deletions
+   and jobs that stopped running.
 
 | Plan ID | Name | Period | Price |
 | --- | --- | --- | --- |

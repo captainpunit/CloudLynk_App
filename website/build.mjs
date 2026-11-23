@@ -171,6 +171,17 @@ write(
   ),
 );
 
+// Where an email confirmation link ends (the app passes it as emailRedirectTo).
+write(
+  "email-confirmed/index.html",
+  page(
+    "Email confirmed · CloudLynk",
+    `<h1>Your email is confirmed</h1>
+<p>Go back to the CloudLynk app and sign in with your email and password.</p>
+<p><a class="button" href="cloudlynk://auth">Open CloudLynk</a></p>`,
+  ),
+);
+
 // Shown only when the app is not installed: Android opens verified /open links in the app.
 // An ad link carries its ad flag through the Play install, so the new member still counts
 // as coming from an advert (see mobile/src/domain/ad-referrer.ts).

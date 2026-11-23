@@ -46,10 +46,12 @@ Deno.serve(scheduled("account-deletion-worker", async () => {
         p_limit: 1,
       });
       dbCheck(remaining.error);
+      // Only videos still being deleted hold the account back. One that failed ten times
+      // stays on the operations list (backend-health reports it) without the member's ID.
       const media = await db.from("stream_deletion_queue").select(
         "stream_uid",
         { count: "exact", head: true },
-      ).eq("owner_id", row.user_id);
+      ).eq("owner_id", row.user_id).eq("state", "queued");
       dbCheck(media.error);
       const allocations = await db.from("stream_allocation_intents").select(
         "id",
@@ -58,6 +60,10 @@ Deno.serve(scheduled("account-deletion-worker", async () => {
       dbCheck(allocations.error);
       if (remaining.data?.length || media.count || allocations.count) pending++;
       else {
+        const orphaned = await db.from("stream_deletion_queue").update({
+          owner_id: null,
+        }).eq("owner_id", row.user_id).eq("state", "failed");
+        dbCheck(orphaned.error);
         const deleted = await db.auth.admin.deleteUser(row.user_id);
         if (deleted.error && deleted.error.status !== 404) {
           throw new Error("auth_delete_failed");

@@ -6,7 +6,7 @@ import { Button, ErrorNote, Field, Label, Pill, Screen } from '@/components/ui';
 import { useWorkspace } from '@/state/workspace-provider';
 import { assertLiveConfiguration } from '@/data/live/cloud-api';
 import { supabase } from '@/lib/supabase';
-import { env } from '@/lib/env';
+import { emailConfirmedUrl, env } from '@/lib/env';
 import { LegalLinks } from '@/components/legal-links';
 import { colors as c } from '@/theme/tokens';
 
@@ -137,7 +137,8 @@ export default function AuthScreen() {
           ? await supabase.auth.signUp({
               email: address,
               password,
-              options: { data: { full_name: name.trim() } },
+              // The confirmation link ends on a page that sends the member back to the app.
+              options: { data: { full_name: name.trim() }, emailRedirectTo: emailConfirmedUrl },
             })
           : await supabase.auth.signInWithPassword({ email: address, password });
       if (result.error) throw result.error;

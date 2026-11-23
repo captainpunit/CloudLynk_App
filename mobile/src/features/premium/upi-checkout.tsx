@@ -91,7 +91,8 @@ export default function UpiCheckout() {
   }, [load]);
 
   const latest = orders[0];
-  const step = latest ? orderStep(latest) : 'closed';
+  // On the Play build an order made without Google's choice screen goes back through it.
+  const step = latest ? orderStep(latest, Date.now(), play.available) : 'closed';
   const current = latest && !choosing && ['pay', 'report', 'review'].includes(step) ? latest : null;
   const plan = plans.find((item) => item.productId === selected) ?? plans[0];
 
