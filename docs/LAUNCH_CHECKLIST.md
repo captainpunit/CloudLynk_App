@@ -39,6 +39,20 @@ The full list, with who gets each item and where each value goes, is in
 
 ## 3. Backend deployment (client's team)
 
+**Shortcut:** once the project exists and `supabase/.env` is filled in, one command runs
+steps 1–5, 6 (with `ADMIN_EMAIL`) and 8 below. It checks the file first, never prints a
+secret, and can be run again safely. It ends with the list of dashboard steps it can't do
+(Auth URLs, the reset email template, SMTP, the Pub/Sub subscription, Admin → Payments,
+the uptime monitor).
+
+```bash
+npx supabase login
+bash supabase/scripts/deploy-production.sh <project-ref> --check   # only checks supabase/.env
+ADMIN_EMAIL=<admin's email> bash supabase/scripts/deploy-production.sh <project-ref>
+```
+
+The steps by hand:
+
 1. Create the production Supabase project. Enable `pg_cron` and `pg_net`.
 2. `supabase db push` to apply every migration, then run
    `supabase/scripts/seed-plans.sql` once to create the five plans below.

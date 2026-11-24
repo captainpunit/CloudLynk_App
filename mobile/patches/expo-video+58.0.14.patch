@@ -1,8 +1,33 @@
 diff --git a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
-index c271134..ab588e6 100644
+index c271134..4221d6a 100644
 --- a/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
 +++ b/node_modules/expo-video/android/src/main/java/expo/modules/video/VideoModule.kt
-@@ -397,6 +397,25 @@ class VideoModule : Module() {
+@@ -375,6 +375,24 @@ class VideoModule : Module() {
+     OnActivityEntersBackground {
+       VideoManager.onAppBackgrounded()
+     }
++
++    // CloudLynk: Android 8 to 11 cannot enter picture-in-picture by itself (that arrived in
++    // Android 12), so do it when the user leaves with Home or Recents, as newer Android does.
++    OnUserLeavesActivity {
++      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O &&
++        android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S
++      ) {
++        val pip = VideoManager.pictureInPicture
++        val candidate = pip.currentPiPViewCandidate.get()
++        if (pip.autoEnterPiP && !pip.isInPiP && candidate != null) {
++          try {
++            candidate.enterPictureInPicture()
++          } catch (e: Exception) {
++            android.util.Log.w("ExpoVideo", "Could not enter picture-in-picture on leaving the app", e)
++          }
++        }
++      }
++    }
+   }
+   private fun replaceImpl(
+     ref: VideoPlayer,
+@@ -397,6 +415,25 @@ class VideoModule : Module() {
    }
  }
  
@@ -28,7 +53,7 @@ index c271134..ab588e6 100644
  @androidx.annotation.OptIn(UnstableApi::class)
  private inline fun <reified T : VideoView> ViewDefinitionBuilder<T>.VideoViewComponent() {
    Events(
-@@ -415,6 +434,19 @@ private inline fun <reified T : VideoView> ViewDefinitionBuilder<T>.VideoViewCom
+@@ -415,6 +452,19 @@ private inline fun <reified T : VideoView> ViewDefinitionBuilder<T>.VideoViewCom
    Prop("contentFit") { view: T, contentFit: ContentFit ->
      view.contentFit = contentFit
    }

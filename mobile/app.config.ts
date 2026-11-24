@@ -22,6 +22,8 @@ if (process.env.EAS_BUILD === 'true' && nativeIntegrations) {
   ].filter((name) => !process.env[name]);
   if (missing.length)
     throw new Error(`Set these EAS environment variables before building: ${missing.join(', ')}`);
+  if (process.env.EXPO_PUBLIC_SAMPLE_VIDEO_URL)
+    throw new Error('EXPO_PUBLIC_SAMPLE_VIDEO_URL is for client test builds only. Remove it.');
 }
 
 const config: ExpoConfig = {

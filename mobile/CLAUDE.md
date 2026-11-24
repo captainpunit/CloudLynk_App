@@ -212,8 +212,12 @@ component with a new variant before creating a lookalike.
 - `expo-video` is patched (`patches/expo-video+58.0.14.patch`, applied by `patch-package` on
   install) and built from source on Android (`expo.autolinking.android.buildFromSource` in
   `package.json`). The patch adds `subtitleBottomInset` (subtitles clear the app's controls)
-  and pauses the video when the picture-in-picture window is closed. When upgrading
-  `expo-video`, check that the patch still applies, or drop it if the library covers both.
+  and pauses the video when the picture-in-picture window is closed, and enters
+  picture-in-picture on Home on Android 8–11 (the library only auto-enters from Android 12).
+  When upgrading `expo-video`, check that the patch still applies, or drop it if the library
+  covers all three.
+- `EXPO_PUBLIC_SAMPLE_VIDEO_URL` is for client test builds only (docs/CLIENT_TEST_BUILD.md):
+  every video then plays that sample stream. A production EAS build refuses to start with it.
 - Import fonts **per weight** (`@expo-google-fonts/plus-jakarta-sans/700Bold`). The package root
   bundles all 16 files.
 

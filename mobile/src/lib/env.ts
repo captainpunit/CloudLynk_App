@@ -12,6 +12,12 @@ export const env = {
   appVersion: Constants.expoConfig?.version ?? '',
   privacyUrl: webPage(process.env.EXPO_PUBLIC_PRIVACY_URL),
   termsUrl: webPage(process.env.EXPO_PUBLIC_TERMS_URL),
+  /**
+   * Client test builds only (docs/CLIENT_TEST_BUILD.md): every video plays this sample HLS
+   * stream while no Cloudflare Stream account is connected. Store builds refuse to start
+   * with it set (app.config.ts).
+   */
+  sampleVideoUrl: webPage(process.env.EXPO_PUBLIC_SAMPLE_VIDEO_URL),
 };
 
 export const configured =

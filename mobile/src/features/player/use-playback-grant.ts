@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { playbackToken } from '@/data/live/backend';
 import { BackendError } from '@/data/live/invoke-backend';
+import { env } from '@/lib/env';
 
 export type PlaybackProblem = {
   message: string;
@@ -49,7 +50,9 @@ export function usePlaybackGrant(titleId: string, active: boolean, identity: str
       const request = ++sequence;
       clearTimeout(timer);
       try {
-        const grant = await playbackToken(titleId);
+        const grant = env.sampleVideoUrl
+          ? { hlsUrl: env.sampleVideoUrl, expiresAt: '2100-01-01T00:00:00Z' }
+          : await playbackToken(titleId);
         if (disposed || request !== sequence) return;
         if (!grant.hlsUrl.startsWith('https://')) throw new Error('Invalid stream address.');
         const receivedAt = Date.now();

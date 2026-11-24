@@ -116,7 +116,9 @@ Four public https addresses on the domain:
 
 ## 4. What happens once these exist
 
-1. Team deploys the backend: [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) section 3.
+1. Team deploys the backend: fill in `supabase/.env`, then run
+   `bash supabase/scripts/deploy-production.sh <project-ref>`
+   ([LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md) section 3).
 2. Team builds the app: `eas build --platform android --profile production`.
 3. Upload to Play's internal track, then test on a real phone: video upload and
    playback, a real UPI payment, a Play purchase, a refund, push, account deletion.

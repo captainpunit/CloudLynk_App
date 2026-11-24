@@ -1,2 +1,4 @@
 # patch-package patches must keep plain line endings to apply to the files in node_modules.
 *.patch text eol=lf
+# Shell scripts must keep plain line endings to run in bash.
+*.sh text eol=lf
